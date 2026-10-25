@@ -246,6 +246,24 @@
       "files": [
         "bot.schema.yaml-authoring.json"
       ]
+    },
+    {
+      "id": "agentforce/agent-script",
+      "repo": "forcedotcom/sf-skills",
+      "commit": "d3088edf8776a3c23f55aadead587eb3903be2d3",
+      "root": "plugins/builder/agentforce-adlc/skills/agentforce-generate/assets/agents",
+      "files": [
+        "hello-world.agent",
+        "knowledge-grounded.agent",
+        "local-info-agent-annotated.agent",
+        "order-service.agent",
+        "production-faq.agent",
+        "router-first.agent",
+        "simple-qa.agent",
+        "template-multi-subagent.agent",
+        "template-single-subagent.agent",
+        "verification-gate.agent"
+      ]
     }
   ]
 }

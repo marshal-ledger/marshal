@@ -39,17 +39,22 @@ SOURCES = [
     ("cloudformation", "cloudformation/agentcore"),
     ("copilot-studio", "copilot-studio/all-the-things"),
     ("copilot-studio", "copilot-studio/mcp-agent"),
+    ("agentforce", "agentforce/agent-script"),
 ]
 # Formats whose writer reproduces the whole source, so a native round trip must be lossless.
 # A CloudFormation template also defines the agent's IAM roles and executors, which the
 # writer references rather than generates; its round trip is held to "every loss explained".
-FULL = {"adl", "agent-spec", "oasf"}
+FULL = {"adl", "agent-spec", "oasf", "agentforce"}
 
 
 def records(fmt, fixture):
     path = CACHE / fixture
     if not path.exists():
         pytest.skip(f"fixture {fixture} not fetched; run python scripts/fetch_fixtures.py")
+    if fixture == "python/crewai-template":
+        # The official template is rendered by `crewai create crew`; do the same substitution.
+        crew = path / "crew.py"
+        crew.write_text(crew.read_text().replace("{{crew_name}}", "ResearchCrew"))
     result = READERS[fmt]().read(path)
     assert result.records, f"no agents read from {fixture}"
     return result.records
@@ -115,7 +120,7 @@ def test_every_loss_is_explained(fmt, fixture, target):
         assert unexplained == [], f"{record.agent} → {target}: unexplained {unexplained}"
         assert conversion.read_back.agent == record.agent, "the agent keeps its identity"
         assert conversion.read_back.platform == record.platform
-        if conversion.files:
+        if conversion.files and target == "copilot-studio":
             validate_copilot_studio(conversion.files)
         else:
             validate(target, conversion.document)

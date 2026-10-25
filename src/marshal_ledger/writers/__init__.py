@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from .adl import AdlWriter
+from .agentforce import AgentforceWriter
 from .agentspec import AgentSpecWriter
 from .base import Writer, Written
 from .cloudformation import CloudFormationWriter
@@ -15,6 +16,7 @@ WRITERS: dict[str, type[Writer]] = {
     OasfWriter.format: OasfWriter,
     CloudFormationWriter.format: CloudFormationWriter,
     CopilotStudioWriter.format: CopilotStudioWriter,
+    AgentforceWriter.format: AgentforceWriter,
 }
 
 __all__ = ["WRITERS", "Writer", "Written"]

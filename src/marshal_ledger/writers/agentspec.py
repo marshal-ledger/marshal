@@ -156,6 +156,11 @@ class AgentSpecWriter(Writer):
             notes[f"tools[{use.ref}].output_schema"] = "Agent Spec names every output; the return value was written as 'result'"
         elif outputs := schema_to_properties(use.output_schema):
             tool["outputs"] = outputs
+            required = set((use.output_schema or {}).get("required") or [])
+            if any(p["title"] not in required and "default" not in p for p in outputs):
+                notes[f"tools[{use.ref}].output_schema"] = (
+                    "Agent Spec marks a property optional only by a default; optional outputs read back as required"
+                )
         if use.requires_confirmation.is_known:
             tool["requires_confirmation"] = bool(use.requires_confirmation.value)
         else:

@@ -163,7 +163,7 @@ def _convert(args: argparse.Namespace) -> int:
                 n += 1
                 name = f"{stem}-{n}{dot}{suffix}"
             used.add(name)
-            if conversion.files:
+            if conversion.files and getattr(WRITERS[args.to], "multi_file", False):
                 for path, text in conversion.files.items():
                     destination = out / stem / path
                     destination.parent.mkdir(parents=True, exist_ok=True)
