@@ -19,7 +19,16 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8"]
+server = [
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+    "pyjwt[crypto]>=2.8",
+]
+dev = [
+    "pytest>=8",
+    "httpx>=0.27",
+    "marshal-ledger[server]",
+]
 
 [project.scripts]
 marshal = "marshal_ledger.cli:main"

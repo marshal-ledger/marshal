@@ -1,0 +1,141 @@
+"""The ingest API.
+
+Pipelines send ledger records here, authenticated with their CI provider's OIDC
+token. The server verifies the token, applies the ingestion policy, normalizes
+the records and writes them to the store. It is the only component that holds
+store credentials.
+
+Run with ``marshal serve --config marshal-server.yaml``. Requires the
+``server`` extra: ``pip install 'marshal-ledger[server]'``.
+"""
+
+from __future__ import annotations
+
+import fnmatch
+from pathlib import Path
+from typing import Any, Optional
+
+import yaml
+from fastapi import Depends, FastAPI, Header, HTTPException
+from pydantic import BaseModel, ConfigDict, Field
+
+from . import __version__
+from .model import AgentVersion, DeploymentEvent, Entity
+from .oidc import Caller, IssuerConfig, KeyResolver, RepositoryNotAllowed, TokenError, Verifier
+from .service import ingest
+from .store import Actor, OwnershipError, Store
+
+MAX_RECORDS = 500
+
+
+class ShippedPolicy(BaseModel):
+    """Who may mark a version as shipped. A request passes if any rule matches."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    refs: list[str] = Field(default_factory=lambda: ["refs/heads/main"])
+    """Glob patterns for Git refs, such as ``refs/heads/main`` or ``refs/tags/v*``."""
+    environments: list[str] = Field(default_factory=list)
+    """CI deployment environments, such as a GitHub environment with required reviewers."""
+    protected_refs: bool = False
+    """Accept any ref the provider reports as protected (GitLab)."""
+    protected_environments: bool = False
+    """Accept any environment the provider reports as protected (GitLab)."""
+
+
+class Policy(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    shipped: ShippedPolicy = Field(default_factory=ShippedPolicy)
+
+
+class ServerConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    store: str
+    """Path of the SQLite store."""
+    issuers: list[IssuerConfig] = Field(min_length=1)
+    policy: Policy = Field(default_factory=Policy)
+    hash_only: bool = False
+    """Store instruction hashes but never instruction text, whatever clients send."""
+
+    @classmethod
+    def load(cls, path: str | Path) -> "ServerConfig":
+        return cls.model_validate(yaml.safe_load(Path(path).read_text(encoding="utf-8")))
+
+
+class EventRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    event: DeploymentEvent
+    environment: str = Field(min_length=1, max_length=200)
+    records: list[AgentVersion] = Field(max_length=MAX_RECORDS)
+    entities: list[Entity] = Field(default_factory=list)
+
+
+def may_ship(caller: Caller, policy: ShippedPolicy) -> bool:
+    if caller.ref and any(fnmatch.fnmatchcase(caller.ref, p) for p in policy.refs):
+        return True
+    if caller.environment and caller.environment in policy.environments:
+        return True
+    if policy.protected_refs and caller.ref_protected:
+        return True
+    if policy.protected_environments and caller.environment_protected:
+        return True
+    return False
+
+
+def create_app(config: ServerConfig, key_resolver: KeyResolver | None = None) -> FastAPI:
+    verifier = Verifier(config.issuers, key_resolver)
+    app = FastAPI(title="Marshal ingest API", version=__version__)
+
+    def caller(authorization: Optional[str] = Header(default=None)) -> Caller:
+        scheme, _, token = (authorization or "").partition(" ")
+        if scheme.lower() != "bearer" or not token:
+            raise HTTPException(401, "a bearer token is required", headers={"WWW-Authenticate": "Bearer"})
+        try:
+            return verifier.verify(token.strip())
+        except TokenError as exc:
+            raise HTTPException(401, str(exc), headers={"WWW-Authenticate": "Bearer"}) from exc
+        except RepositoryNotAllowed as exc:
+            raise HTTPException(403, str(exc)) from exc
+
+    @app.get("/healthz")
+    def healthz() -> dict[str, str]:
+        return {"status": "ok"}
+
+    @app.post("/v0/events")
+    def post_events(request: EventRequest, who: Caller = Depends(caller)) -> dict[str, Any]:
+        if request.event is DeploymentEvent.SHIPPED and not may_ship(who, config.policy.shipped):
+            raise HTTPException(
+                403,
+                f"{who.repository} at {who.ref or 'an unknown ref'} may not record shipped events; "
+                "the shipped policy requires a protected ref or deployment environment",
+            )
+        records = []
+        for record in request.records:
+            # The token, not the request body, says which commit and run this was.
+            source = record.source.model_copy(
+                update={
+                    "commit": who.sha or record.source.commit,
+                    "pipeline_run": f"{who.provider}:{who.run}" if who.run else record.source.pipeline_run,
+                }
+            )
+            records.append(record.model_copy(update={"source": source}))
+        actor = Actor(issuer=who.issuer, repository=who.repository, ref=who.ref, workflow=who.workflow)
+        with Store(config.store) as store:
+            try:
+                reports = ingest(
+                    store,
+                    records,
+                    event=request.event,
+                    environment=request.environment,
+                    entities=request.entities,
+                    actor=actor,
+                    hash_only=config.hash_only,
+                )
+            except OwnershipError as exc:
+                raise HTTPException(403, f"agent ownership: {exc}") from exc
+        return {"reports": [r.to_dict() for r in reports]}
+
+    return app

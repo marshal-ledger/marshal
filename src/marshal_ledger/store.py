@@ -22,9 +22,9 @@ from typing import Iterable, Iterator, Optional
 
 from .model import AgentVersion, Deployment, DeploymentEvent, Entity
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
-_SCHEMA = """
+_SCHEMA_V1 = """
 CREATE TABLE meta (
     key   TEXT PRIMARY KEY,
     value TEXT NOT NULL
@@ -77,9 +77,39 @@ CREATE TABLE version_refs (
 CREATE INDEX version_refs_by_ref ON version_refs(ref);
 """
 
+# Each entry upgrades the schema from version N to N + 1.
+_MIGRATIONS: dict[int, str] = {
+    1: """
+ALTER TABLE events ADD COLUMN actor_issuer TEXT;
+ALTER TABLE events ADD COLUMN actor_repository TEXT;
+ALTER TABLE events ADD COLUMN actor_ref TEXT;
+ALTER TABLE events ADD COLUMN actor_workflow TEXT;
+CREATE TABLE agent_owners (
+    agent      TEXT PRIMARY KEY REFERENCES agents(id),
+    issuer     TEXT NOT NULL,
+    repository TEXT NOT NULL,
+    bound_at   TEXT NOT NULL
+);
+""",
+}
+
 
 class StoreError(LookupError):
     """A requested agent or version is not in the store."""
+
+
+class OwnershipError(PermissionError):
+    """A caller tried to record an agent that belongs to another repository."""
+
+
+@dataclass(frozen=True)
+class Actor:
+    """The authenticated pipeline that recorded an event."""
+
+    issuer: str
+    repository: str
+    ref: Optional[str] = None
+    workflow: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -156,16 +186,19 @@ class Store:
             "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'meta'"
         ).fetchone()
         if not has_meta:
-            with self._db:
-                self._db.executescript(_SCHEMA)
-                self._db.execute(
-                    "INSERT INTO meta (key, value) VALUES ('schema_version', ?)", (str(SCHEMA_VERSION),)
-                )
-            return
+            self._db.executescript(_SCHEMA_V1)
+            self._db.execute("INSERT INTO meta (key, value) VALUES ('schema_version', '1')")
+            self._db.commit()
         row = self._db.execute("SELECT value FROM meta WHERE key = 'schema_version'").fetchone()
         found = int(row["value"]) if row else 0
-        if found != SCHEMA_VERSION:
+        if found > SCHEMA_VERSION or found < 1:
             raise StoreError(f"{self.path}: store schema version {found}, expected {SCHEMA_VERSION}")
+        for version in range(found, SCHEMA_VERSION):
+            # executescript commits first, so each migration runs as its own script.
+            self._db.executescript(
+                "BEGIN;\n" + _MIGRATIONS[version]
+                + f"\nUPDATE meta SET value = '{version + 1}' WHERE key = 'schema_version';\nCOMMIT;"
+            )
 
     # -- writes ----------------------------------------------------------
 
@@ -177,11 +210,20 @@ class Store:
         environment: str,
         entities: Iterable[Entity] = (),
         at: datetime | None = None,
+        actor: Actor | None = None,
     ) -> list[Recorded]:
-        """Store each record's version, if new, and add one event per record."""
+        """Store each record's version, if new, and add one event per record.
+
+        With an ``actor``, each agent is bound to the actor's repository the first
+        time it is recorded, and later writes from any other repository raise
+        :class:`OwnershipError`. Nothing is written if any agent is refused.
+        """
+        records = list(records)
         when = _iso(at or _now())
         results: list[Recorded] = []
         with self._db:
+            if actor is not None:
+                self._check_owners(records, actor, when)
             for entity in entities:
                 self._db.execute(
                     "INSERT INTO entities (ref, kind, platform, identifier, display_name) "
@@ -190,10 +232,40 @@ class Store:
                     (entity.ref, entity.kind.value, entity.platform, entity.identifier, entity.display_name),
                 )
             for record in records:
-                results.append(self._record_one(record, event, environment, when))
+                results.append(self._record_one(record, event, environment, when, actor))
         return results
 
-    def _record_one(self, record: AgentVersion, event: DeploymentEvent, environment: str, when: str) -> Recorded:
+    def _check_owners(self, records: list[AgentVersion], actor: Actor, when: str) -> None:
+        refused = []
+        for record in records:
+            row = self._db.execute(
+                "SELECT issuer, repository FROM agent_owners WHERE agent = ?", (record.agent,)
+            ).fetchone()
+            if row is not None and (row["issuer"], row["repository"]) != (actor.issuer, actor.repository):
+                refused.append(f"{record.agent} belongs to {row['repository']}")
+        if refused:
+            raise OwnershipError("; ".join(refused))
+
+    def owner(self, agent: str) -> Optional[tuple[str, str]]:
+        """The (issuer, repository) an agent is bound to, if any."""
+        row = self._db.execute("SELECT issuer, repository FROM agent_owners WHERE agent = ?", (agent,)).fetchone()
+        return (row["issuer"], row["repository"]) if row else None
+
+    def transfer(self, agent: str, issuer: str, repository: str) -> None:
+        """Bind ``agent`` to another repository. An administrative operation."""
+        if not self.has_agent(agent):
+            raise StoreError(f"unknown agent {agent!r}")
+        with self._db:
+            self._db.execute(
+                "INSERT INTO agent_owners (agent, issuer, repository, bound_at) VALUES (?, ?, ?, ?) "
+                "ON CONFLICT (agent) DO UPDATE SET issuer = excluded.issuer, "
+                "repository = excluded.repository, bound_at = excluded.bound_at",
+                (agent, issuer, repository, _iso(_now())),
+            )
+
+    def _record_one(
+        self, record: AgentVersion, event: DeploymentEvent, environment: str, when: str, actor: Actor | None
+    ) -> Recorded:
         display = record.spec.display_name.value
         self._db.execute(
             "INSERT INTO agents (id, platform, display_name, first_seen, last_seen) VALUES (?, ?, ?, ?, ?) "
@@ -201,6 +273,11 @@ class Store:
             "display_name = COALESCE(excluded.display_name, display_name)",
             (record.agent, record.platform, display, when, when),
         )
+        if actor is not None:
+            self._db.execute(
+                "INSERT OR IGNORE INTO agent_owners (agent, issuer, repository, bound_at) VALUES (?, ?, ?, ?)",
+                (record.agent, actor.issuer, actor.repository, when),
+            )
         row = self._db.execute(
             "SELECT seq FROM versions WHERE agent = ? AND version = ?", (record.agent, record.version)
         ).fetchone()
@@ -223,7 +300,8 @@ class Store:
             seq = row["seq"]
         self._db.execute(
             "INSERT INTO events (agent, version, platform, environment, event, at, commit_sha, "
-            "pipeline_run, artifact, bindings) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "pipeline_run, artifact, bindings, actor_issuer, actor_repository, actor_ref, actor_workflow) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 record.agent,
                 record.version,
@@ -235,6 +313,10 @@ class Store:
                 record.source.pipeline_run,
                 record.source.artifact,
                 json.dumps(record.bindings, sort_keys=True),
+                actor.issuer if actor else None,
+                actor.repository if actor else None,
+                actor.ref if actor else None,
+                actor.workflow if actor else None,
             ),
         )
         stored_version = self._version_row(record.agent, "seq = ?", (seq,))
@@ -310,8 +392,8 @@ class Store:
             raise StoreError(f"{agent}: no {where or 'recorded'} version")
         return self._version_row(agent, "version = ?", (row["version"],))
 
-    def history(self, agent: str) -> list[tuple[Deployment, int]]:
-        """Every event for ``agent``, oldest first, with the version's sequence number."""
+    def history(self, agent: str) -> list[tuple[Deployment, int, Optional[Actor]]]:
+        """Every event for ``agent``, oldest first, with the version's sequence number and actor."""
         if not self.has_agent(agent):
             raise StoreError(f"unknown agent {agent!r}")
         rows = self._db.execute(
@@ -332,6 +414,9 @@ class Store:
                     pipeline_run=row["pipeline_run"],
                 ),
                 row["seq"],
+                Actor(row["actor_issuer"], row["actor_repository"], row["actor_ref"], row["actor_workflow"])
+                if row["actor_repository"]
+                else None,
             )
             for row in rows
         ]

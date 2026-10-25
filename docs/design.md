@@ -114,7 +114,7 @@ team pipeline                          Marshal (inside the org network)
                                        write to store
 ```
 
-**Identity.** GitHub Actions, GitLab CI and Azure DevOps each issue short-lived, signed OIDC tokens that name the repository, ref, workflow and deployment environment. The Marshal step requests one at run time; nothing is provisioned per team and nothing needs rotating. Marshal accepts only tokens from configured issuers with its own audience.
+**Identity.** CI providers such as GitHub Actions and GitLab CI issue short-lived, signed OIDC tokens that name the repository, ref, workflow and deployment environment. The Marshal step requests one at run time; nothing is provisioned per team and nothing needs rotating. Marshal accepts only tokens from configured issuers with its own audience.
 
 **Authorization.**
 
@@ -238,12 +238,14 @@ A public, community-maintained data file per platform listing what it supports: 
 **GitHub Action, around the deploy step teams already have:**
 
 ```yaml
-- uses: marshal-ledger/collect@v1
-  with: { event: proposed, artifacts: databricks.yml }
+- uses: marshal-ledger/marshal/collect@v1
+  with: { event: proposed, artifacts: ., target: prod, url: https://marshal.acme.example }
 - run: databricks bundle deploy -t prod
-- uses: marshal-ledger/collect@v1
-  with: { event: shipped, artifacts: databricks.yml, target: prod }
+- uses: marshal-ledger/marshal/collect@v1
+  with: { event: shipped, artifacts: ., target: prod, url: https://marshal.acme.example }
 ```
+
+See [GitHub Action](github-action.md) and [Ingest API](ingest-server.md).
 
 **PR comment, ranked by risk:**
 
@@ -295,7 +297,7 @@ $ marshal port invoice-agent --to bedrock
 
 - **Core, readers, writers:** Python and Pydantic. The JSON Schema for ledger records is generated from the models and published with each release
 - **Store:** SQLite or DuckDB locally; Postgres for shared deployments
-- **CI:** GitHub Action first; GitLab and Azure DevOps later
+- **CI:** GitHub Action first; GitLab CI through `marshal push` with ID tokens; Azure DevOps later
 - **UI:** a lightweight read-only web view
 - **Packaging:** Docker image and Helm chart for self-hosting
 

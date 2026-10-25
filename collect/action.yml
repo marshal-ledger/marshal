@@ -1,0 +1,87 @@
+name: Marshal collect
+description: Record agent definitions in a Marshal ledger and comment on pull requests with risk-ranked changes.
+author: Marshal
+
+inputs:
+  event:
+    description: "`proposed` (before deploy, typically on pull requests) or `shipped` (after a successful deploy)."
+    required: true
+  artifacts:
+    description: Path of the agent artifact to read, such as a directory containing databricks.yml.
+    required: true
+  url:
+    description: Base URL of the Marshal ingest API.
+    required: true
+  target:
+    description: Deployment target whose overrides to apply, such as a Databricks bundle target.
+    required: false
+    default: ""
+  environment:
+    description: Environment the event applies to. Defaults to the target.
+    required: false
+    default: ""
+  audience:
+    description: OIDC audience the Marshal server expects.
+    required: false
+    default: marshal
+  comment:
+    description: On pull requests, create or update a comment with the risk-ranked changes.
+    required: false
+    default: "true"
+  python-version:
+    description: Python version to run Marshal with.
+    required: false
+    default: "3.12"
+
+outputs:
+  report:
+    description: Path of the Markdown report.
+    value: ${{ steps.push.outputs.report }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install Marshal
+      shell: bash
+      run: python -m pip install --quiet --disable-pip-version-check "${GITHUB_ACTION_PATH}/.."
+
+    - name: Record ${{ inputs.event }} event
+      id: push
+      shell: bash
+      env:
+        MARSHAL_EVENT: ${{ inputs.event }}
+        MARSHAL_ARTIFACTS: ${{ inputs.artifacts }}
+        MARSHAL_URL: ${{ inputs.url }}
+        MARSHAL_TARGET: ${{ inputs.target }}
+        MARSHAL_ENVIRONMENT: ${{ inputs.environment }}
+        MARSHAL_AUDIENCE: ${{ inputs.audience }}
+      run: |
+        report="${RUNNER_TEMP}/marshal-report.md"
+        args=(push "$MARSHAL_ARTIFACTS" --event "$MARSHAL_EVENT" --url "$MARSHAL_URL"
+              --audience "$MARSHAL_AUDIENCE" --commit "$GITHUB_SHA" --report "$report")
+        if [ -n "$MARSHAL_TARGET" ]; then args+=(--target "$MARSHAL_TARGET"); fi
+        if [ -n "$MARSHAL_ENVIRONMENT" ]; then args+=(--environment "$MARSHAL_ENVIRONMENT"); fi
+        marshal "${args[@]}"
+        echo "report=$report" >> "$GITHUB_OUTPUT"
+        cat "$report" >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Comment on pull request
+      if: inputs.comment == 'true' && github.event_name == 'pull_request' && inputs.event == 'proposed'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        REPORT: ${{ steps.push.outputs.report }}
+      run: |
+        marker='<!-- marshal-ledger:report -->'
+        existing=$(gh api "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" --paginate \
+          --jq ".[] | select(.body | startswith(\"${marker}\")) | .id" | head -n 1)
+        if [ -n "$existing" ]; then
+          gh api --method PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/${existing}" -F "body=@${REPORT}" > /dev/null
+        else
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" -F "body=@${REPORT}" > /dev/null
+        fi

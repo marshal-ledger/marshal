@@ -1,0 +1,28 @@
+# Marshal ingest API configuration. See docs/ingest-server.md.
+
+store: /var/lib/marshal/ledger.sqlite
+
+# Store instruction hashes but never instruction text, whatever clients send.
+hash_only: false
+
+issuers:
+  - issuer: https://token.actions.githubusercontent.com
+    provider: github
+    audience: marshal
+    repositories:
+      - acme/*            # only repositories in your organization
+
+  - issuer: https://gitlab.acme.example
+    provider: gitlab
+    audience: marshal
+    repositories:
+      - platform/agents/*
+
+policy:
+  shipped:
+    refs:
+      - refs/heads/main
+    environments:
+      - prod              # GitHub environments with required reviewers
+    protected_refs: false
+    protected_environments: true

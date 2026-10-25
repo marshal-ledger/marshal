@@ -12,12 +12,16 @@ from typing import Sequence
 import yaml
 
 from . import __version__
-from .diff import diff_specs, format_changes
+from .diff import diff_specs
 from .model import AgentSpec, DeploymentEvent
 from .readers import READERS, ReadOptions, ReadResult, detect
+from .report import markdown, text
+from .risk import rank
+from .service import AgentReport, ingest
 from .store import Store, StoreError
 
 DEFAULT_DB = "marshal.sqlite"
+DEFAULT_AUDIENCE = "marshal"
 
 
 def _fail(message: str, code: int = 1) -> int:
@@ -62,6 +66,17 @@ def _read(args: argparse.Namespace) -> int:
     return 0
 
 
+def _emit(reports: list[AgentReport], args: argparse.Namespace) -> None:
+    for report in reports:
+        note = "new version" if report.new_version else "known version"
+        print(f"{report.event} {report.environment}: {report.agent} {report.label} ({note})")
+    if reports:
+        print()
+        print(text(reports))
+    if args.report:
+        Path(args.report).write_text(markdown(reports), encoding="utf-8")
+
+
 def _collect(args: argparse.Namespace) -> int:
     environment = args.environment or args.target
     if not environment:
@@ -72,17 +87,58 @@ def _collect(args: argparse.Namespace) -> int:
         return _fail(str(exc))
     if not result.records:
         print("no agents found", file=sys.stderr)
-        return 0
     with _open_store(args) as store:
-        recorded = store.record(
+        reports = ingest(
+            store,
             result.records,
             entities=result.entities,
             event=DeploymentEvent(args.event),
             environment=environment,
+            hash_only=args.hash_only,
         )
-    for item in recorded:
-        note = "new version" if item.new_version else "known version"
-        print(f"{args.event} {environment}: {item.agent} {item.version.label} ({note})")
+    _emit(reports, args)
+    return 0
+
+
+def _push(args: argparse.Namespace) -> int:
+    from .client import ClientError, ci_token, push
+
+    environment = args.environment or args.target
+    if not environment:
+        return _fail("--environment is required when no --target is given", 2)
+    if not args.url:
+        return _fail("--url (or $MARSHAL_URL) is required", 2)
+    try:
+        result = _run_reader(args)
+    except ValueError as exc:
+        return _fail(str(exc))
+    if not result.records:
+        print("no agents found", file=sys.stderr)
+    try:
+        token = ci_token(args.audience, args.token_env)
+        reports = push(
+            args.url,
+            token,
+            result.records,
+            event=DeploymentEvent(args.event),
+            environment=environment,
+            entities=result.entities,
+        )
+    except ClientError as exc:
+        return _fail(str(exc))
+    _emit(reports, args)
+    return 0
+
+
+def _serve(args: argparse.Namespace) -> int:
+    try:
+        import uvicorn
+
+        from .server import ServerConfig, create_app
+    except ImportError:
+        return _fail("the server needs extra packages: pip install 'marshal-ledger[server]'")
+    config = ServerConfig.load(args.config)
+    uvicorn.run(create_app(config), host=args.host, port=args.port, proxy_headers=True)
     return 0
 
 
@@ -147,7 +203,7 @@ def _diff(args: argparse.Namespace) -> int:
                     old_label = f"{agent}@{old.label}"
         except StoreError as exc:
             return _fail(str(exc))
-    changes = diff_specs(old_spec, new.record.spec)
+    changes = rank(diff_specs(old_spec, new.record.spec))
     if args.output == "json":
         json.dump(
             {
@@ -162,8 +218,14 @@ def _diff(args: argparse.Namespace) -> int:
         )
         sys.stdout.write("\n")
     else:
-        header = f"{new.record.agent} ({new.record.platform})  {old_label} → {new.label}"
-        print(format_changes(header, changes))
+        print(f"{new.record.agent} ({new.record.platform})  {old_label} → {new.label}")
+        print()
+        for change in changes:
+            print(f"  {change.line()}")
+        if not changes:
+            print("  no changes")
+        print()
+        print(f"  Completeness {new.record.quality.completeness:.0%}")
     return 0
 
 
@@ -173,9 +235,18 @@ def _log(args: argparse.Namespace) -> int:
             history = store.history(args.agent)
         except StoreError as exc:
             return _fail(str(exc))
-    for event, seq in history:
+    for event, seq, actor in history:
         when = event.at.strftime("%Y-%m-%d %H:%M:%SZ")
-        extra = " ".join(filter(None, [event.commit and f"commit {event.commit}", event.pipeline_run]))
+        extra = " ".join(
+            filter(
+                None,
+                [
+                    event.commit and f"commit {event.commit}",
+                    event.pipeline_run,
+                    actor and f"by {actor.repository}" + (f" ({actor.ref})" if actor.ref else ""),
+                ],
+            )
+        )
         print(f"{when}  {event.event.value:<8}  {event.environment:<12}  v{seq}  {extra}".rstrip())
     return 0
 
@@ -206,13 +277,31 @@ def main(argv: Sequence[str] | None = None) -> int:
     read.add_argument("--output", choices=["yaml", "json"], default="yaml")
     read.set_defaults(handler=_read)
 
-    collect = commands.add_parser("collect", help="read agent definitions and record an event in the store")
+    def add_event_args(parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("--event", choices=[e.value for e in DeploymentEvent], required=True)
+        parser.add_argument("--environment", help="environment the event applies to (default: --target)")
+        parser.add_argument("--pipeline-run", help="pipeline run identifier to record")
+        parser.add_argument("--report", metavar="FILE", help="also write a Markdown report, for a PR comment")
+
+    collect = commands.add_parser("collect", help="read agent definitions and record an event in a local store")
     _add_read_args(collect)
-    collect.add_argument("--event", choices=[e.value for e in DeploymentEvent], required=True)
-    collect.add_argument("--environment", help="environment the event applies to (default: --target)")
-    collect.add_argument("--pipeline-run", help="pipeline run identifier to record")
+    add_event_args(collect)
     _add_db_arg(collect)
     collect.set_defaults(handler=_collect)
+
+    push_ = commands.add_parser("push", help="read agent definitions and send an event to the ingest API")
+    _add_read_args(push_)
+    add_event_args(push_)
+    push_.add_argument("--url", default=os.environ.get("MARSHAL_URL"), help="ingest API base URL ($MARSHAL_URL)")
+    push_.add_argument("--audience", default=DEFAULT_AUDIENCE, help="OIDC audience to request (default: marshal)")
+    push_.add_argument("--token-env", help="read the OIDC token from this variable instead of GitHub Actions")
+    push_.set_defaults(handler=_push)
+
+    serve = commands.add_parser("serve", help="run the ingest API")
+    serve.add_argument("--config", required=True, help="server configuration file (YAML)")
+    serve.add_argument("--host", default="127.0.0.1")
+    serve.add_argument("--port", type=int, default=8080)
+    serve.set_defaults(handler=_serve)
 
     ls = commands.add_parser("ls", help="list agents in the store")
     ls.add_argument("--platform")

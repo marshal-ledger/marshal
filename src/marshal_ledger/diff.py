@@ -27,6 +27,10 @@ class Change:
     before: Any = None
     after: Any = None
     detail: Optional[str] = None
+    scope: Optional[str] = None
+    """For added or removed tools, knowledge and grants: the item's scope."""
+    reversible: Optional[str] = None
+    """For added or removed tools: whether the tool's effects are reversible."""
 
     def to_dict(self) -> dict[str, Any]:
         return {k: v for k, v in asdict(self).items() if v is not None}
@@ -76,11 +80,12 @@ def _keyed(
     b: dict[str, Any],
     describe,
     compare,
+    attrs=lambda item: {},
 ) -> Iterator[Change]:
     for key in sorted(b.keys() - a.keys()):
-        yield Change(category, "added", f"{label} {key}", after=key, detail=describe(b[key]))
+        yield Change(category, "added", f"{label} {key}", after=key, detail=describe(b[key]), **attrs(b[key]))
     for key in sorted(a.keys() - b.keys()):
-        yield Change(category, "removed", f"{label} {key}", before=key, detail=describe(a[key]))
+        yield Change(category, "removed", f"{label} {key}", before=key, detail=describe(a[key]), **attrs(a[key]))
     for key in sorted(a.keys() & b.keys()):
         yield from compare(key, a[key], b[key])
 
@@ -104,7 +109,13 @@ def diff_specs(a: AgentSpec, b: AgentSpec) -> list[Change]:
     grants_a = {f"{g.target} {g.privilege}": g for g in a.permissions.grants}
     grants_b = {f"{g.target} {g.privilege}": g for g in b.permissions.grants}
     changes += _keyed(
-        "permissions", "grant", grants_a, grants_b, lambda g: g.scope.value, lambda *_: iter(())
+        "permissions",
+        "grant",
+        grants_a,
+        grants_b,
+        lambda g: g.scope.value,
+        lambda *_: iter(()),
+        lambda g: {"scope": g.scope.value},
     )
     access_a = {f"{r.principal} {r.level}": r for r in a.permissions.access}
     access_b = {f"{r.principal} {r.level}": r for r in b.permissions.access}
@@ -119,7 +130,13 @@ def diff_specs(a: AgentSpec, b: AgentSpec) -> list[Change]:
         yield from _value("tools", f"tool {ref} reversible", x.reversible, y.reversible)
 
     changes += _keyed(
-        "tools", "tool", {t.ref: t for t in a.tools}, {t.ref: t for t in b.tools}, describe_tool, compare_tool
+        "tools",
+        "tool",
+        {t.ref: t for t in a.tools},
+        {t.ref: t for t in b.tools},
+        describe_tool,
+        compare_tool,
+        lambda t: {"scope": str(_shown(t.scope)), "reversible": str(_shown(t.reversible)).lower()},
     )
 
     # model
@@ -137,6 +154,7 @@ def diff_specs(a: AgentSpec, b: AgentSpec) -> list[Change]:
         {k.ref: k for k in b.knowledge},
         lambda k: f"scope {_shown(k.scope)}",
         compare_knowledge,
+        lambda k: {"scope": str(_shown(k.scope))},
     )
 
     changes += _instructions(a.instructions, b.instructions)
@@ -161,15 +179,18 @@ def diff_specs(a: AgentSpec, b: AgentSpec) -> list[Change]:
 _MARKS = {"added": "+", "removed": "-", "changed": "~"}
 
 
+def describe(change: Change) -> str:
+    """One line for a change, without severity: ``+ tool tool/x (scope write, ...)``."""
+    mark = _MARKS[change.kind]
+    if change.kind == "changed":
+        text = change.detail or f"{change.before} → {change.after}"
+        return f"{mark} {change.path}: {text}"
+    return f"{mark} {change.path}" + (f" ({change.detail})" if change.detail else "")
+
+
 def format_changes(header: str, changes: list[Change]) -> str:
     lines = [header]
     if not changes:
         lines.append("  no changes")
-    for change in changes:
-        mark = _MARKS[change.kind]
-        if change.kind == "changed":
-            text = change.detail or f"{change.before} → {change.after}"
-            lines.append(f"  {mark} {change.path}: {text}")
-        else:
-            lines.append(f"  {mark} {change.path}" + (f" ({change.detail})" if change.detail else ""))
+    lines += [f"  {describe(change)}" for change in changes]
     return "\n".join(lines)

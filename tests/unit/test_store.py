@@ -74,7 +74,7 @@ def test_history_is_an_audit_trail(store):
     store.record([record(commit="abc")], event=PROPOSED, environment="prod", at=T0)
     store.record([record(commit="abc")], event=SHIPPED, environment="prod", at=T0 + timedelta(1))
     history = store.history("finance/invoice")
-    assert [(e.event, e.environment, e.commit, seq) for e, seq in history] == [
+    assert [(e.event, e.environment, e.commit, seq) for e, seq, _ in history] == [
         (PROPOSED, "prod", "abc", 1),
         (SHIPPED, "prod", "abc", 1),
     ]
@@ -107,3 +107,34 @@ def test_store_persists_and_checks_schema_version(tmp_path):
         s._db.commit()
     with pytest.raises(StoreError, match="schema version"):
         Store(path)
+
+
+def test_version_1_store_is_migrated(tmp_path):
+    import sqlite3
+
+    from marshal_ledger import store as store_module
+
+    path = tmp_path / "old.sqlite"
+    db = sqlite3.connect(path)
+    db.executescript(store_module._SCHEMA_V1)
+    db.execute("INSERT INTO meta (key, value) VALUES ('schema_version', '1')")
+    db.commit()
+    db.close()
+    with Store(path) as s:
+        version = s._db.execute("SELECT value FROM meta WHERE key = 'schema_version'").fetchone()[0]
+        assert version == str(SCHEMA_VERSION)
+        s.record([record()], event=SHIPPED, environment="prod", at=T0)
+
+
+def test_ownership(store):
+    from marshal_ledger.store import Actor, OwnershipError
+
+    team = Actor(issuer="gh", repository="acme/finance")
+    other = Actor(issuer="gh", repository="acme/other")
+    store.record([record()], event=SHIPPED, environment="prod", at=T0, actor=team)
+    assert store.owner("finance/invoice") == ("gh", "acme/finance")
+    with pytest.raises(OwnershipError):
+        store.record([record(), record(agent="other/agent")], event=SHIPPED, environment="prod", actor=other)
+    assert not store.has_agent("other/agent"), "a refused batch writes nothing"
+    store.transfer("finance/invoice", "gh", "acme/other")
+    store.record([record()], event=SHIPPED, environment="prod", actor=other)

@@ -32,7 +32,7 @@ def test_collect_ls_diff_log(tmp_path, capsys):
     db = str(tmp_path / "ledger.sqlite")
 
     code, out, _ = run(capsys, "collect", str(bundle), "--target", "prod", "--event", "shipped", "--db", db)
-    assert code == 0 and out.strip() == "shipped prod: support/support_agent v1 (new version)"
+    assert code == 0 and out.splitlines()[0] == "shipped prod: support/support_agent v1 (new version)"
 
     (bundle / "databricks.yml").write_text(
         textwrap.dedent(BUNDLE).replace(
@@ -40,8 +40,15 @@ def test_collect_ls_diff_log(tmp_path, capsys):
             "{securable_full_name: main.support.refund, securable_type: FUNCTION, permission: EXECUTE}",
         )
     )
-    code, out, _ = run(capsys, "collect", str(bundle), "--target", "prod", "--event", "proposed", "--db", db)
+    report = tmp_path / "comment.md"
+    code, out, _ = run(
+        capsys, "collect", str(bundle), "--target", "prod", "--event", "proposed", "--db", db, "--report", str(report)
+    )
     assert "v2 (new version)" in out
+    assert "support/support_agent (databricks)  prod: v1 → v2" in out
+    comment = report.read_text()
+    assert comment.startswith("<!-- marshal-ledger:report -->")
+    assert "MED   + tool tool/databricks.uc.function.main.support.refund" in comment
 
     code, out, _ = run(capsys, "ls", "--db", db)
     assert "support/support_agent  databricks  v2      prod v1" in out
@@ -51,8 +58,8 @@ def test_collect_ls_diff_log(tmp_path, capsys):
 
     code, out, _ = run(capsys, "diff", "support/support_agent", "--db", db)
     assert out.splitlines()[0] == "support/support_agent (databricks)  v1 → v2"
-    assert "  + tool tool/databricks.uc.function.main.support.refund (scope execute, reversible unknown)" in out
-    assert "  - knowledge knowledge/databricks.uc.table.main.support.faq (scope read)" in out
+    assert "  MED   + tool tool/databricks.uc.function.main.support.refund (scope execute, reversible unknown)" in out
+    assert "  MED   - knowledge knowledge/databricks.uc.table.main.support.faq (scope read)" in out
 
     code, out, _ = run(capsys, "diff", "support/support_agent@v1", "support/support_agent@v2", "--output", "json", "--db", db)
     assert json.loads(out)["from"] == "v1"

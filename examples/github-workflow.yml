@@ -1,0 +1,40 @@
+# Deploy a Databricks bundle and record it in Marshal.
+name: deploy-agents
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  id-token: write        # OIDC token for Marshal
+  pull-requests: write   # risk-ranked PR comment
+
+jobs:
+  review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: marshal-ledger/marshal/collect@v1
+        with:
+          event: proposed
+          artifacts: .
+          target: prod
+          url: https://marshal.acme.example
+
+  deploy:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: prod
+    steps:
+      - uses: actions/checkout@v4
+      - uses: databricks/setup-cli@main
+      - run: databricks bundle deploy -t prod
+      - uses: marshal-ledger/marshal/collect@v1
+        with:
+          event: shipped
+          artifacts: .
+          target: prod
+          url: https://marshal.acme.example

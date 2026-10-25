@@ -1,0 +1,102 @@
+"""Risk ranking for agent changes.
+
+Each change from :mod:`marshal_ledger.diff` gets a severity. The rules put the
+changes a reviewer most needs to see first: escalated permissions, new tools
+that can write, model changes and removed knowledge. An unknown scope is ranked
+as if it were a write, because the ledger does not assume a tool is safe.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from enum import IntEnum
+from typing import Any, Optional
+
+from .diff import Change, describe
+
+_SCOPE_RANK = {"read": 1, "execute": 2, "write": 3, "unknown": 3, "admin": 4}
+
+
+class Severity(IntEnum):
+    LOW = 1
+    MEDIUM = 2
+    HIGH = 3
+
+    @property
+    def label(self) -> str:
+        return {Severity.LOW: "LOW", Severity.MEDIUM: "MED", Severity.HIGH: "HIGH"}[self]
+
+
+@dataclass(frozen=True)
+class RankedChange:
+    severity: Severity
+    change: Change
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"severity": self.severity.label, **self.change.to_dict()}
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "RankedChange":
+        data = dict(data)
+        severity = {s.label: s for s in Severity}[data.pop("severity")]
+        return cls(severity, Change(**data))
+
+    def line(self) -> str:
+        return f"{self.severity.label:<4}  {describe(self.change)}"
+
+
+def _rank(scope: Optional[str]) -> int:
+    return _SCOPE_RANK.get(str(scope), _SCOPE_RANK["unknown"])
+
+
+def severity(change: Change) -> Severity:
+    path, kind = change.path, change.kind
+
+    if change.category == "permissions":
+        if path == "permissions.identity":
+            return Severity.HIGH
+        if path == "permissions.principal":
+            return Severity.MEDIUM
+        if path.startswith("grant "):
+            if kind == "added":
+                return Severity.HIGH if _rank(change.scope) >= _rank("write") else Severity.MEDIUM
+            return Severity.LOW
+        if path.startswith("access "):
+            return Severity.MEDIUM if kind == "added" else Severity.LOW
+
+    if change.category == "tools":
+        if kind == "added":
+            if _rank(change.scope) >= _rank("write") or change.reversible == "false":
+                return Severity.HIGH
+            return Severity.MEDIUM if _rank(change.scope) == _rank("execute") else Severity.LOW
+        if kind == "removed":
+            return Severity.LOW
+        if path.endswith(" scope"):
+            return Severity.HIGH if _rank(change.after) > _rank(change.before) else Severity.LOW
+        if path.endswith(" reversible"):
+            after = str(change.after).lower()
+            if after == "false":
+                return Severity.HIGH
+            return Severity.MEDIUM if after == "unknown" else Severity.LOW
+
+    if change.category == "model":
+        return Severity.HIGH if path == "model.requested" else Severity.MEDIUM
+
+    if change.category == "knowledge":
+        if kind == "removed":
+            return Severity.MEDIUM
+        if kind == "added":
+            if change.scope == "unknown":
+                return Severity.MEDIUM
+            return Severity.HIGH if _rank(change.scope) >= _rank("write") else Severity.LOW
+        if _rank(change.after) > _rank(change.before):
+            return Severity.HIGH if change.after == "write" else Severity.MEDIUM
+        return Severity.LOW
+
+    return Severity.LOW
+
+
+def rank(changes: list[Change]) -> list[RankedChange]:
+    """Changes sorted by severity, highest first. Ties keep their diff order."""
+    ranked = [RankedChange(severity(c), c) for c in changes]
+    return sorted(ranked, key=lambda r: -r.severity)

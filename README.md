@@ -4,7 +4,7 @@ A vendor-neutral, open-source ledger for enterprise AI agents. Any format in, an
 
 Marshal reads the agent definitions teams already produce, such as Databricks bundles, Copilot Studio agents, Bedrock templates, Agentforce metadata and open standards. It builds a normalized, versioned record of every agent: what model it asks for, what tools and data it can reach, and who it acts as. Every field says where its value came from, and nothing is guessed.
 
-**Status:** pre-alpha. The ledger model, the Databricks Asset Bundle reader and a local version store are implemented.
+**Status:** pre-alpha. Implemented so far: the ledger model, the Databricks Asset Bundle reader, the version store, risk-ranked diffs, the ingest API with OIDC authentication, and the GitHub Action.
 
 ## Try it
 
@@ -20,7 +20,7 @@ $ marshal diff finance/invoice_agent@v3 finance/invoice_agent@v5
 $ marshal log finance/invoice_agent                  # proposed and shipped events
 ```
 
-`collect` writes to a local SQLite store (`marshal.sqlite`, or `--db` / `$MARSHAL_DB`). Shared deployments receive records through the ingest API described in [Ingestion and authentication](docs/design.md#ingestion-and-authentication).
+`collect` writes to a local SQLite store (`marshal.sqlite`, or `--db` / `$MARSHAL_DB`). In a shared deployment, pipelines run `marshal push` (or the [GitHub Action](docs/github-action.md)) against the [ingest API](docs/ingest-server.md), authenticated by their CI provider's OIDC token, so agent teams never hold store credentials.
 
 ## Documentation
 
@@ -28,6 +28,8 @@ $ marshal log finance/invoice_agent                  # proposed and shipped even
 - [Ledger model v0](docs/ledger-model.md): records, provenance, version hashing, the version store, completeness
 - [Platform exportability](docs/platform-exportability.md): what Copilot Studio, Bedrock, Vertex AI, Agentforce and Databricks expose
 - [Databricks reader](docs/readers/databricks.md): mapping rules and known gaps
+- [Ingest API](docs/ingest-server.md): running the server, OIDC issuers, shipped policy, agent ownership
+- [GitHub Action](docs/github-action.md): recording events and PR comments
 
 ## Development
 
