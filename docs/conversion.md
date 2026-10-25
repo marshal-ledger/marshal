@@ -11,9 +11,9 @@ Every reader's output can be written by every writer:
 
 | Readers | Writers |
 |---|---|
-| `adl`, `agent-spec`, `oasf`, `cloudformation`, `copilot-studio`, `databricks-asset-bundle`, `python` | `adl`, `agent-spec`, `oasf`, `cloudformation`, `copilot-studio` |
+| `adl`, `agent-spec`, `oasf`, `cloudformation`, `copilot-studio`, `agentforce`, `adk-config`, `databricks-asset-bundle`, `python` | `adl`, `agent-spec`, `oasf`, `cloudformation`, `copilot-studio`, `agentforce`, `adk-config` |
 
-Copilot Studio definitions span several files, so converting to `copilot-studio` needs `--out`.
+Copilot Studio and ADK Agent Config definitions are written as files in a folder, so converting to them needs `--out`.
 
 ## How fidelity is computed
 

@@ -276,6 +276,26 @@
         "agents/__init__.py",
         "agents/agent.py"
       ]
+    },
+    {
+      "id": "adk-config/samples",
+      "repo": "google/adk-python",
+      "commit": "bf6739723c1b8b03bff8bb1e6ffada4d88098fcf",
+      "root": "contributing/samples",
+      "files": [
+        "config/core_basic_config/root_agent.yaml",
+        "config/core_generate_content_config_config/root_agent.yaml",
+        "hitl/tool_human_in_the_loop_config/root_agent.yaml",
+        "mcp/tool_mcp_stdio_notion_config/root_agent.yaml",
+        "multi_agent/multi_agent_llm_config/root_agent.yaml",
+        "multi_agent/multi_agent_llm_config/roll_agent.yaml",
+        "multi_agent/multi_agent_llm_config/prime_agent.yaml",
+        "multi_agent/multi_agent_loop_config/root_agent.yaml",
+        "multi_agent/multi_agent_loop_config/loop_agent.yaml",
+        "multi_agent/multi_agent_loop_config/writer_agents/critic_agent.yaml",
+        "multi_agent/multi_agent_loop_config/writer_agents/initial_writer_agent.yaml",
+        "multi_agent/multi_agent_loop_config/writer_agents/refiner_agent.yaml"
+      ]
     }
   ]
 }

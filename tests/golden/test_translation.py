@@ -41,11 +41,13 @@ SOURCES = [
     ("copilot-studio", "copilot-studio/all-the-things"),
     ("copilot-studio", "copilot-studio/mcp-agent"),
     ("agentforce", "agentforce/agent-script"),
+    ("adk-config", "adk-config/samples"),
 ]
 # Formats whose writer reproduces the whole source, so a native round trip must be lossless.
 # A CloudFormation template also defines the agent's IAM roles and executors, which the
 # writer references rather than generates; its round trip is held to "every loss explained".
 FULL = {"adl", "agent-spec", "oasf", "agentforce"}
+# ADK Agent Config sub-agents live in other files, which a single conversion doesn't write.
 
 
 def records(fmt, fixture):

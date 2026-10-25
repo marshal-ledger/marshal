@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from .adkconfig import AdkConfigWriter
 from .adl import AdlWriter
 from .agentforce import AgentforceWriter
 from .agentspec import AgentSpecWriter
@@ -17,6 +18,7 @@ WRITERS: dict[str, type[Writer]] = {
     CloudFormationWriter.format: CloudFormationWriter,
     CopilotStudioWriter.format: CopilotStudioWriter,
     AgentforceWriter.format: AgentforceWriter,
+    AdkConfigWriter.format: AdkConfigWriter,
 }
 
 __all__ = ["WRITERS", "Writer", "Written"]
