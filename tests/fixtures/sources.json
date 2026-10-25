@@ -200,6 +200,52 @@
         "basic-runtime/template.yaml",
         "multi-agent-runtime/template.yaml"
       ]
+    },
+    {
+      "id": "copilot-studio/all-the-things",
+      "repo": "microsoft/vscode-copilotstudio",
+      "commit": "16e4ece7a098a1fb01f9e42a7cb51d38af424ac4",
+      "root": "src/LanguageServers/PowerPlatformLS/Tools/LspJournalCli/TestAssets/fixtures/all-the-things-clean-workspace",
+      "files": [
+        "agent.mcs.yml",
+        "settings.mcs.yml",
+        "connectionreferences.mcs.yml",
+        "actions/CallSubAgent.mcs.yml",
+        "actions/GetWeather.mcs.yml",
+        "actions/RunComplianceFlow.mcs.yml",
+        "agents/HelperAgent/agent.mcs.yml",
+        "knowledge/CompanyWebsite.mcs.yml",
+        "knowledge/TeamSite.mcs.yml",
+        "knowledge/files/ProductGuide.mcs.yml",
+        "skills/EchoSkill.mcs.yml",
+        "topics/Greeting.mcs.yml",
+        "topics/RichActions.mcs.yml",
+        "topics/SignInFlow.mcs.yml",
+        "trigger/OnNewEmail.mcs.yml",
+        "settings/Autonomous.mcs.yml"
+      ]
+    },
+    {
+      "id": "copilot-studio/mcp-agent",
+      "repo": "microsoft/skills-for-copilot-studio",
+      "commit": "fd9653d0ec743b39443596d7132f907d0d993f1f",
+      "root": "evals/fixtures/agent-with-mcp-action",
+      "files": [
+        "agent.mcs.yml",
+        "settings.mcs.yml",
+        "actions/CustomMCP.mcs.yml",
+        "actions/SearchDocs.mcs.yml",
+        "topics/Greeting.topic.mcs.yml"
+      ]
+    },
+    {
+      "id": "copilot-studio/schema",
+      "repo": "microsoft/skills-for-copilot-studio",
+      "commit": "fd9653d0ec743b39443596d7132f907d0d993f1f",
+      "root": "reference",
+      "files": [
+        "bot.schema.yaml-authoring.json"
+      ]
     }
   ]
 }

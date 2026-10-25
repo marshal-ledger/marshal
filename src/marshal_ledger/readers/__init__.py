@@ -7,6 +7,7 @@ from pathlib import Path
 from .adl import AdlReader
 from .agentspec import AgentSpecReader
 from .cloudformation import CloudFormationReader
+from .copilotstudio import CopilotStudioReader
 from .base import DocumentReader, ReadOptions, ReadResult, Reader, Skipped
 from .databricks import DatabricksBundleReader
 from .oasf import OasfReader
@@ -19,6 +20,7 @@ READERS: dict[str, type[Reader]] = {
     AgentSpecReader.format: AgentSpecReader,
     OasfReader.format: OasfReader,
     CloudFormationReader.format: CloudFormationReader,
+    CopilotStudioReader.format: CopilotStudioReader,
     # Last: a directory of Python code is the least specific match.
     PythonAgentReader.format: PythonAgentReader,
 }

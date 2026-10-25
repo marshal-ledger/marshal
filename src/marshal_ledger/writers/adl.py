@@ -176,6 +176,7 @@ class AdlWriter(Writer):
                 resource["description"] = item.description
             if not extras.get("uri") and item.ref.startswith("knowledge/") and "://" in item.ref:
                 resource["uri"] = item.ref.split("/", 1)[1]
+                notes["extensions.adl.resources"] = "resource URIs were written from the knowledge refs"
             for key, value in extras.items():
                 if key == "extensions":
                     resource.setdefault("extensions", {}).update(value)

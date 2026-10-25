@@ -37,6 +37,8 @@ SOURCES = [
     ("cloudformation", "cloudformation/serverless-agents"),
     ("cloudformation", "cloudformation/multi-agent"),
     ("cloudformation", "cloudformation/agentcore"),
+    ("copilot-studio", "copilot-studio/all-the-things"),
+    ("copilot-studio", "copilot-studio/mcp-agent"),
 ]
 # Formats whose writer reproduces the whole source, so a native round trip must be lossless.
 # A CloudFormation template also defines the agent's IAM roles and executors, which the
@@ -61,6 +63,23 @@ def schema_validator(fixture, file, ref=None):
     if ref:
         schema = {"$ref": ref, "$defs": schema["$defs"]}
     return jsonschema.Draft202012Validator(schema)
+
+
+def validate_copilot_studio(files):
+    import yaml
+
+    validator_schema = json.loads((CACHE / "copilot-studio/schema/bot.schema.yaml-authoring.json").read_text()) \
+        if (CACHE / "copilot-studio/schema/bot.schema.yaml-authoring.json").exists() else None
+    if validator_schema is None:
+        pytest.skip("Copilot Studio schema not fetched")
+    for path, text in files.items():
+        data = yaml.safe_load(text)
+        kind = data.get("kind") if isinstance(data, dict) else None
+        if kind is None:
+            continue  # settings and connection references have no published schema
+        validator = jsonschema.Draft7Validator({"$ref": f"#/definitions/{kind}", "definitions": validator_schema["definitions"]})
+        error = best_match(validator.iter_errors(data))
+        assert error is None, f"{path}: {list(error.absolute_path)}: {error.message[:300]}"
 
 
 def validate(target, document):
@@ -96,4 +115,7 @@ def test_every_loss_is_explained(fmt, fixture, target):
         assert unexplained == [], f"{record.agent} → {target}: unexplained {unexplained}"
         assert conversion.read_back.agent == record.agent, "the agent keeps its identity"
         assert conversion.read_back.platform == record.platform
-        validate(target, conversion.document)
+        if conversion.files:
+            validate_copilot_studio(conversion.files)
+        else:
+            validate(target, conversion.document)

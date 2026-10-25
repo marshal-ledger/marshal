@@ -122,6 +122,7 @@
       "enum": [
         "service_principal",
         "on_behalf_of_user",
+        "shared_credential",
         "mixed"
       ],
       "title": "IdentityKind",

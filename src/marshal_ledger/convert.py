@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import tempfile
+from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from .fidelity import FidelityReport, compare
@@ -20,6 +22,8 @@ class Conversion:
     report: FidelityReport
     read_back: AgentVersion
     warnings: list[str]
+    files: dict[str, str] = field(default_factory=dict)
+    """Set for formats that span several files: relative path → text."""
 
 
 class ConversionError(ValueError):
@@ -34,12 +38,20 @@ def convert(record: AgentVersion, target: str) -> Conversion:
     writer = writer_cls()
     written = writer.write(record)
     reader = READERS[writer.reader_format]()
-    assert isinstance(reader, DocumentReader)
     filename = record.agent.rsplit("/", 1)[-1].split(":")[-1] or "agent"
     filename = "".join(c if c.isalnum() or c in "-_." else "-" for c in filename) + writer.suffix
-    result = reader.read_data(written.document, filename)
-    if len(result.records) != 1:
-        raise ConversionError(f"{target} writer produced {len(result.records)} agents for one record")
+    if written.files:
+        with tempfile.TemporaryDirectory() as directory:
+            for path, text in written.files.items():
+                destination = Path(directory) / path
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.write_text(text, encoding="utf-8")
+            result = reader.read(Path(directory))
+    else:
+        assert isinstance(reader, DocumentReader)
+        result = reader.read_data(written.document, filename)
+    if not result.records:
+        raise ConversionError(f"{target} writer produced no agent that reads back")
     read_back = result.records[0]
     notes = {**writer.LOSSES, **written.notes}
     report = compare(record, read_back, target, notes, writer.MECHANICS)
@@ -51,4 +63,5 @@ def convert(record: AgentVersion, target: str) -> Conversion:
         report=report,
         read_back=read_back,
         warnings=written.warnings,
+        files=written.files,
     )

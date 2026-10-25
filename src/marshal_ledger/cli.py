@@ -144,6 +144,8 @@ def _convert(args: argparse.Namespace) -> int:
         return _fail("no agents found")
     if len(result.records) > 1 and not args.out:
         return _fail(f"{len(result.records)} agents found; pass --out DIR to write one file per agent", 2)
+    if getattr(WRITERS[args.to], "multi_file", False) and not args.out:
+        return _fail(f"{args.to} definitions span several files; pass --out DIR", 2)
     try:
         conversions = [convert(record, args.to) for record in result.records]
     except ConversionError as exc:
@@ -161,8 +163,15 @@ def _convert(args: argparse.Namespace) -> int:
                 n += 1
                 name = f"{stem}-{n}{dot}{suffix}"
             used.add(name)
-            (out / name).write_text(conversion.text, encoding="utf-8")
-            print(f"wrote {out / name}", file=sys.stderr)
+            if conversion.files:
+                for path, text in conversion.files.items():
+                    destination = out / stem / path
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    destination.write_text(text, encoding="utf-8")
+                print(f"wrote {out / stem}/", file=sys.stderr)
+            else:
+                (out / name).write_text(conversion.text, encoding="utf-8")
+                print(f"wrote {out / name}", file=sys.stderr)
     else:
         sys.stdout.write(conversions[0].text)
 

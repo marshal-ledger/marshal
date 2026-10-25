@@ -65,7 +65,7 @@ connectionreferences.mcs.yml   # connection references (environment-bound)
 
 **Gaps.** Files uploaded as knowledge are listed but not downloaded by default. Connection references are environment-bound. The model is an alias hint, not a resolved model. Microsoft's own authoring tools note that the YAML schema may change without notice, so the reader should validate against the published schema and report unknown kinds rather than fail.
 
-**Recommended reader.** Read the cloned YAML folder first, since it is the native definition and maps cleanly to the ledger model. Add the solution zip second, for teams that ship through solutions. Partial tier at first, with Full likely.
+**Reader.** Implemented for the cloned YAML workspace: see [formats/copilot-studio.md](formats/copilot-studio.md). Solution zips are not yet read.
 
 Sources: [extension overview](https://learn.microsoft.com/en-us/microsoft-copilot-studio/visual-studio-code-extension-overview), [clone an agent](https://learn.microsoft.com/en-us/microsoft-copilot-studio/visual-studio-code-extension-clone-agent), [edit agent components](https://learn.microsoft.com/en-us/microsoft-copilot-studio/visual-studio-code-extension-edit-agent-components), [microsoft/skills-for-copilot-studio](https://github.com/microsoft/skills-for-copilot-studio) (MIT; includes the authoring schema and example agent files).
 

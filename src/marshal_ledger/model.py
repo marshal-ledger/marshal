@@ -159,6 +159,8 @@ class IdentityKind(str, Enum):
     """The agent acts as its own non-human identity."""
     ON_BEHALF_OF_USER = "on_behalf_of_user"
     """The agent acts with the calling user's permissions."""
+    SHARED_CREDENTIAL = "shared_credential"
+    """The agent acts with credentials its author configured, the same for every user."""
     MIXED = "mixed"
 
 

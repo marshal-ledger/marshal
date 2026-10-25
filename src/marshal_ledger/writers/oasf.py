@@ -125,6 +125,14 @@ class OasfWriter(Writer):
                 servers.setdefault(rest, [])
         for server, tools in servers.items():
             data: dict[str, Any] = {"name": server, "connections": [_connection(server)]}
+            if not tools:
+                # A whole server: OASF names it by its address, and keeps its description.
+                whole = next((t for t in spec.tools if t.ref == f"tool/mcp.{server}"), None)
+                if whole is not None:
+                    if whole.description:
+                        data["description"] = whole.description
+                    if whole.name and whole.name != server:
+                        notes[f"tools[{whole.ref}].name"] = "OASF names an MCP server by its address"
             if tools:
                 data["tools"] = [
                     {"name": t.name, **({"description": t.description} if t.description else {})} for t in tools

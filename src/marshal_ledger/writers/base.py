@@ -22,6 +22,8 @@ class Written:
 
     document: dict[str, Any]
     notes: dict[str, str] = field(default_factory=dict)
+    files: dict[str, str] = field(default_factory=dict)
+    """For formats that span several files: relative path → file text. ``document`` is then the main file."""
     warnings: list[str] = field(default_factory=list)
     """Problems with the written document itself, such as required values the source lacks."""
 
