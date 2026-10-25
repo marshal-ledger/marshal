@@ -1,0 +1,175 @@
+"""Normalized diff between two versions of an agent.
+
+Changes are computed on the ledger model, not on source text, so the same
+change reads the same way on every platform. Tools, knowledge and grants are
+matched by entity reference. Provenance and basis metadata are ignored, except
+that a value moving from unknown to known (or back) is reported.
+"""
+
+from __future__ import annotations
+
+import difflib
+from dataclasses import asdict, dataclass
+from typing import Any, Iterator, Optional
+
+from .model import AgentSpec, Instructions, Value
+
+CATEGORIES = ("permissions", "tools", "model", "knowledge", "instructions", "metadata", "extensions")
+
+
+@dataclass(frozen=True)
+class Change:
+    category: str
+    """One of :data:`CATEGORIES`."""
+    kind: str
+    """``added``, ``removed`` or ``changed``."""
+    path: str
+    before: Any = None
+    after: Any = None
+    detail: Optional[str] = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {k: v for k, v in asdict(self).items() if v is not None}
+
+
+def _shown(v: Value) -> Any:
+    if not v.is_known:
+        return "unknown"
+    value = v.value
+    return getattr(value, "value", value)
+
+
+def _value(category: str, path: str, a: Value, b: Value) -> Iterator[Change]:
+    before, after = _shown(a), _shown(b)
+    if before != after:
+        yield Change(category, "changed", path, before, after)
+
+
+def _instructions(a: Instructions, b: Instructions) -> Iterator[Change]:
+    if a.hash == b.hash:
+        return
+    if a.hash is None or b.hash is None:
+        yield Change(
+            "instructions",
+            "changed",
+            "instructions",
+            "unknown" if a.hash is None else a.hash,
+            "unknown" if b.hash is None else b.hash,
+        )
+        return
+    detail = "content changed"
+    if a.text is not None and b.text is not None:
+        added = removed = 0
+        for line in difflib.ndiff(a.text.splitlines(), b.text.splitlines()):
+            if line.startswith("+ "):
+                added += 1
+            elif line.startswith("- "):
+                removed += 1
+        detail = f"+{added} -{removed} lines"
+    yield Change("instructions", "changed", "instructions", a.hash, b.hash, detail)
+
+
+def _keyed(
+    category: str,
+    label: str,
+    a: dict[str, Any],
+    b: dict[str, Any],
+    describe,
+    compare,
+) -> Iterator[Change]:
+    for key in sorted(b.keys() - a.keys()):
+        yield Change(category, "added", f"{label} {key}", after=key, detail=describe(b[key]))
+    for key in sorted(a.keys() - b.keys()):
+        yield Change(category, "removed", f"{label} {key}", before=key, detail=describe(a[key]))
+    for key in sorted(a.keys() & b.keys()):
+        yield from compare(key, a[key], b[key])
+
+
+def _flatten(node: Any, prefix: str = "") -> dict[str, Any]:
+    if isinstance(node, dict) and node:
+        flat: dict[str, Any] = {}
+        for key, value in node.items():
+            flat.update(_flatten(value, f"{prefix}.{key}" if prefix else str(key)))
+        return flat
+    return {prefix: node}
+
+
+def diff_specs(a: AgentSpec, b: AgentSpec) -> list[Change]:
+    """Every change from ``a`` to ``b``, grouped in :data:`CATEGORIES` order."""
+    changes: list[Change] = []
+
+    # permissions
+    changes += _value("permissions", "permissions.identity", a.permissions.identity, b.permissions.identity)
+    changes += _value("permissions", "permissions.principal", a.permissions.principal, b.permissions.principal)
+    grants_a = {f"{g.target} {g.privilege}": g for g in a.permissions.grants}
+    grants_b = {f"{g.target} {g.privilege}": g for g in b.permissions.grants}
+    changes += _keyed(
+        "permissions", "grant", grants_a, grants_b, lambda g: g.scope.value, lambda *_: iter(())
+    )
+    access_a = {f"{r.principal} {r.level}": r for r in a.permissions.access}
+    access_b = {f"{r.principal} {r.level}": r for r in b.permissions.access}
+    changes += _keyed("permissions", "access", access_a, access_b, lambda r: r.principal_type, lambda *_: iter(()))
+
+    # tools
+    def describe_tool(t) -> str:
+        return f"scope {_shown(t.scope)}, reversible {_shown(t.reversible)}"
+
+    def compare_tool(ref, x, y) -> Iterator[Change]:
+        yield from _value("tools", f"tool {ref} scope", x.scope, y.scope)
+        yield from _value("tools", f"tool {ref} reversible", x.reversible, y.reversible)
+
+    changes += _keyed(
+        "tools", "tool", {t.ref: t for t in a.tools}, {t.ref: t for t in b.tools}, describe_tool, compare_tool
+    )
+
+    # model
+    changes += _value("model", "model.requested", a.model.requested, b.model.requested)
+    changes += _value("model", "model.resolved", a.model.resolved, b.model.resolved)
+
+    # knowledge
+    def compare_knowledge(ref, x, y) -> Iterator[Change]:
+        yield from _value("knowledge", f"knowledge {ref} scope", x.scope, y.scope)
+
+    changes += _keyed(
+        "knowledge",
+        "knowledge",
+        {k.ref: k for k in a.knowledge},
+        {k.ref: k for k in b.knowledge},
+        lambda k: f"scope {_shown(k.scope)}",
+        compare_knowledge,
+    )
+
+    changes += _instructions(a.instructions, b.instructions)
+
+    changes += _value("metadata", "display_name", a.display_name, b.display_name)
+    changes += _value("metadata", "description", a.description, b.description)
+
+    ext_a, ext_b = _flatten(a.extensions), _flatten(b.extensions)
+    ext_a.pop("", None)
+    ext_b.pop("", None)
+    for path in sorted(ext_b.keys() - ext_a.keys()):
+        changes.append(Change("extensions", "added", f"extensions.{path}", after=ext_b[path]))
+    for path in sorted(ext_a.keys() - ext_b.keys()):
+        changes.append(Change("extensions", "removed", f"extensions.{path}", before=ext_a[path]))
+    for path in sorted(ext_a.keys() & ext_b.keys()):
+        if ext_a[path] != ext_b[path]:
+            changes.append(Change("extensions", "changed", f"extensions.{path}", ext_a[path], ext_b[path]))
+
+    return changes
+
+
+_MARKS = {"added": "+", "removed": "-", "changed": "~"}
+
+
+def format_changes(header: str, changes: list[Change]) -> str:
+    lines = [header]
+    if not changes:
+        lines.append("  no changes")
+    for change in changes:
+        mark = _MARKS[change.kind]
+        if change.kind == "changed":
+            text = change.detail or f"{change.before} → {change.after}"
+            lines.append(f"  {mark} {change.path}: {text}")
+        else:
+            lines.append(f"  {mark} {change.path}" + (f" ({change.detail})" if change.detail else ""))
+    return "\n".join(lines)

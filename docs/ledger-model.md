@@ -42,6 +42,26 @@ Only `spec` is hashed, so the same definition in dev and prod is the same versio
 
 Tools, knowledge, grants and access rules are sorted before hashing, so reordering them doesn't create a new version. Lists inside `extensions` keep their order.
 
+## Version store
+
+The store keeps each (agent, version hash) once and numbers versions per agent in the order it first saw them: `v1`, `v2`, and so on. Sequence numbers are local to a store; the hash is the portable identity.
+
+Every collection adds an event, `proposed` or `shipped`, for an environment. Bindings, commit and pipeline run are stored on the event, not on the version. Which version runs where is the most recent `shipped` event per environment, so re-shipping an older version (a rollback) is recorded as such.
+
+Commands and the store API select versions with:
+
+| Selector | Meaning |
+|---|---|
+| `v3` | Sequence number |
+| `sha256:7c41a9e` or `7c41a9e` | Version hash or a unique prefix of at least 7 hex digits |
+| `latest` | The version in the agent's most recent event |
+| `shipped`, `shipped:prod` | The version most recently shipped, anywhere or to one environment |
+| `proposed`, `proposed:prod` | The version most recently proposed |
+
+`marshal diff AGENT` compares the latest version with the last shipped one. Diffs are computed on the ledger model, so they read the same on every platform. Changes are grouped by category, permissions and tools first.
+
+The store also indexes the tools, knowledge and grant targets of each version, which backs `marshal ls --tool` and `--knowledge` and, later, dependency queries.
+
 ## Entity references
 
 References use the form `<kind>/<platform>.<type>.<identifier>`, for example:

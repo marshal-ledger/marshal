@@ -4,22 +4,28 @@ A vendor-neutral, open-source ledger for enterprise AI agents. Any format in, an
 
 Marshal reads the agent definitions teams already produce, such as Databricks bundles, Copilot Studio agents, Bedrock templates, Agentforce metadata and open standards. It builds a normalized, versioned record of every agent: what model it asks for, what tools and data it can reach, and who it acts as. Every field says where its value came from, and nothing is guessed.
 
-**Status:** pre-alpha. The ledger model and the Databricks Asset Bundle reader are implemented.
+**Status:** pre-alpha. The ledger model, the Databricks Asset Bundle reader and a local version store are implemented.
 
 ## Try it
 
 ```console
 $ pip install -e '.[dev]'
-$ marshal read path/to/databricks/bundle
-$ marshal read path/to/databricks/bundle --target prod --hash-only
+$ marshal read path/to/bundle                        # print ledger records
+$ marshal collect path/to/bundle --target prod --event shipped
+$ marshal collect path/to/bundle --target prod --event proposed
+$ marshal ls                                         # every agent, latest version, where it is shipped
+$ marshal ls --tool "main.finance.*"                 # agents that use matching tools
+$ marshal diff finance/invoice_agent                 # latest against last shipped
+$ marshal diff finance/invoice_agent@v3 finance/invoice_agent@v5
+$ marshal log finance/invoice_agent                  # proposed and shipped events
 ```
 
-`marshal read` prints one ledger record per agent as YAML (or JSON with `--output json`). Items the reader looked at and did not record as agents are listed on stderr with the reason.
+`collect` writes to a local SQLite store (`marshal.sqlite`, or `--db` / `$MARSHAL_DB`). Shared deployments receive records through the ingest API described in [Ingestion and authentication](docs/design.md#ingestion-and-authentication).
 
 ## Documentation
 
 - [Design](docs/design.md): the problem, architecture, roadmap
-- [Ledger model v0](docs/ledger-model.md): records, provenance, version hashing, completeness
+- [Ledger model v0](docs/ledger-model.md): records, provenance, version hashing, the version store, completeness
 - [Platform exportability](docs/platform-exportability.md): what Copilot Studio, Bedrock, Vertex AI, Agentforce and Databricks expose
 - [Databricks reader](docs/readers/databricks.md): mapping rules and known gaps
 

@@ -101,6 +101,33 @@ Fidelity tiers keep the user experience smooth while coverage grows. Every major
 - `proposed`: captured before deploy, from the PR. Powers review.
 - `shipped`: confirmed after deploy succeeds. Diffs compare against the last shipped version, so failed deploys never show up as live.
 
+## Ingestion and authentication
+
+Agent teams never hold database credentials. Readers run inside the team's own pipeline, and the resulting records go to a Marshal ingest API that authenticates each pipeline by its identity rather than by a shared secret.
+
+```
+team pipeline                          Marshal (inside the org network)
+  read artifacts → ledger records
+  request OIDC token (aud: marshal)
+  POST /v0/events  ──── HTTPS ────→   verify token signature, issuer, audience
+                                       check claims against policy
+                                       write to store
+```
+
+**Identity.** GitHub Actions, GitLab CI and Azure DevOps each issue short-lived, signed OIDC tokens that name the repository, ref, workflow and deployment environment. The Marshal step requests one at run time; nothing is provisioned per team and nothing needs rotating. Marshal accepts only tokens from configured issuers with its own audience.
+
+**Authorization.**
+
+- An agent id is bound to the repository that first records it. Later writes for that agent must come from the same repository; a Marshal administrator can transfer the binding.
+- `shipped` events are accepted only from protected refs or deployment environments named in policy (for example `main`, or a GitHub environment named `prod`). This keeps a pull request from marking its own version as live.
+- `proposed` events are accepted from any ref of the bound repository, including pull requests. They power review and are never treated as deployed.
+
+**Separation.** Only the Marshal service holds database credentials. The web view and query API are read-only and authenticate users through the organization's SSO.
+
+**Network.** The ingest endpoint must be reachable from the runners. Self-hosted runners inside the network reach it directly. For hosted runners, the organization exposes the ingest endpoint alone (not the database or the web view) through its ingress, with OIDC as the only accepted credential.
+
+**Local mode.** `marshal collect --db <file>` writes directly to a local SQLite store, for trials, tests and single-team use.
+
 ## Ledger record
 
 The full v0 model is documented in [Ledger model v0](ledger-model.md). Every field records where its value came from: `declared` (in the source artifact), `annotation` (such as MCP tool hints), `derived` (computed by the ledger), or `unknown`. An abbreviated record:
@@ -202,6 +229,7 @@ A public, community-maintained data file per platform listing what it supports: 
 
 - **Secret redaction in every reader**, by design. Deploy artifacts often carry credentials and environment variables; they never reach the store.
 - **Hash-only mode** per org: store instruction hashes instead of prompt text. Diffs then report "instructions changed" without showing content.
+- **No shared secrets in pipelines.** CI authenticates to Marshal with short-lived OIDC tokens; agent teams never hold store credentials.
 - **CI path stands alone.** Pollers need admin-level read credentials, so they're optional, not required for core value.
 - **Self-hosted** with no external calls.
 
@@ -245,7 +273,7 @@ $ marshal port invoice-agent --to bedrock
 |---|---|
 | 1 | Exportability survey across Copilot Studio, Bedrock, Vertex and Agentforce. Ledger model v0. Databricks reader |
 | 2–3 | Version store with agent → version → deployment, proposed/shipped events, `marshal ls` and `marshal diff` |
-| 4 | GitHub Action, risk-ranked PR comments, secret redaction, hash-only mode |
+| 4 | Ingest API with OIDC authentication, GitHub Action, risk-ranked PR comments, secret redaction, hash-only mode |
 | 5–6 | Readers and writers for ADL, Open Agent Spec and OASF, round-trip tests, `marshal convert` with fidelity reports |
 | 7 | Capability matrix v0, quality and portability scores, `marshal port` |
 | 8 | Copilot Studio, Bedrock Agents and Agentforce adapters at Partial tier; inventory readers for AgentCore and Agent Engine |
