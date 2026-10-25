@@ -160,6 +160,46 @@
         "config/agents.yaml",
         "config/tasks.yaml"
       ]
+    },
+    {
+      "id": "cloudformation/bedrock-agents",
+      "repo": "aws-samples/amazon-bedrock-samples",
+      "commit": "d481795702a043af8fcedfdf843b94ec20224675",
+      "root": "agents-and-function-calling/bedrock-agents/use-case-examples",
+      "files": [
+        "cost-explorer-agent/agent_template.yaml",
+        "fine-grained-access-permissions-agent/003_bedrock-agent/template.yaml",
+        "hr-assistant/cfn/hr-resources.yml"
+      ]
+    },
+    {
+      "id": "cloudformation/serverless-agents",
+      "repo": "aws-samples/serverless-samples",
+      "commit": "1c3d7c095d58a491495564ead8faca3f438bd24b",
+      "root": "apigw-ai-agents/bedrock-agents/iac",
+      "files": [
+        "api-expert-agent.yaml",
+        "api-inspector-agent.yaml"
+      ]
+    },
+    {
+      "id": "cloudformation/multi-agent",
+      "repo": "aws-samples/amazon-bedrock-agents-healthcare-lifesciences",
+      "commit": "996056562151b226065c611d5708562253c0055c",
+      "root": "multi_agent_collaboration/competitive_intelligence",
+      "files": [
+        "competitive-intelligence-agent-cfn.yaml"
+      ]
+    },
+    {
+      "id": "cloudformation/agentcore",
+      "repo": "awslabs/agentcore-samples",
+      "commit": "0672a4e9c2f8b194007ee479fc7f15f03dc335f4",
+      "root": "04-infrastructure-as-code/cloudformation",
+      "files": [
+        "basic-runtime/template.yaml",
+        "multi-agent-runtime/template.yaml"
+      ]
     }
   ]
 }

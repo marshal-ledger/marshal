@@ -94,7 +94,7 @@ Versions and deployments map to `AWS::Bedrock::AgentAlias`.
 - The role's actual permissions sit in separate IAM resources. They can be resolved when they are in the same template.
 - Whether an action writes is not declared. The OpenAPI method (`GET` versus `POST`) is a usable signal, recorded as derived.
 
-**Recommended reader.** Read CloudFormation templates and CDK output. Partial tier at first, with Full likely, since the resource is fully declarative.
+**Reader.** Implemented: see [formats/cloudformation.md](formats/cloudformation.md). IAM roles in the same template give the agent's grants, and each executor Lambda's role gives its tools' scope.
 
 ### Bedrock AgentCore Runtime
 
@@ -107,7 +107,7 @@ Versions and deployments map to `AWS::Bedrock::AgentAlias`.
 
 There is no model, instruction or tool definition. AgentCore hosts code agents built with any framework (Strands, LangGraph, CrewAI and others).
 
-**Recommended reader.** Inventory tier: identity, protocol, deployment and endpoints. Model, instructions and tools come from the pro-code reader for the agent's framework.
+**Reader.** Implemented at inventory tier in the CloudFormation reader. Model, instructions and tools come from the [Python reader](formats/python.md) run on the runtime's source.
 
 Not covered by this survey: AgentCore Gateway, which defines tools for AgentCore agents.
 

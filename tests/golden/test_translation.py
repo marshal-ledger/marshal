@@ -33,7 +33,15 @@ SOURCES = [
     ("python", "python/openai-agents"),
     ("python", "python/google-adk"),
     ("python", "python/crewai-template"),
+    ("cloudformation", "cloudformation/bedrock-agents"),
+    ("cloudformation", "cloudformation/serverless-agents"),
+    ("cloudformation", "cloudformation/multi-agent"),
+    ("cloudformation", "cloudformation/agentcore"),
 ]
+# Formats whose writer reproduces the whole source, so a native round trip must be lossless.
+# A CloudFormation template also defines the agent's IAM roles and executors, which the
+# writer references rather than generates; its round trip is held to "every loss explained".
+FULL = {"adl", "agent-spec", "oasf"}
 
 
 def records(fmt, fixture):
@@ -71,7 +79,7 @@ def validate(target, document):
     assert error is None, f"{list(error.absolute_path)}: {error.message[:300]}"
 
 
-@pytest.mark.parametrize("fmt, fixture", [s for s in SOURCES if s[0] in WRITERS])
+@pytest.mark.parametrize("fmt, fixture", [s for s in SOURCES if s[0] in FULL])
 def test_native_round_trip_is_lossless(fmt, fixture):
     for record in records(fmt, fixture):
         conversion = convert(record, fmt)
