@@ -13,3 +13,4 @@ build/
 *.sqlite
 *.duckdb
 node_modules/
+dist/

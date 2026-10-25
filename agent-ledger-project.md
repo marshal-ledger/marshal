@@ -2,7 +2,7 @@
 
 **A vendor-neutral, open-source ledger for enterprise AI agents. Any format in, any format out, with versions, diffs, portability and audit across every platform.**
 
-*(Name decided. `marshal-ledger` was free on PyPI, npm and GitHub as of 2026-10-25; bare `marshal` is free on PyPI. Domains and trademark not yet checked.)*
+*(Name decided. `marshal-ledger` was free on PyPI, npm and GitHub as of 2026-10-25. Bare `marshal` is unusable on PyPI because it is a Python standard-library module; the Python package is `marshal_ledger`. Domains and trademark not yet checked.)*
 
 ---
 

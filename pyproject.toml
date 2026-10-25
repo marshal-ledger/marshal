@@ -1,0 +1,18 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "marshal-ledger"
+version = "0.0.0"
+description = "Marshal — a vendor-neutral, open-source ledger for enterprise AI agents. Pre-release placeholder."
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 1 - Planning",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+]
+
+[project.urls]
+Homepage = "https://github.com/marshal-ledger/marshal"
