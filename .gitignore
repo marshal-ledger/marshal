@@ -14,3 +14,6 @@ build/
 *.duckdb
 node_modules/
 dist/
+
+# Golden fixtures are fetched, not committed
+tests/fixtures/.cache/

@@ -1,3 +1,3 @@
-"""Marshal — an agent ledger. Pre-release placeholder."""
+"""Marshal — an agent ledger."""
 
-__version__ = "0.0.0"
+__version__ = "0.1.0.dev0"

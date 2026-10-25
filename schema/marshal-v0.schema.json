@@ -1,0 +1,555 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/marshal-ledger/marshal/schema/marshal-v0.schema.json",
+  "$defs": {
+    "AccessRule": {
+      "additionalProperties": false,
+      "description": "Who may use or manage the agent itself.",
+      "properties": {
+        "principal": {
+          "title": "Principal",
+          "type": "string"
+        },
+        "principal_type": {
+          "enum": [
+            "user",
+            "group",
+            "service_principal",
+            "unknown"
+          ],
+          "title": "Principal Type",
+          "type": "string"
+        },
+        "level": {
+          "title": "Level",
+          "type": "string"
+        }
+      },
+      "required": [
+        "principal",
+        "principal_type",
+        "level"
+      ],
+      "title": "AccessRule",
+      "type": "object"
+    },
+    "AgentSpec": {
+      "additionalProperties": false,
+      "description": "The environment-independent agent definition. This is what the version hash covers.",
+      "properties": {
+        "display_name": {
+          "$ref": "#/$defs/Value_str_"
+        },
+        "description": {
+          "$ref": "#/$defs/Value_str_"
+        },
+        "model": {
+          "$ref": "#/$defs/ModelSpec"
+        },
+        "instructions": {
+          "$ref": "#/$defs/Instructions"
+        },
+        "tools": {
+          "items": {
+            "$ref": "#/$defs/ToolUse"
+          },
+          "title": "Tools",
+          "type": "array"
+        },
+        "knowledge": {
+          "items": {
+            "$ref": "#/$defs/KnowledgeUse"
+          },
+          "title": "Knowledge",
+          "type": "array"
+        },
+        "permissions": {
+          "$ref": "#/$defs/Permissions"
+        },
+        "extensions": {
+          "additionalProperties": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Extensions",
+          "type": "object"
+        }
+      },
+      "title": "AgentSpec",
+      "type": "object"
+    },
+    "Grant": {
+      "additionalProperties": false,
+      "description": "A permission held by the agent's identity on a target.",
+      "properties": {
+        "target": {
+          "title": "Target",
+          "type": "string"
+        },
+        "privilege": {
+          "title": "Privilege",
+          "type": "string"
+        },
+        "scope": {
+          "$ref": "#/$defs/Scope"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance",
+          "default": "declared"
+        },
+        "basis": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Basis"
+        }
+      },
+      "required": [
+        "target",
+        "privilege",
+        "scope"
+      ],
+      "title": "Grant",
+      "type": "object"
+    },
+    "IdentityKind": {
+      "enum": [
+        "service_principal",
+        "on_behalf_of_user",
+        "mixed"
+      ],
+      "title": "IdentityKind",
+      "type": "string"
+    },
+    "Instructions": {
+      "additionalProperties": false,
+      "properties": {
+        "hash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Hash"
+        },
+        "text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Text"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance",
+          "default": "unknown"
+        },
+        "basis": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Basis"
+        }
+      },
+      "title": "Instructions",
+      "type": "object"
+    },
+    "KnowledgeUse": {
+      "additionalProperties": false,
+      "properties": {
+        "ref": {
+          "title": "Ref",
+          "type": "string"
+        },
+        "scope": {
+          "$ref": "#/$defs/Value_Scope_"
+        }
+      },
+      "required": [
+        "ref"
+      ],
+      "title": "KnowledgeUse",
+      "type": "object"
+    },
+    "ModelSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "requested": {
+          "$ref": "#/$defs/Value_str_"
+        },
+        "resolved": {
+          "$ref": "#/$defs/Value_str_"
+        }
+      },
+      "title": "ModelSpec",
+      "type": "object"
+    },
+    "Permissions": {
+      "additionalProperties": false,
+      "properties": {
+        "identity": {
+          "$ref": "#/$defs/Value_IdentityKind_"
+        },
+        "principal": {
+          "$ref": "#/$defs/Value_str_"
+        },
+        "grants": {
+          "items": {
+            "$ref": "#/$defs/Grant"
+          },
+          "title": "Grants",
+          "type": "array"
+        },
+        "access": {
+          "items": {
+            "$ref": "#/$defs/AccessRule"
+          },
+          "title": "Access",
+          "type": "array"
+        }
+      },
+      "title": "Permissions",
+      "type": "object"
+    },
+    "Provenance": {
+      "description": "Where a value came from.",
+      "enum": [
+        "declared",
+        "annotation",
+        "derived",
+        "unknown"
+      ],
+      "title": "Provenance",
+      "type": "string"
+    },
+    "Quality": {
+      "additionalProperties": false,
+      "properties": {
+        "completeness": {
+          "title": "Completeness",
+          "type": "number"
+        },
+        "unknown_fields": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Unknown Fields",
+          "type": "array"
+        }
+      },
+      "required": [
+        "completeness"
+      ],
+      "title": "Quality",
+      "type": "object"
+    },
+    "Scope": {
+      "description": "What a tool or grant lets the agent do to the target.",
+      "enum": [
+        "read",
+        "write",
+        "execute",
+        "admin"
+      ],
+      "title": "Scope",
+      "type": "string"
+    },
+    "Source": {
+      "additionalProperties": false,
+      "properties": {
+        "format": {
+          "title": "Format",
+          "type": "string"
+        },
+        "artifact": {
+          "title": "Artifact",
+          "type": "string"
+        },
+        "locator": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Locator"
+        },
+        "detected_by": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Detected By"
+        },
+        "commit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Commit"
+        },
+        "pipeline_run": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pipeline Run"
+        }
+      },
+      "required": [
+        "format",
+        "artifact"
+      ],
+      "title": "Source",
+      "type": "object"
+    },
+    "ToolUse": {
+      "additionalProperties": false,
+      "properties": {
+        "ref": {
+          "title": "Ref",
+          "type": "string"
+        },
+        "scope": {
+          "$ref": "#/$defs/Value_Scope_"
+        },
+        "reversible": {
+          "$ref": "#/$defs/Value_bool_"
+        }
+      },
+      "required": [
+        "ref"
+      ],
+      "title": "ToolUse",
+      "type": "object"
+    },
+    "Value_IdentityKind_": {
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/IdentityKind"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance",
+          "default": "unknown"
+        },
+        "basis": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Basis"
+        }
+      },
+      "title": "Value[IdentityKind]",
+      "type": "object"
+    },
+    "Value_Scope_": {
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Scope"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance",
+          "default": "unknown"
+        },
+        "basis": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Basis"
+        }
+      },
+      "title": "Value[Scope]",
+      "type": "object"
+    },
+    "Value_bool_": {
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance",
+          "default": "unknown"
+        },
+        "basis": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Basis"
+        }
+      },
+      "title": "Value[bool]",
+      "type": "object"
+    },
+    "Value_str_": {
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance",
+          "default": "unknown"
+        },
+        "basis": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Basis"
+        }
+      },
+      "title": "Value[str]",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One version of one agent, as read from one source artifact.",
+  "properties": {
+    "apiVersion": {
+      "const": "marshal/v0",
+      "default": "marshal/v0",
+      "title": "Apiversion",
+      "type": "string"
+    },
+    "kind": {
+      "const": "AgentVersion",
+      "default": "AgentVersion",
+      "title": "Kind",
+      "type": "string"
+    },
+    "agent": {
+      "title": "Agent",
+      "type": "string"
+    },
+    "platform": {
+      "title": "Platform",
+      "type": "string"
+    },
+    "version": {
+      "title": "Version",
+      "type": "string"
+    },
+    "source": {
+      "$ref": "#/$defs/Source"
+    },
+    "spec": {
+      "$ref": "#/$defs/AgentSpec"
+    },
+    "bindings": {
+      "additionalProperties": true,
+      "title": "Bindings",
+      "type": "object"
+    },
+    "quality": {
+      "$ref": "#/$defs/Quality"
+    }
+  },
+  "required": [
+    "agent",
+    "platform",
+    "version",
+    "source",
+    "spec",
+    "quality"
+  ],
+  "title": "AgentVersion",
+  "type": "object"
+}

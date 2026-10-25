@@ -4,15 +4,31 @@ build-backend = "hatchling.build"
 
 [project]
 name = "marshal-ledger"
-version = "0.0.0"
-description = "Marshal — a vendor-neutral, open-source ledger for enterprise AI agents. Pre-release placeholder."
+version = "0.1.0.dev0"
+description = "Marshal — a vendor-neutral, open-source ledger for enterprise AI agents."
 readme = "README.md"
 requires-python = ">=3.10"
+dependencies = [
+    "pydantic>=2.6",
+    "pyyaml>=6.0",
+]
 classifiers = [
-    "Development Status :: 1 - Planning",
+    "Development Status :: 2 - Pre-Alpha",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
 ]
 
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.scripts]
+marshal = "marshal_ledger.cli:main"
+
 [project.urls]
 Homepage = "https://github.com/marshal-ledger/marshal"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/marshal_ledger"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
