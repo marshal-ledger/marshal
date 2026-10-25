@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .adkconfig import AdkConfigReader
 from .adl import AdlReader
+from .agentengine import AgentEngineReader
 from .agentforce import AgentforceReader
 from .agentspec import AgentSpecReader
 from .cloudformation import CloudFormationReader
@@ -25,6 +26,7 @@ READERS: dict[str, type[Reader]] = {
     CopilotStudioReader.format: CopilotStudioReader,
     AgentforceReader.format: AgentforceReader,
     AdkConfigReader.format: AdkConfigReader,
+    AgentEngineReader.format: AgentEngineReader,
     # Last: a directory of Python code is the least specific match.
     PythonAgentReader.format: PythonAgentReader,
 }
