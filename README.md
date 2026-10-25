@@ -17,7 +17,8 @@ $ marshal ls                                         # every agent, latest versi
 $ marshal ls --tool "main.finance.*"                 # agents that use matching tools
 $ marshal diff finance/invoice_agent                 # latest against last shipped
 $ marshal diff finance/invoice_agent@v3 finance/invoice_agent@v5
-$ marshal log finance/invoice_agent                  # proposed and shipped events
+$ marshal status finance/invoice_agent               # shipped vs live per environment, drift, freshness
+$ marshal log finance/invoice_agent                  # proposed, shipped and observed events
 $ marshal convert agent.adl.yaml --to agent-spec     # translate, with a fidelity report
 ```
 

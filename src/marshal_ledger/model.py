@@ -259,6 +259,20 @@ class DeploymentEvent(str, Enum):
     """Captured before deploy, from a pull request."""
     SHIPPED = "shipped"
     """Confirmed after the deploy succeeded."""
+    OBSERVED = "observed"
+    """Read from the live platform, by a poller or a manual import. When it differs
+    from what was last shipped, the agent has drifted."""
+
+
+class Channel(str, Enum):
+    """How an event reached the ledger, which decides how far to trust it."""
+
+    CI = "ci"
+    """An authenticated pipeline, through the ingest API."""
+    POLLER = "poller"
+    """A scheduled read of the platform's own API."""
+    MANUAL = "manual"
+    """A person ran a collection or imported a file."""
 
 
 class Deployment(_Model):
@@ -272,5 +286,6 @@ class Deployment(_Model):
     environment: str
     event: DeploymentEvent
     at: datetime
+    channel: Channel = Channel.MANUAL
     commit: Optional[str] = None
     pipeline_run: Optional[str] = None

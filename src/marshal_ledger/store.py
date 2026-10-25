@@ -18,11 +18,12 @@ import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Iterable, Iterator, Optional
+from typing import Any, Iterable, Iterator, Optional
 
-from .model import AgentVersion, Deployment, DeploymentEvent, Entity
+from .freshness import FreshnessPolicy
+from .model import AgentVersion, Channel, Deployment, DeploymentEvent, Entity
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 _SCHEMA_V1 = """
 CREATE TABLE meta (
@@ -91,6 +92,38 @@ CREATE TABLE agent_owners (
     bound_at   TEXT NOT NULL
 );
 """,
+    # Adds the observed event and each event's collection channel. SQLite can't alter a
+    # CHECK constraint, so the events table is rebuilt.
+    2: """
+CREATE TABLE events_v3 (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    agent            TEXT NOT NULL,
+    version          TEXT NOT NULL,
+    platform         TEXT NOT NULL,
+    environment      TEXT NOT NULL,
+    event            TEXT NOT NULL CHECK (event IN ('proposed', 'shipped', 'observed')),
+    at               TEXT NOT NULL,
+    commit_sha       TEXT,
+    pipeline_run     TEXT,
+    artifact         TEXT,
+    bindings         TEXT NOT NULL,
+    actor_issuer     TEXT,
+    actor_repository TEXT,
+    actor_ref        TEXT,
+    actor_workflow   TEXT,
+    channel          TEXT NOT NULL DEFAULT 'manual' CHECK (channel IN ('ci', 'poller', 'manual')),
+    FOREIGN KEY (agent, version) REFERENCES versions(agent, version)
+);
+INSERT INTO events_v3 (id, agent, version, platform, environment, event, at, commit_sha, pipeline_run,
+                       artifact, bindings, actor_issuer, actor_repository, actor_ref, actor_workflow, channel)
+SELECT id, agent, version, platform, environment, event, at, commit_sha, pipeline_run, artifact, bindings,
+       actor_issuer, actor_repository, actor_ref, actor_workflow,
+       CASE WHEN actor_repository IS NOT NULL THEN 'ci' ELSE 'manual' END
+FROM events;
+DROP TABLE events;
+ALTER TABLE events_v3 RENAME TO events;
+CREATE INDEX events_by_agent ON events(agent, id);
+""",
 }
 
 
@@ -134,6 +167,35 @@ class Recorded:
 
 
 @dataclass(frozen=True)
+class EnvironmentStatus:
+    """Where an agent stands in one environment: what is shipped, what is live, and how current that is."""
+
+    environment: str
+    shipped: Optional[int]
+    """Sequence number of the version last shipped here."""
+    observed: Optional[int]
+    """Sequence number of the version last observed live here."""
+    last_confirmed: datetime
+    """Time of the latest shipped or observed event."""
+    channel: Channel
+    """Channel of that event."""
+    age_days: float
+    stale: bool
+    drift: bool
+    """The live definition differs from what was last shipped."""
+
+    @property
+    def summary(self) -> str:
+        days = int(self.age_days)
+        text = f"{self.channel.value} {days}d"
+        if self.drift:
+            text += " DRIFT"
+        elif self.stale:
+            text += " stale"
+        return text
+
+
+@dataclass(frozen=True)
 class AgentSummary:
     id: str
     platform: str
@@ -141,6 +203,7 @@ class AgentSummary:
     latest: StoredVersion
     shipped: dict[str, int]
     """Environment → sequence number of the version last shipped there."""
+    environments: tuple["EnvironmentStatus", ...] = ()
 
 
 def _now() -> datetime:
@@ -211,6 +274,7 @@ class Store:
         entities: Iterable[Entity] = (),
         at: datetime | None = None,
         actor: Actor | None = None,
+        channel: Channel = Channel.MANUAL,
     ) -> list[Recorded]:
         """Store each record's version, if new, and add one event per record.
 
@@ -232,7 +296,7 @@ class Store:
                     (entity.ref, entity.kind.value, entity.platform, entity.identifier, entity.display_name),
                 )
             for record in records:
-                results.append(self._record_one(record, event, environment, when, actor))
+                results.append(self._record_one(record, event, environment, when, actor, channel))
         return results
 
     def _check_owners(self, records: list[AgentVersion], actor: Actor, when: str) -> None:
@@ -264,7 +328,8 @@ class Store:
             )
 
     def _record_one(
-        self, record: AgentVersion, event: DeploymentEvent, environment: str, when: str, actor: Actor | None
+        self, record: AgentVersion, event: DeploymentEvent, environment: str, when: str, actor: Actor | None,
+        channel: Channel = Channel.MANUAL,
     ) -> Recorded:
         display = record.spec.display_name.value
         self._db.execute(
@@ -300,8 +365,8 @@ class Store:
             seq = row["seq"]
         self._db.execute(
             "INSERT INTO events (agent, version, platform, environment, event, at, commit_sha, "
-            "pipeline_run, artifact, bindings, actor_issuer, actor_repository, actor_ref, actor_workflow) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "pipeline_run, artifact, bindings, actor_issuer, actor_repository, actor_ref, actor_workflow, channel) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 record.agent,
                 record.version,
@@ -317,6 +382,7 @@ class Store:
                 actor.repository if actor else None,
                 actor.ref if actor else None,
                 actor.workflow if actor else None,
+                channel.value,
             ),
         )
         stored_version = self._version_row(record.agent, "seq = ?", (seq,))
@@ -327,6 +393,7 @@ class Store:
             environment=environment,
             event=event,
             at=datetime.fromisoformat(when),
+            channel=channel,
             commit=record.source.commit,
             pipeline_run=record.source.pipeline_run,
         )
@@ -410,6 +477,7 @@ class Store:
                     environment=row["environment"],
                     event=DeploymentEvent(row["event"]),
                     at=datetime.fromisoformat(row["at"]),
+                    channel=Channel(row["channel"]),
                     commit=row["commit_sha"],
                     pipeline_run=row["pipeline_run"],
                 ),
@@ -427,6 +495,8 @@ class Store:
         platform: str | None = None,
         tool: str | None = None,
         knowledge: str | None = None,
+        policy: FreshnessPolicy | None = None,
+        now: datetime | None = None,
     ) -> list[AgentSummary]:
         """Every agent with its latest version. ``tool`` and ``knowledge`` are glob patterns
         matched against the latest version's references."""
@@ -459,9 +529,51 @@ class Store:
                     display_name=row["display_name"],
                     latest=latest,
                     shipped=shipped,
+                    environments=tuple(self.status(row["id"], policy=policy, now=now)),
                 )
             )
         return summaries
+
+    def status(
+        self, agent: str, *, policy: FreshnessPolicy | None = None, now: datetime | None = None
+    ) -> list[EnvironmentStatus]:
+        """Per environment: the shipped and observed versions, drift between them, and freshness."""
+        if not self.has_agent(agent):
+            raise StoreError(f"unknown agent {agent!r}")
+        policy = policy or FreshnessPolicy()
+        now = now or _now()
+        rows = self._db.execute(
+            "SELECT e.id, e.environment, e.event, e.version, e.at, e.channel, v.seq FROM events e "
+            "JOIN versions v ON v.agent = e.agent AND v.version = e.version "
+            "WHERE e.agent = ? AND e.event IN ('shipped', 'observed') ORDER BY e.id",
+            (agent,),
+        ).fetchall()
+        latest: dict[str, dict[str, Any]] = {}
+        for row in rows:
+            latest.setdefault(row["environment"], {})[row["event"]] = row
+        statuses = []
+        for environment in sorted(latest):
+            events = latest[environment]
+            shipped, observed = events.get("shipped"), events.get("observed")
+            newest = max((r for r in (shipped, observed) if r is not None), key=lambda r: r["id"])
+            confirmed = datetime.fromisoformat(newest["at"])
+            age = (now - confirmed).total_seconds() / 86400
+            channel = Channel(newest["channel"])
+            drift = bool(
+                shipped is not None and observed is not None
+                and observed["id"] > shipped["id"] and observed["version"] != shipped["version"]
+            )
+            statuses.append(EnvironmentStatus(
+                environment=environment,
+                shipped=shipped["seq"] if shipped is not None else None,
+                observed=observed["seq"] if observed is not None else None,
+                last_confirmed=confirmed,
+                channel=channel,
+                age_days=max(age, 0.0),
+                stale=policy.is_stale(channel, age),
+                drift=drift,
+            ))
+        return statuses
 
     def _uses(self, record: AgentVersion, relation: str, pattern: str) -> bool:
         rows = self._db.execute(

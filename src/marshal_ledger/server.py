@@ -20,7 +20,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
 from . import __version__
-from .model import AgentVersion, DeploymentEvent, Entity
+from .model import AgentVersion, Channel, DeploymentEvent, Entity
 from .oidc import Caller, IssuerConfig, KeyResolver, RepositoryNotAllowed, TokenError, Verifier
 from .service import ingest
 from .store import Actor, OwnershipError, Store
@@ -106,12 +106,14 @@ def create_app(config: ServerConfig, key_resolver: KeyResolver | None = None) ->
 
     @app.post("/v0/events")
     def post_events(request: EventRequest, who: Caller = Depends(caller)) -> dict[str, Any]:
-        if request.event is DeploymentEvent.SHIPPED and not may_ship(who, config.policy.shipped):
+        # Shipped and observed events both claim what is live, so both need the shipped policy.
+        if request.event in (DeploymentEvent.SHIPPED, DeploymentEvent.OBSERVED) and not may_ship(who, config.policy.shipped):
             raise HTTPException(
                 403,
-                f"{who.repository} at {who.ref or 'an unknown ref'} may not record shipped events; "
+                f"{who.repository} at {who.ref or 'an unknown ref'} may not record {request.event.value} events; "
                 "the shipped policy requires a protected ref or deployment environment",
             )
+        channel = Channel.POLLER if request.event is DeploymentEvent.OBSERVED else Channel.CI
         records = []
         for record in request.records:
             # The token, not the request body, says which commit and run this was.
@@ -133,6 +135,7 @@ def create_app(config: ServerConfig, key_resolver: KeyResolver | None = None) ->
                     entities=request.entities,
                     actor=actor,
                     hash_only=config.hash_only,
+                    channel=channel,
                 )
             except OwnershipError as exc:
                 raise HTTPException(403, f"agent ownership: {exc}") from exc

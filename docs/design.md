@@ -96,10 +96,13 @@ Fidelity tiers keep the user experience smooth while coverage grows. Every major
 
 **Shared entities.** Tools, knowledge sources and permissions are first-class records shared across agents, so the ledger can answer "who depends on this?" In the MVP, entities match only on exact identity. Recognizing that a Copilot connector, an MCP tool and an OpenAPI operation wrap the same underlying API is the hard entity-resolution problem and a planned milestone.
 
-**Two events per deploy.**
+**Two events per deploy, and observations.**
 
 - `proposed`: captured before deploy, from the PR. Powers review.
 - `shipped`: confirmed after deploy succeeds. Diffs compare against the last shipped version, so failed deploys never show up as live.
+- `observed`: read from the live platform by a poller or a manual import. An observation that differs from what was shipped is drift: a change made outside the pipeline, such as an edit in a platform's web UI.
+
+Every event records its channel (`ci`, `poller` or `manual`), and each agent's freshness per environment is the age of its last confirmation, judged by channel. Manual imports age out fastest. Freshness and drift are shown beside the risk-ranked diff, so a reviewer can tell a risky change from an untrustworthy record.
 
 ## Ingestion and authentication
 

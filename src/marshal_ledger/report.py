@@ -17,6 +17,8 @@ def text(reports: list[AgentReport]) -> str:
     blocks = []
     for report in reports:
         lines = [f"{report.agent} ({report.platform})  {report.environment}: {_transition(report)}", ""]
+        if report.drift:
+            lines.insert(1, f"  DRIFT: the live definition differs from shipped {report.baseline}")
         if report.changes:
             lines += [f"  {c.line()}" for c in report.changes]
         else:
@@ -43,6 +45,8 @@ def markdown(reports: list[AgentReport]) -> str:
         summary = f"{len(report.changes)} change{'s' * (len(report.changes) != 1)}"
         if high:
             summary += f", {high} high risk"
+        if report.drift:
+            summary += f" · **drift**: live differs from shipped {report.baseline}"
         parts += [
             f"**{report.agent}** ({report.platform}) · {_transition(report)} · {summary}",
             "",

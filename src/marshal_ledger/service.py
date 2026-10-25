@@ -13,7 +13,7 @@ from typing import Any, Iterable, Optional
 
 from .diff import diff_specs
 from .hashing import sha256_text, spec_digest
-from .model import AgentSpec, AgentVersion, DeploymentEvent, Entity, Provenance
+from .model import AgentSpec, AgentVersion, Channel, DeploymentEvent, Entity, Provenance
 from .quality import score
 from .redact import redact
 from .risk import RankedChange, rank
@@ -36,6 +36,9 @@ class AgentReport:
     completeness: float
     changes: list[RankedChange] = field(default_factory=list)
     redactions: int = 0
+    channel: str = Channel.MANUAL.value
+    drift: bool = False
+    """An observed live definition differs from what was last shipped."""
 
     def to_dict(self) -> dict[str, Any]:
         data = {k: v for k, v in self.__dict__.items() if k != "changes"}
@@ -82,6 +85,7 @@ def ingest(
     actor: Actor | None = None,
     hash_only: bool = False,
     at: datetime | None = None,
+    channel: Channel = Channel.MANUAL,
 ) -> list[AgentReport]:
     """Normalize and record ``records``, and report each one's changes against what
     was last shipped to ``environment``."""
@@ -96,7 +100,8 @@ def ingest(
             baselines[record.agent] = (None, AgentSpec())
 
     recorded = store.record(
-        [r for r, _ in normalized], event=event, environment=environment, entities=entities, at=at, actor=actor
+        [r for r, _ in normalized], event=event, environment=environment, entities=entities, at=at, actor=actor,
+        channel=channel,
     )
 
     reports = []
@@ -115,6 +120,8 @@ def ingest(
                 completeness=record.quality.completeness,
                 changes=rank(diff_specs(baseline_spec, record.spec)),
                 redactions=redactions,
+                channel=channel.value,
+                drift=event is DeploymentEvent.OBSERVED and baseline_label is not None and baseline_label != result.version.label,
             )
         )
     return reports

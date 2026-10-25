@@ -13,7 +13,8 @@ import yaml
 
 from . import __version__
 from .diff import diff_specs
-from .model import AgentSpec, DeploymentEvent
+from .freshness import FreshnessPolicy
+from .model import AgentSpec, Channel, DeploymentEvent
 from .readers import READERS, ReadOptions, ReadResult, detect
 from .report import markdown, text
 from .risk import rank
@@ -95,6 +96,7 @@ def _collect(args: argparse.Namespace) -> int:
             event=DeploymentEvent(args.event),
             environment=environment,
             hash_only=args.hash_only,
+            channel=Channel(args.channel),
         )
     _emit(reports, args)
     return 0
@@ -198,9 +200,13 @@ def _serve(args: argparse.Namespace) -> int:
     return 0
 
 
+def _policy(args: argparse.Namespace) -> FreshnessPolicy:
+    return FreshnessPolicy(manual_days=args.manual_max_age, poller_days=args.poller_max_age)
+
+
 def _ls(args: argparse.Namespace) -> int:
     with _open_store(args) as store:
-        agents = store.agents(platform=args.platform, tool=args.tool, knowledge=args.knowledge)
+        agents = store.agents(platform=args.platform, tool=args.tool, knowledge=args.knowledge, policy=_policy(args))
     if args.output == "json":
         json.dump(
             [
@@ -212,6 +218,17 @@ def _ls(args: argparse.Namespace) -> int:
                     "version": a.latest.record.version,
                     "shipped": {env: f"v{seq}" for env, seq in a.shipped.items()},
                     "completeness": a.latest.record.quality.completeness,
+                    "environments": {
+                        s.environment: {
+                            "shipped": f"v{s.shipped}" if s.shipped else None,
+                            "observed": f"v{s.observed}" if s.observed else None,
+                            "channel": s.channel.value,
+                            "last_confirmed": s.last_confirmed.isoformat(),
+                            "stale": s.stale,
+                            "drift": s.drift,
+                        }
+                        for s in a.environments
+                    },
                 }
                 for a in agents
             ],
@@ -220,11 +237,12 @@ def _ls(args: argparse.Namespace) -> int:
         )
         sys.stdout.write("\n")
         return 0
-    rows = [("AGENT", "PLATFORM", "LATEST", "SHIPPED", "COMPLETE")]
+    rows = [("AGENT", "PLATFORM", "LATEST", "SHIPPED", "FRESHNESS", "COMPLETE")]
     for a in agents:
         shipped = ", ".join(f"{env} v{seq}" for env, seq in a.shipped.items()) or "-"
+        freshness = ", ".join(f"{s.environment}: {s.summary}" for s in a.environments) or "-"
         rows.append(
-            (a.id, a.platform, a.latest.label, shipped, f"{a.latest.record.quality.completeness:.0%}")
+            (a.id, a.platform, a.latest.label, shipped, freshness, f"{a.latest.record.quality.completeness:.0%}")
         )
     widths = [max(len(row[i]) for row in rows) for i in range(len(rows[0]))]
     for row in rows:
@@ -285,6 +303,31 @@ def _diff(args: argparse.Namespace) -> int:
     return 0
 
 
+def _status(args: argparse.Namespace) -> int:
+    with _open_store(args) as store:
+        try:
+            statuses = store.status(args.agent, policy=_policy(args))
+        except StoreError as exc:
+            return _fail(str(exc))
+    if not statuses:
+        print(f"{args.agent}: nothing shipped or observed yet")
+    for s in statuses:
+        state = "DRIFT: live differs from shipped" if s.drift else ("stale" if s.stale else "current")
+        print(f"{s.environment}: shipped {f'v{s.shipped}' if s.shipped else '-'}, "
+              f"observed {f'v{s.observed}' if s.observed else '-'}, "
+              f"confirmed {s.last_confirmed.strftime('%Y-%m-%d')} by {s.channel.value} "
+              f"({int(s.age_days)}d ago), {state}")
+    return 1 if any(s.drift or s.stale for s in statuses) and args.check else 0
+
+
+def _add_freshness_args(parser: argparse.ArgumentParser) -> None:
+    defaults = FreshnessPolicy()
+    parser.add_argument("--manual-max-age", type=float, default=defaults.manual_days, metavar="DAYS",
+                        help=f"manual imports are stale after this many days (default {defaults.manual_days:g})")
+    parser.add_argument("--poller-max-age", type=float, default=defaults.poller_days, metavar="DAYS",
+                        help=f"poller observations are stale after this many days (default {defaults.poller_days:g})")
+
+
 def _log(args: argparse.Namespace) -> int:
     with _open_store(args) as store:
         try:
@@ -303,7 +346,7 @@ def _log(args: argparse.Namespace) -> int:
                 ],
             )
         )
-        print(f"{when}  {event.event.value:<8}  {event.environment:<12}  v{seq}  {extra}".rstrip())
+        print(f"{when}  {event.event.value:<8}  {event.environment:<12}  v{seq}  {event.channel.value:<6}  {extra}".rstrip())
     return 0
 
 
@@ -342,6 +385,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     collect = commands.add_parser("collect", help="read agent definitions and record an event in a local store")
     _add_read_args(collect)
     add_event_args(collect)
+    collect.add_argument("--channel", choices=[Channel.MANUAL.value, Channel.POLLER.value], default=Channel.MANUAL.value,
+                         help="how this collection runs: by a person (default) or by a scheduled poller")
     _add_db_arg(collect)
     collect.set_defaults(handler=_collect)
 
@@ -378,6 +423,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     ls.add_argument("--tool", help="only agents whose latest version uses a matching tool (glob)")
     ls.add_argument("--knowledge", help="only agents whose latest version uses matching knowledge (glob)")
     ls.add_argument("--output", choices=["table", "json"], default="table")
+    _add_freshness_args(ls)
     _add_db_arg(ls)
     ls.set_defaults(handler=_ls)
 
@@ -395,7 +441,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     _add_db_arg(diff)
     diff.set_defaults(handler=_diff)
 
-    log = commands.add_parser("log", help="show an agent's proposed and shipped events")
+    status = commands.add_parser("status", help="show what is shipped and live per environment, drift and freshness")
+    status.add_argument("agent")
+    status.add_argument("--check", action="store_true", help="exit 1 if any environment has drifted or is stale")
+    _add_freshness_args(status)
+    _add_db_arg(status)
+    status.set_defaults(handler=_status)
+
+    log = commands.add_parser("log", help="show an agent's proposed, shipped and observed events")
     log.add_argument("agent")
     _add_db_arg(log)
     log.set_defaults(handler=_log)

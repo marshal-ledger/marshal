@@ -70,8 +70,33 @@ Commands and the store API select versions with:
 | `latest` | The version in the agent's most recent event |
 | `shipped`, `shipped:prod` | The version most recently shipped, anywhere or to one environment |
 | `proposed`, `proposed:prod` | The version most recently proposed |
+| `observed`, `observed:prod` | The version most recently observed live |
 
 `marshal diff AGENT` compares the latest version with the last shipped one. Diffs are computed on the ledger model, so they read the same on every platform. Changes are grouped by category, permissions and tools first.
+
+## Channels, drift and freshness
+
+Every event records its channel, which says how far to trust it:
+
+| Channel | Source | Set by |
+|---|---|---|
+| `ci` | An authenticated pipeline | The ingest API, for `proposed` and `shipped` events |
+| `poller` | A scheduled read of the platform's live definition | The ingest API, for `observed` events; `marshal collect --channel poller` locally |
+| `manual` | A person ran a collection or imported a file | `marshal collect` (the default) |
+
+Clients can't choose `ci`: the ingest API sets the channel from the authenticated request.
+
+An `observed` event records what is live on the platform. When it differs from the version last shipped to that environment, the agent has **drifted**: something changed outside the pipeline, for example an edit in a platform's web UI. Drift clears when the agent is shipped again.
+
+**Freshness** is the age of the latest `shipped` or `observed` event, judged by its channel:
+
+| Channel | Stale after (default) |
+|---|---|
+| `manual` | 30 days |
+| `poller` | 7 days (the poller has stopped running) |
+| `ci` | Never by age alone; drift detection covers changes made outside the pipeline |
+
+`marshal ls` shows freshness per environment, and `marshal status AGENT` shows the shipped and observed versions. `marshal status --check` exits 1 on drift or staleness, for scheduled checks. Freshness is reported beside risk, not folded into it: how risky a change is and how far to trust the record are separate questions.
 
 The store also indexes the tools, knowledge and grant targets of each version, which backs `marshal ls --tool` and `--knowledge` and, later, dependency queries.
 
