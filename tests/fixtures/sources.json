@@ -1,5 +1,5 @@
 {
-  "_comment": "Golden fixtures: real, public agent definitions, pinned to a commit. They are fetched rather than vendored so each file stays under its upstream license. Fetch with: python scripts/fetch_fixtures.py",
+  "_comment": "Golden fixtures: real, public agent definitions and the published schemas they conform to, pinned to a commit. They are fetched rather than vendored so each file stays under its upstream license. Fetch with: python scripts/fetch_fixtures.py",
   "fixtures": [
     {
       "id": "databricks/genie-space-nyc-taxi",
@@ -29,14 +29,78 @@
       "repo": "databricks/app-templates",
       "commit": "382645061cc66f23d672a46c0b9f55497da2913c",
       "root": "agent-openai-agents-sdk",
-      "files": ["databricks.yml"]
+      "files": [
+        "databricks.yml"
+      ]
     },
     {
       "id": "databricks/agent-langgraph-advanced",
       "repo": "databricks/app-templates",
       "commit": "382645061cc66f23d672a46c0b9f55497da2913c",
       "root": "agent-langgraph-advanced",
-      "files": ["databricks.yml"]
+      "files": [
+        "databricks.yml"
+      ]
+    },
+    {
+      "id": "adl/examples",
+      "repo": "Ironstead-Group/agent-definition-language",
+      "commit": "a123665afe9eba7a52bd17fadcaada2c30b9ddcd",
+      "root": "",
+      "files": [
+        "versions/0.3.0/examples/minimal.yaml",
+        "versions/0.3.0/examples/production.yaml",
+        "versions/0.3.0/examples/with-tools.yaml",
+        "packages/adl-agent/examples/openclaw-passport/enterprise/agents/invoice-processor.adl.yaml",
+        "packages/adl-agent/examples/openclaw-passport/enterprise/agents/legacy-analyzer.adl.yaml",
+        "packages/adl-agent/examples/openclaw-passport/enterprise/agents/research-assistant.adl.yaml",
+        "packages/adl-agent/examples/openclaw-passport/consumer/consumer-agent.adl.yaml",
+        "profiles/financial/1.0/examples/financial-compliance-agent.json",
+        "profiles/healthcare/1.0/examples/clinical-research-agent.json",
+        "profiles/portfolio/1.0/examples/customer-service-agent.json"
+      ]
+    },
+    {
+      "id": "adl/schema",
+      "repo": "Ironstead-Group/agent-definition-language",
+      "commit": "a123665afe9eba7a52bd17fadcaada2c30b9ddcd",
+      "root": "packages/adl-core/src/schemas",
+      "files": [
+        "0.3.0.json"
+      ]
+    },
+    {
+      "id": "agent-spec/examples",
+      "repo": "oracle/agent-spec",
+      "commit": "656f538e0df6ea3f9e7fbbe51706c9a56b664494",
+      "root": "docs/pyagentspec/source/agentspec_config_examples",
+      "files": [
+        "howto_agents.yaml",
+        "howto_agent_with_remote_tools.yaml",
+        "agentspec_oracle_it_assistant.yaml",
+        "ext_code_assistant_tutorial.yaml",
+        "howto_a2aagent.yaml"
+      ]
+    },
+    {
+      "id": "agent-spec/schema",
+      "repo": "oracle/agent-spec",
+      "commit": "656f538e0df6ea3f9e7fbbe51706c9a56b664494",
+      "root": "docs/pyagentspec/source/agentspec/json_spec",
+      "files": [
+        "agentspec_json_spec_26_3_1.json"
+      ]
+    },
+    {
+      "id": "oasf/records",
+      "repo": "agntcy/dir",
+      "commit": "91e934a0898fa7d90df695e25752985665efd01d",
+      "root": "tests/e2e/shared/testdata",
+      "files": [
+        "record_110.json",
+        "record_100.json",
+        "record_080_v5.json"
+      ]
     }
   ]
 }

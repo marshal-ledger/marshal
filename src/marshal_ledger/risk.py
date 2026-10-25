@@ -78,9 +78,15 @@ def severity(change: Change) -> Severity:
             if after == "false":
                 return Severity.HIGH
             return Severity.MEDIUM if after == "unknown" else Severity.LOW
+        if path.endswith(" requires_confirmation"):
+            # Losing a human approval step is an escalation.
+            return Severity.HIGH if str(change.before).lower() == "true" else Severity.LOW
+        return Severity.LOW
 
     if change.category == "model":
-        return Severity.HIGH if path == "model.requested" else Severity.MEDIUM
+        if path in ("model.requested", "model.provider"):
+            return Severity.HIGH
+        return Severity.MEDIUM
 
     if change.category == "knowledge":
         if kind == "removed":

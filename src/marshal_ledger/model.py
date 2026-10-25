@@ -20,6 +20,12 @@ from pydantic import BaseModel, ConfigDict, Field
 
 API_VERSION = "marshal/v0"
 
+MARSHAL_NAMESPACE = "io.github.marshal-ledger"
+"""Key for Marshal's own extension block in formats that allow vendor extensions.
+Writers use it only to carry what the target format can't name, such as the
+original agent id and entity references, so a converted document reads back
+as the same agent."""
+
 T = TypeVar("T")
 
 
@@ -107,9 +113,13 @@ class Entity(_Model):
 
 class ModelSpec(_Model):
     requested: Value[str] = Field(default_factory=Value[str].unknown)
-    """The model or model alias the agent asks for."""
+    """The model or model alias the agent asks for, as the source names it."""
+    provider: Value[str] = Field(default_factory=Value[str].unknown)
+    """Who serves the model, in lowercase: ``openai``, ``anthropic``, ``databricks``, ``oci``."""
     resolved: Value[str] = Field(default_factory=Value[str].unknown)
     """The concrete model that served requests. Filled only where a gateway is connected."""
+    parameters: dict[str, Any] = Field(default_factory=dict)
+    """Declared generation parameters, such as ``temperature`` and ``max_tokens``."""
 
 
 class Instructions(_Model):
@@ -123,12 +133,24 @@ class Instructions(_Model):
 
 class ToolUse(_Model):
     ref: str
+    name: Optional[str] = None
+    """The name the agent calls the tool by, where it differs from the entity."""
+    description: Optional[str] = None
+    input_schema: Optional[dict[str, Any]] = None
+    """JSON Schema of the tool's input."""
+    output_schema: Optional[dict[str, Any]] = None
     scope: Value[Scope] = Field(default_factory=Value[Scope].unknown)
     reversible: Value[bool] = Field(default_factory=Value[bool].unknown)
+    requires_confirmation: Value[bool] = Field(default_factory=Value[bool].unknown)
+    """Whether a human must approve each call."""
 
 
 class KnowledgeUse(_Model):
     ref: str
+    name: Optional[str] = None
+    description: Optional[str] = None
+    type: Optional[str] = None
+    """The source's own kind, such as ``table``, ``vector_store`` or ``file``."""
     scope: Value[Scope] = Field(default_factory=Value[Scope].unknown)
 
 

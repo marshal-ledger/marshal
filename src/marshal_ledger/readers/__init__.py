@@ -4,11 +4,18 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .base import ReadOptions, ReadResult, Reader, Skipped
+from .adl import AdlReader
+from .agentspec import AgentSpecReader
+from .base import DocumentReader, ReadOptions, ReadResult, Reader, Skipped
 from .databricks import DatabricksBundleReader
+from .oasf import OasfReader
 
+# Detection order: bundle formats (identified by a file name) before document formats.
 READERS: dict[str, type[Reader]] = {
     DatabricksBundleReader.format: DatabricksBundleReader,
+    AdlReader.format: AdlReader,
+    AgentSpecReader.format: AgentSpecReader,
+    OasfReader.format: OasfReader,
 }
 
 
@@ -20,4 +27,4 @@ def detect(path: Path) -> type[Reader] | None:
     return None
 
 
-__all__ = ["READERS", "ReadOptions", "ReadResult", "Reader", "Skipped", "detect"]
+__all__ = ["READERS", "DocumentReader", "ReadOptions", "ReadResult", "Reader", "Skipped", "detect"]

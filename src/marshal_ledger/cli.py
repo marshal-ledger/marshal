@@ -130,6 +130,53 @@ def _push(args: argparse.Namespace) -> int:
     return 0
 
 
+def _convert(args: argparse.Namespace) -> int:
+    from .convert import ConversionError, convert
+    from .writers import WRITERS
+
+    if args.to not in WRITERS:
+        return _fail(f"no writer for {args.to!r}; writers: {', '.join(sorted(WRITERS))}", 2)
+    try:
+        result = _run_reader(args)
+    except ValueError as exc:
+        return _fail(str(exc))
+    if not result.records:
+        return _fail("no agents found")
+    if len(result.records) > 1 and not args.out:
+        return _fail(f"{len(result.records)} agents found; pass --out DIR to write one file per agent", 2)
+    try:
+        conversions = [convert(record, args.to) for record in result.records]
+    except ConversionError as exc:
+        return _fail(str(exc))
+
+    if args.out:
+        out = Path(args.out)
+        out.mkdir(parents=True, exist_ok=True)
+        used: set[str] = set()
+        for conversion in conversions:
+            name = conversion.filename
+            stem, dot, suffix = name.partition(".")
+            n = 1
+            while name in used:
+                n += 1
+                name = f"{stem}-{n}{dot}{suffix}"
+            used.add(name)
+            (out / name).write_text(conversion.text, encoding="utf-8")
+            print(f"wrote {out / name}", file=sys.stderr)
+    else:
+        sys.stdout.write(conversions[0].text)
+
+    for conversion in conversions:
+        print(conversion.report.text(), file=sys.stderr)
+        for warning in conversion.warnings:
+            print(f"  warning: {warning}", file=sys.stderr)
+    if args.report:
+        Path(args.report).write_text(
+            json.dumps([c.report.to_dict() for c in conversions], indent=2, default=str) + "\n", encoding="utf-8"
+        )
+    return 0
+
+
 def _serve(args: argparse.Namespace) -> int:
     try:
         import uvicorn
@@ -296,6 +343,20 @@ def main(argv: Sequence[str] | None = None) -> int:
     push_.add_argument("--audience", default=DEFAULT_AUDIENCE, help="OIDC audience to request (default: marshal)")
     push_.add_argument("--token-env", help="read the OIDC token from this variable instead of GitHub Actions")
     push_.set_defaults(handler=_push)
+
+    from .writers import WRITERS
+
+    convert_ = commands.add_parser(
+        "convert",
+        help="convert agent definitions to another format, with a fidelity report",
+        description="Read agents in any supported format and write them in another. The fidelity report "
+        "(on stderr) is computed by reading the written document back.",
+    )
+    _add_read_args(convert_)
+    convert_.add_argument("--to", required=True, choices=sorted(WRITERS), help="target format")
+    convert_.add_argument("--out", metavar="DIR", help="write one file per agent here (required for several agents)")
+    convert_.add_argument("--report", metavar="FILE", help="also write the fidelity reports as JSON")
+    convert_.set_defaults(handler=_convert)
 
     serve = commands.add_parser("serve", help="run the ingest API")
     serve.add_argument("--config", required=True, help="server configuration file (YAML)")

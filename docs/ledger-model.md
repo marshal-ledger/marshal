@@ -27,6 +27,18 @@ scope:
 - `derived`: computed by a documented rule from declared values. `basis` names the rule.
 - `unknown`: not available. The ledger stores no value rather than guess.
 
+## What a spec holds
+
+| Field | Contents |
+|---|---|
+| `display_name`, `description` | Human-readable identity |
+| `model` | `requested` model, `provider`, `resolved` model (where a gateway is connected), declared generation `parameters` |
+| `instructions` | Hash of the instruction text, and the text unless hash-only mode is on |
+| `tools[]` | Entity ref, name, description, input and output JSON Schemas, `scope`, `reversible`, `requires_confirmation` |
+| `knowledge[]` | Entity ref, name, description, the source's own type, `scope` |
+| `permissions` | `identity` kind, `principal`, `grants` held by the agent's identity, `access` rules for who may use the agent |
+| `extensions` | Platform- or format-specific fields with no portable equivalent, kept intact per platform |
+
 ## Spec and bindings
 
 `spec` is the environment-independent definition: name, description, model, instructions, tools, knowledge, permissions and platform extensions. `bindings` holds environment-bound values: target name, workspace host, warehouse IDs, deployed names.
@@ -39,6 +51,7 @@ Only `spec` is hashed, so the same definition in dev and prod is the same versio
 
 - `provenance` and `basis` metadata. Moving a file, or improving a reader's classification, doesn't create a new version.
 - Instruction text. Instructions are represented by their own hash, so hash-only mode gives the same version as full mode.
+- Absent values (`null`, empty lists, empty mappings). Adding an optional field to the model doesn't change existing versions.
 
 Tools, knowledge, grants and access rules are sorted before hashing, so reordering them doesn't create a new version. Lists inside `extensions` keep their order.
 

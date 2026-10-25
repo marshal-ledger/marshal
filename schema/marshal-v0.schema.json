@@ -181,6 +181,42 @@
           "title": "Ref",
           "type": "string"
         },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Type"
+        },
         "scope": {
           "$ref": "#/$defs/Value_Scope_"
         }
@@ -197,8 +233,16 @@
         "requested": {
           "$ref": "#/$defs/Value_str_"
         },
+        "provider": {
+          "$ref": "#/$defs/Value_str_"
+        },
         "resolved": {
           "$ref": "#/$defs/Value_str_"
+        },
+        "parameters": {
+          "additionalProperties": true,
+          "title": "Parameters",
+          "type": "object"
         }
       },
       "title": "ModelSpec",
@@ -348,10 +392,63 @@
           "title": "Ref",
           "type": "string"
         },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "input_schema": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Input Schema"
+        },
+        "output_schema": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Output Schema"
+        },
         "scope": {
           "$ref": "#/$defs/Value_Scope_"
         },
         "reversible": {
+          "$ref": "#/$defs/Value_bool_"
+        },
+        "requires_confirmation": {
           "$ref": "#/$defs/Value_bool_"
         }
       },

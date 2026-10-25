@@ -77,3 +77,31 @@ def test_collect_requires_environment(tmp_path, capsys):
 def test_unknown_agent_is_an_error(tmp_path, capsys):
     code, _, err = run(capsys, "diff", "nobody", "--db", str(tmp_path / "x.sqlite"))
     assert code == 1 and "unknown agent" in err
+
+
+def test_convert(tmp_path, capsys):
+    import yaml
+
+    adl = tmp_path / "agent.adl.yaml"
+    adl.write_text(
+        yaml.safe_dump(
+            {
+                "adl_spec": "0.3.0",
+                "name": "Calculator",
+                "description": "Adds numbers.",
+                "version": "1.0.0",
+                "data_classification": {"sensitivity": "public"},
+                "tools": [{"name": "add", "description": "Add two numbers.", "read_only": True}],
+            }
+        )
+    )
+    code, out, err = run(capsys, "convert", str(adl), "--to", "agent-spec")
+    assert code == 0
+    assert yaml.safe_load(out)["component_type"] == "Agent"
+    assert "calculator → agent-spec" in err and "Fidelity:" in err
+
+    report = tmp_path / "fidelity.json"
+    code, _, err = run(capsys, "convert", str(adl), "--to", "oasf", "--out", str(tmp_path / "out"), "--report", str(report))
+    assert code == 0 and (tmp_path / "out" / "calculator.oasf.json").exists()
+    assert json.loads(report.read_text())[0]["target"] == "oasf"
+    assert "warning: OASF requires at least one skill" in err

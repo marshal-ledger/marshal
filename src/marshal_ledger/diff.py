@@ -128,6 +128,13 @@ def diff_specs(a: AgentSpec, b: AgentSpec) -> list[Change]:
     def compare_tool(ref, x, y) -> Iterator[Change]:
         yield from _value("tools", f"tool {ref} scope", x.scope, y.scope)
         yield from _value("tools", f"tool {ref} reversible", x.reversible, y.reversible)
+        yield from _value(
+            "tools", f"tool {ref} requires_confirmation", x.requires_confirmation, y.requires_confirmation
+        )
+        for attr in ("name", "description", "input_schema", "output_schema"):
+            before, after = getattr(x, attr), getattr(y, attr)
+            if before != after:
+                yield Change("tools", "changed", f"tool {ref} {attr}", before, after, f"{attr} changed")
 
     changes += _keyed(
         "tools",
@@ -141,11 +148,20 @@ def diff_specs(a: AgentSpec, b: AgentSpec) -> list[Change]:
 
     # model
     changes += _value("model", "model.requested", a.model.requested, b.model.requested)
+    changes += _value("model", "model.provider", a.model.provider, b.model.provider)
     changes += _value("model", "model.resolved", a.model.resolved, b.model.resolved)
+    for key in sorted(a.model.parameters.keys() | b.model.parameters.keys()):
+        before, after = a.model.parameters.get(key), b.model.parameters.get(key)
+        if before != after:
+            changes.append(Change("model", "changed", f"model.parameters.{key}", before, after))
 
     # knowledge
     def compare_knowledge(ref, x, y) -> Iterator[Change]:
         yield from _value("knowledge", f"knowledge {ref} scope", x.scope, y.scope)
+        for attr in ("name", "description", "type"):
+            before, after = getattr(x, attr), getattr(y, attr)
+            if before != after:
+                yield Change("knowledge", "changed", f"knowledge {ref} {attr}", before, after)
 
     changes += _keyed(
         "knowledge",

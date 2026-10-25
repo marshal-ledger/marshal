@@ -14,7 +14,7 @@ records two resource types as agents:
 Model serving endpoints are reported as skipped: a bundle alone cannot tell an
 endpoint that serves an agent from one that serves any other model.
 
-Mapping rules are documented in ``docs/readers/databricks.md``.
+Mapping rules are documented in ``docs/formats/databricks.md``.
 """
 
 from __future__ import annotations
@@ -374,6 +374,8 @@ class _BundleRead:
                     spec.knowledge.append(
                         KnowledgeUse(
                             ref=ref,
+                            name=str(ident),
+                            type="table" if group == "tables" else group.rstrip("s"),
                             scope=Value[Scope].derived(Scope.READ, "Genie runs read-only SQL against its data sources"),
                         )
                     )
@@ -551,10 +553,12 @@ class _BundleRead:
             name = str(body.get("securable_full_name"))
             if stype in ("FUNCTION", "CONNECTION"):
                 ref = self.entity(EntityKind.TOOL, f"uc.{stype.lower()}", name)
-                spec.tools.append(ToolUse(ref=ref, scope=tool_scope(), reversible=reversible()))
+                spec.tools.append(
+                    ToolUse(ref=ref, name=name.rsplit(".", 1)[-1], scope=tool_scope(), reversible=reversible())
+                )
             elif stype in ("TABLE", "VOLUME"):
                 ref = self.entity(EntityKind.KNOWLEDGE, f"uc.{stype.lower()}", name)
-                spec.knowledge.append(KnowledgeUse(ref=ref, scope=tool_scope()))
+                spec.knowledge.append(KnowledgeUse(ref=ref, name=name, type=stype.lower(), scope=tool_scope()))
             elif stype == "MODEL_SERVICE":
                 ref = self.entity(EntityKind.MODEL, "uc.model_service", name)
             else:

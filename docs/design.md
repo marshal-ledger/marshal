@@ -69,7 +69,7 @@ Fidelity tiers keep the user experience smooth while coverage grows. Every major
 | **Partial** | Read and write, with declared gaps |
 | **Inventory** | Read metadata only (name, owner, platform, version, deployments) |
 
-| Format | Type | Starting tier (target) |
+| Format | Type | Tier (target) |
 |---|---|---|
 | Databricks Asset Bundles: Genie spaces | Closed, as-code | Full |
 | Databricks Asset Bundles: agent apps | Closed, as-code | Partial (model and instructions from pro-code readers) |
@@ -79,12 +79,12 @@ Fidelity tiers keep the user experience smooth while coverage grows. Every major
 | Google Vertex AI Agent Engine | Closed | Inventory |
 | Google ADK Agent Config, Conversational Agents export | Closed / open-source | Partial |
 | Salesforce Agentforce (Agent Script, planner metadata) | Closed | Partial → Full |
-| LangGraph, CrewAI, OpenAI Agents SDK | Pro-code | Partial via static extraction |
+| LangGraph, CrewAI, OpenAI Agents SDK, Google ADK | Pro-code | Partial via static extraction |
 | ADL | Open standard | Full |
-| Open Agent Spec | Open standard | Full |
+| Open Agent Spec | Open standard | Full for agents; flows recorded as their member agents |
 | AGNTCY OASF | Open standard | Full (metadata) |
 
-*Each adapter targets the platform's current documented export path. See [Platform exportability](platform-exportability.md) for what each closed platform exposes. ADL's specification repository notes a US provisional patent application alongside its Apache 2.0 license.*
+*Each adapter targets the platform's current documented export path. See [Platform exportability](platform-exportability.md) for what each closed platform exposes, [Conversion and fidelity](conversion.md) for how translation is measured, and [docs/formats](formats/) for each format's mapping and declared losses. ADL is published under Apache 2.0 with an irrevocable patent non-assertion covenant for conforming implementations.*
 
 ## Data model
 
@@ -269,18 +269,22 @@ $ marshal convert agent.adl.yaml --to agent-spec
 $ marshal port invoice-agent --to bedrock
 ```
 
-## Plan
+## Roadmap
 
-| Weeks | Deliverable |
+| Phase | Deliverable |
 |---|---|
 | 1 | Exportability survey across Copilot Studio, Bedrock, Vertex and Agentforce. Ledger model v0. Databricks reader |
-| 2–3 | Version store with agent → version → deployment, proposed/shipped events, `marshal ls` and `marshal diff` |
-| 4 | Ingest API with OIDC authentication, GitHub Action, risk-ranked PR comments, secret redaction, hash-only mode |
-| 5–6 | Readers and writers for ADL, Open Agent Spec and OASF, round-trip tests, `marshal convert` with fidelity reports |
+| 2 | Version store with agent → version → deployment, proposed/shipped events, `marshal ls` and `marshal diff` |
+| 3 | Ingest API with OIDC authentication, GitHub Action, risk-ranked PR comments, secret redaction, hash-only mode |
+| 4 | Readers and writers for ADL, Open Agent Spec and OASF, round-trip tests, `marshal convert` with fidelity reports |
+| 5 | Pro-code readers by static extraction: LangGraph, OpenAI Agents SDK, CrewAI, Google ADK. Linked to platform records, so a Databricks App, AgentCore runtime or Agent Engine deployment gains its model, instructions and tools from source |
+| 6 | Copilot Studio, Bedrock Agents and Agentforce adapters at Partial tier; inventory readers for AgentCore and Agent Engine |
 | 7 | Capability matrix v0, quality and portability scores, `marshal port` |
-| 8 | Copilot Studio, Bedrock Agents and Agentforce adapters at Partial tier; inventory readers for AgentCore and Agent Engine |
-| 9 | Discovery and dependency queries, simple read-only web view |
+| 8 | Discovery and dependency queries, simple read-only web view |
+| 9 | Postgres store, container image and Helm chart, SSO for the web view |
 | 10 | Docs, capability matrix contribution guide, sample repo with real public agents, launch |
+
+Pro-code readers come before the closed-platform adapters. Most agents on Databricks, AgentCore and Agent Engine are code agents, and their platform artifacts carry permissions and packaging but not behavior. The capability matrix follows the platform adapters, so portability scores cover every platform from the start.
 
 ## Target users and success metrics
 

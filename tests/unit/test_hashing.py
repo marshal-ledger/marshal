@@ -57,3 +57,17 @@ def test_extension_keys_named_like_metadata_are_kept():
     a = spec(extensions={"x": {"basis": 1}})
     b = spec(extensions={"x": {"basis": 2}})
     assert spec_digest(a) != spec_digest(b)
+
+
+def test_absent_optional_fields_do_not_affect_version():
+    plain = spec()
+    explicit = spec()
+    explicit.tools[0].description = None
+    explicit.model.parameters = {}
+    assert spec_digest(plain) == spec_digest(explicit)
+
+
+def test_tool_details_are_part_of_the_version():
+    described = spec()
+    described.tools[0].description = "Updates a purchase order"
+    assert spec_digest(described) != spec_digest(spec())

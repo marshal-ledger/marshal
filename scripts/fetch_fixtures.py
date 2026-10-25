@@ -22,10 +22,8 @@ def main() -> int:
     for fixture in fixtures:
         target = CACHE / fixture["id"]
         for name in fixture["files"]:
-            url = (
-                f"https://raw.githubusercontent.com/{fixture['repo']}/"
-                f"{fixture['commit']}/{fixture['root']}/{name}"
-            )
+            path = f"{fixture['root']}/{name}" if fixture["root"] else name
+            url = f"https://raw.githubusercontent.com/{fixture['repo']}/{fixture['commit']}/{path}"
             dest = target / name
             dest.parent.mkdir(parents=True, exist_ok=True)
             with urllib.request.urlopen(url, timeout=30) as response:
