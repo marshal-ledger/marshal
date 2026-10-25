@@ -41,6 +41,8 @@ class ReadOptions:
     """Store instruction hashes but not instruction text."""
     commit: Optional[str] = None
     pipeline_run: Optional[str] = None
+    link_code: bool = True
+    """Read agent code that a platform artifact points to, such as a Databricks App's source."""
 
 
 class Reader(ABC):

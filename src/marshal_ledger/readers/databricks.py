@@ -479,6 +479,8 @@ class _BundleRead:
             if source_ref:
                 entry["value_from"] = source_ref
             env.append(entry)
+        linked = self.link_code(spec, key, code, where) if self.options.link_code and code else None
+
         extension: dict[str, Any] = {"resource_type": "app"}
         for field in ("source_code_path", "compute_size"):
             if body.get(field):
@@ -489,7 +491,7 @@ class _BundleRead:
             extension["env"] = env
         if scopes:
             extension["user_api_scopes"] = scopes
-        spec.extensions[PLATFORM] = extension
+        spec.extensions[PLATFORM] = {**extension, **spec.extensions.get(PLATFORM, {})}
 
         bindings = self.base_bindings()
         if body.get("name") and body.get("name") != base.get("name"):
@@ -499,11 +501,72 @@ class _BundleRead:
             build_record(
                 agent=self.agent_id(key),
                 platform=PLATFORM,
-                source=self.source("apps", key, f"app declares access to: {', '.join(sorted(set(signals)))}"),
+                source=self.source(
+                    "apps",
+                    key,
+                    f"app declares access to: {', '.join(sorted(set(signals)))}"
+                    + (f"; code: {linked}" if linked else ""),
+                ),
                 spec=spec,
                 bindings=bindings,
             )
         )
+
+    def link_code(self, spec: AgentSpec, key: str, code: str, where: str) -> Optional[str]:
+        """Fill in model, instructions and tools from the app's agent code, when it can be read."""
+        from .python import PythonAgentReader
+
+        origin = self.bundle.origins.get(("apps", key), self.bundle.root / "databricks.yml")
+        directory = (origin.parent / code).resolve()
+        try:
+            directory.relative_to(self.bundle.root.resolve())
+        except ValueError:
+            self.result.warnings.append(f"{where}: source_code_path {code} is outside the bundle; code not read")
+            return None
+        if not directory.is_dir() or not PythonAgentReader.detect(directory):
+            return None
+        found = PythonAgentReader().read(directory, ReadOptions(hash_only=self.options.hash_only, link_code=False))
+        called = {t.ref.removeprefix("agent/") for r in found.records for t in r.spec.tools if t.ref.startswith("agent/")}
+        roots = [r for r in found.records if r.agent not in called]
+        if len(roots) != 1:
+            if found.records:
+                self.result.warnings.append(
+                    f"{where}: {len(found.records)} agents in the app code and no single entry point; code not linked"
+                )
+            return None
+        agent = roots[0]
+        code_spec = agent.spec
+        directory_rel = self.bundle.rel(directory)
+        prefix = "" if directory_rel in ("", ".") else f"{directory_rel}/"
+        relative = f"{prefix}{agent.source.artifact}"
+
+        def located(value: Value) -> Value:
+            return value.model_copy(update={"basis": f"{prefix}{value.basis}" if value.basis else relative})
+
+        if code_spec.model.requested.is_known or not spec.model.requested.is_known:
+            spec.model.requested = located(code_spec.model.requested)
+        if code_spec.model.provider.is_known:
+            spec.model.provider = located(code_spec.model.provider)
+        spec.model.parameters = code_spec.model.parameters or spec.model.parameters
+        if code_spec.instructions.provenance is not Provenance.UNKNOWN or code_spec.instructions.basis:
+            spec.instructions = code_spec.instructions.model_copy(
+                update={"basis": f"{prefix}{code_spec.instructions.basis}"}
+            )
+        for tool in code_spec.tools:
+            if all(t.ref != tool.ref for t in spec.tools):
+                spec.tools.append(tool)
+        for item in code_spec.knowledge:
+            if all(k.ref != item.ref for k in spec.knowledge):
+                spec.knowledge.append(item)
+        for entity in found.entities:
+            self._entities.setdefault(entity.ref, entity)
+        self.result.warnings += [f"{where}: {w}" for w in found.warnings]
+        spec.extensions.setdefault(PLATFORM, {})["code"] = {
+            "artifact": relative,
+            "framework": code_spec.extensions["python"]["framework"],
+            "constructor": agent.source.locator,
+        }
+        return f"{code_spec.extensions['python']['framework']} agent at {relative}:{agent.source.locator.rsplit(' ', 1)[-1]}"
 
     def app_resource(self, spec: AgentSpec, item: dict[str, Any], where: str) -> None:
         for kind in ("serving_endpoint", "genie_space", "uc_securable", "sql_warehouse", "job",

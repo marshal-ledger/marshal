@@ -35,6 +35,7 @@ class OasfWriter(Writer):
         "knowledge[*]": "OASF lists data sources only as MCP server resources",
         "model.parameters.*": "OASF model entries have no generation parameters",
         "model.resolved": "OASF describes the configured model only",
+        "model.provider": "OASF lists a provider only alongside a model",
     }
     MECHANICS = ("extensions.oasf.schema_version",)
 

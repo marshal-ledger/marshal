@@ -36,7 +36,7 @@ For code agents, the platform reader records identity, permissions and deploymen
 
 **Gaps.** For apps, the model, instructions and tools are in code. Environment variable values and target overrides are environment-bound. A UC function's write behavior is not declared.
 
-**Reader.** Implemented: see [formats/databricks.md](formats/databricks.md).
+**Reader.** Implemented: see [formats/databricks.md](formats/databricks.md). App code at `source_code_path` is read by the [Python reader](formats/python.md), which fills in model, instructions and tools.
 
 Sources: [databricks/cli bundle schema](https://github.com/databricks/cli/blob/main/bundle/schema/jsonschema.json), [databricks/bundle-examples](https://github.com/databricks/bundle-examples), [databricks/app-templates](https://github.com/databricks/app-templates).
 

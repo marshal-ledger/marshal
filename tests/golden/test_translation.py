@@ -29,6 +29,10 @@ SOURCES = [
     ("databricks-asset-bundle", "databricks/app-with-genie-space"),
     ("databricks-asset-bundle", "databricks/agent-openai-agents-sdk"),
     ("databricks-asset-bundle", "databricks/agent-langgraph-advanced"),
+    ("databricks-asset-bundle", "databricks/agent-langgraph"),
+    ("python", "python/openai-agents"),
+    ("python", "python/google-adk"),
+    ("python", "python/crewai-template"),
 ]
 
 

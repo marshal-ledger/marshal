@@ -46,20 +46,29 @@ def test_app_with_genie_space_links_app_to_space():
 
 
 @pytest.mark.parametrize(
-    "fixture_id, agent",
+    "fixture_id, agent, has_code",
     [
-        ("databricks/agent-openai-agents-sdk", "agent_openai_agents_sdk/agent_openai_agents_sdk"),
-        ("databricks/agent-langgraph-advanced", "agent_langgraph_advanced/agent_langgraph_advanced"),
+        ("databricks/agent-openai-agents-sdk", "agent_openai_agents_sdk/agent_openai_agents_sdk", True),
+        ("databricks/agent-langgraph", "agent_langgraph/agent_langgraph", True),
+        ("databricks/agent-langgraph-advanced", "agent_langgraph_advanced/agent_langgraph_advanced", False),
     ],
 )
-def test_agent_app_templates(fixture_id, agent):
+def test_agent_app_templates(fixture_id, agent, has_code):
     result = read(fixture_id)
     [record] = result.records
     assert record.agent == agent
     targets = {g.target: g.privilege for g in record.spec.permissions.grants}
     assert targets["model/databricks.serving_endpoint.databricks-claude-sonnet-5-5"] == "CAN_QUERY"
-    assert record.spec.model.requested.provenance is Provenance.UNKNOWN
     assert record.spec.permissions.identity.value is IdentityKind.SERVICE_PRINCIPAL
+    if has_code:
+        # The app's code names the model it queries, matching the endpoint it is granted.
+        assert record.spec.model.requested.value == "databricks-claude-sonnet-5-5"
+        assert record.spec.model.provider.value == "databricks"
+        assert record.spec.model.requested.basis.startswith("agent_server/agent.py:")
+        assert "tool/python.agent_server.agent:get_current_time" in {t.ref for t in record.spec.tools}
+        assert "code:" in record.source.detected_by
+    else:
+        assert record.spec.model.requested.provenance is Provenance.UNKNOWN
 
     prod = read(fixture_id, target="prod").records[0]
     assert prod.version == record.version, "the prod target only renames the app"

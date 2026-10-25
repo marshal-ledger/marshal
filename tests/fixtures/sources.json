@@ -30,7 +30,10 @@
       "commit": "382645061cc66f23d672a46c0b9f55497da2913c",
       "root": "agent-openai-agents-sdk",
       "files": [
-        "databricks.yml"
+        "databricks.yml",
+        "agent_server/__init__.py",
+        "agent_server/agent.py",
+        "agent_server/utils.py"
       ]
     },
     {
@@ -100,6 +103,62 @@
         "record_110.json",
         "record_100.json",
         "record_080_v5.json"
+      ]
+    },
+    {
+      "id": "databricks/agent-langgraph",
+      "repo": "databricks/app-templates",
+      "commit": "382645061cc66f23d672a46c0b9f55497da2913c",
+      "root": "agent-langgraph",
+      "files": [
+        "databricks.yml",
+        "agent_server/__init__.py",
+        "agent_server/agent.py",
+        "agent_server/utils.py"
+      ]
+    },
+    {
+      "id": "python/openai-agents",
+      "repo": "openai/openai-agents-python",
+      "commit": "0dc4cf152bff1f50bdc0e41f28808563406545b2",
+      "root": "examples",
+      "files": [
+        "basic/hello_world.py",
+        "agent_patterns/routing.py",
+        "agent_patterns/agents_as_tools.py",
+        "customer_service/main.py",
+        "tools/web_search.py",
+        "financial_research_agent/agents/planner_agent.py",
+        "financial_research_agent/agents/search_agent.py",
+        "financial_research_agent/agents/writer_agent.py"
+      ]
+    },
+    {
+      "id": "python/google-adk",
+      "repo": "google/adk-samples",
+      "commit": "a6d62a4093e2db48a0640244e0bd94a85ba37e4b",
+      "root": "contrib/python/llm-auditor",
+      "files": [
+        "app/__init__.py",
+        "app/agent.py",
+        "app/sub_agents/__init__.py",
+        "app/sub_agents/critic/__init__.py",
+        "app/sub_agents/critic/agent.py",
+        "app/sub_agents/critic/prompt.py",
+        "app/sub_agents/reviser/__init__.py",
+        "app/sub_agents/reviser/agent.py",
+        "app/sub_agents/reviser/prompt.py"
+      ]
+    },
+    {
+      "id": "python/crewai-template",
+      "repo": "crewAIInc/crewAI",
+      "commit": "38db11e3324fa0e23beb5eecd0d87e8e31ca2bb0",
+      "root": "lib/cli/src/crewai_cli/templates/crew",
+      "files": [
+        "crew.py",
+        "config/agents.yaml",
+        "config/tasks.yaml"
       ]
     }
   ]

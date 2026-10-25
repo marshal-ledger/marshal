@@ -13,6 +13,7 @@ $ marshal convert path/to/bundle --target prod --to adl --out converted/ --repor
 | `agent-spec` | ✓ | ✓ | ✓ |
 | `oasf` | ✓ | ✓ | ✓ |
 | `databricks-asset-bundle` | ✓ | ✓ | ✓ |
+| `python` (agent code) | ✓ | ✓ | ✓ |
 
 ## How fidelity is computed
 

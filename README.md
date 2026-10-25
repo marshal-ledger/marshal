@@ -4,7 +4,7 @@ A vendor-neutral, open-source ledger for enterprise AI agents. Any format in, an
 
 Marshal reads the agent definitions teams already produce, such as Databricks bundles, Copilot Studio agents, Bedrock templates, Agentforce metadata and open standards. It builds a normalized, versioned record of every agent: what model it asks for, what tools and data it can reach, and who it acts as. Every field says where its value came from, and nothing is guessed.
 
-**Status:** pre-alpha. Implemented so far: the ledger model; readers for Databricks Asset Bundles, ADL, Open Agent Spec and OASF; writers for the three open standards with measured fidelity; the version store; risk-ranked diffs; the ingest API with OIDC authentication; and the GitHub Action.
+**Status:** pre-alpha. Implemented so far: the ledger model; readers for Databricks Asset Bundles, ADL, Open Agent Spec, OASF, and agent code (OpenAI Agents SDK, LangChain/LangGraph, Google ADK, CrewAI); writers for the three open standards with measured fidelity; the version store; risk-ranked diffs; the ingest API with OIDC authentication; and the GitHub Action.
 
 ## Try it
 
@@ -29,7 +29,7 @@ $ marshal convert agent.adl.yaml --to agent-spec     # translate, with a fidelit
 - [Ledger model v0](docs/ledger-model.md): records, provenance, version hashing, the version store, completeness
 - [Platform exportability](docs/platform-exportability.md): what Copilot Studio, Bedrock, Vertex AI, Agentforce and Databricks expose
 - [Conversion and fidelity](docs/conversion.md): how translation works and how fidelity is measured
-- Formats: [Databricks](docs/formats/databricks.md), [ADL](docs/formats/adl.md), [Agent Spec](docs/formats/agent-spec.md), [OASF](docs/formats/oasf.md): mapping rules, declared losses, known gaps
+- Formats: [Databricks](docs/formats/databricks.md), [ADL](docs/formats/adl.md), [Agent Spec](docs/formats/agent-spec.md), [OASF](docs/formats/oasf.md), [Python agent code](docs/formats/python.md): mapping rules, declared losses, known gaps
 - [Ingest API](docs/ingest-server.md): running the server, OIDC issuers, shipped policy, agent ownership
 - [GitHub Action](docs/github-action.md): recording events and PR comments
 

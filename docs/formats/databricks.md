@@ -46,7 +46,7 @@ The serialized space is read from `file_path` (resolved relative to the file tha
 |---|---|---|
 | `display_name` | `name` | declared |
 | `description` | `description` | declared |
-| `model.requested`, `instructions` | Application code at `source_code_path` | unknown |
+| `model.requested`, `provider`, `instructions`, code tools | The app's agent code at `source_code_path`, read by the [Python reader](python.md) when it finds one entry-point agent; otherwise unknown | declared / derived / unknown |
 | `permissions.identity` | `service_principal`, or `mixed` when `user_api_scopes` is set | derived |
 | `permissions.grants[]` | Every entry in `resources`, with its `permission` | declared |
 | `tools[]` | `genie_space`, `uc_securable` of type `FUNCTION` or `CONNECTION`, `job` | declared ref, derived scope |
@@ -81,6 +81,6 @@ The reader copies an allowlist of fields. Environment variable values are never 
 
 ## Known gaps
 
-- Apps: model, instructions and tool wiring are in application code. The pro-code readers will cover them by reading `source_code_path`.
+- Apps whose code isn't in the bundle directory, or whose code has several entry-point agents, keep model and instructions unknown.
 - `model_serving_endpoints`, `mcp_services` and `vector_search_indexes` are not yet linked to the agents that use them.
 - Variables are not resolved, including `lookup` variables.
