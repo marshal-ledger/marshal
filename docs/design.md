@@ -236,6 +236,15 @@ A public, community-maintained data file per platform listing what it supports: 
 - **CI path stands alone.** Pollers need admin-level read credentials, so they're optional, not required for core value.
 - **Self-hosted** with no external calls.
 
+### Network posture
+
+Marshal never starts a connection to an agent platform. Records reach it in two ways, both initiated by systems that already have access:
+
+- **Files** that readers parse: repositories, exports, generated templates.
+- **Pushes** to the ingest API, from pipelines and from any optional poller.
+
+A poller is a separate component the organization runs wherever it already has network access to a platform, such as a scheduled Power Platform or cloud pipeline. It reads the live definition with that platform's own tools and pushes an `observed` event. Where no poller exists, Marshal still works: drift isn't detected, and records that only came from manual imports are reported as stale instead of current.
+
 ## Demo
 
 **GitHub Action, around the deploy step teams already have:**
