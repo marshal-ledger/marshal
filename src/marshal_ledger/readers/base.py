@@ -43,6 +43,8 @@ class ReadOptions:
     pipeline_run: Optional[str] = None
     link_code: bool = True
     """Read agent code that a platform artifact points to, such as a Databricks App's source."""
+    infer_code_agents: bool = True
+    """Record model API calls that pass tools as agents, for code that uses no agent framework."""
 
 
 class Reader(ABC):

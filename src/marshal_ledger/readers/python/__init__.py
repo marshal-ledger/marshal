@@ -11,6 +11,7 @@ Mapping rules are documented in ``docs/formats/python.md``.
 
 from __future__ import annotations
 
+import ast
 import re
 from pathlib import Path
 from typing import Any, Optional
@@ -35,15 +36,21 @@ from .frameworks import (
     ORCHESTRATION_HINTS,
     AgentDraft,
     CrewAIProfile,
+    RAW_CALLS,
+    normalize_call_name,
+    unresolved_client,
     GoogleAdkProfile,
     LangChainProfile,
     OpenAIAgentsProfile,
+    RawModelCallProfile,
 )
 from .static import Call, Evaluator, Project, Template, Unknown, callee_name, iter_calls
 
 FORMAT = "python"
 _FRAMEWORK_IMPORT = re.compile(
-    r"^\s*(from|import)\s+(agents|langchain|langgraph|crewai|google\.adk)\b", re.MULTILINE
+    r"^\s*(from|import)\s+(agents|langchain|langgraph|crewai|google\.adk|google\.genai|openai|anthropic|litellm|"
+    r"databricks_openai|boto3)\b",
+    re.MULTILINE,
 )
 _SETUP_CALLS = {"agents.set_default_openai_client"}
 
@@ -97,6 +104,7 @@ class PythonAgentReader(Reader):
         only = path.resolve() if path.is_file() else None
 
         calls: list[tuple[Call, Optional[str]]] = []
+        raw_calls: list[tuple[Call, Optional[str], str]] = []
         setup: list[Call] = []
         constructors = {
             *OpenAIAgentsProfile.constructors, *LangChainProfile.constructors,
@@ -106,6 +114,17 @@ class PythonAgentReader(Reader):
             if only is not None and scope.module.path.resolve() != only:
                 continue
             name = callee_name(evaluator.eval(node.func, scope))
+            if options.infer_code_agents:
+                client = RAW_CALLS.get(normalize_call_name(name) or "")
+                if client is None and isinstance(node.func, ast.Attribute):
+                    imported = {target.split(".")[0] if not target.startswith("google.genai") else "google.genai"
+                                for target, _ in scope.module.imports.values()}
+                    client = unresolved_client(ast.unparse(node.func), imported)
+                if client is not None:
+                    value = evaluator.eval(node, scope)
+                    if isinstance(value, Call):
+                        raw_calls.append((value, scope.function, client))
+                    continue
             if name in constructors or name in _SETUP_CALLS or name in ORCHESTRATION_HINTS:
                 value = evaluator.eval(node, scope)
                 if not isinstance(value, Call):
@@ -133,6 +152,12 @@ class PythonAgentReader(Reader):
                 if profile.matches(call.qualname):
                     drafts.append((profile.draft(call), assigned))
                     break
+
+        raw = RawModelCallProfile(evaluator)
+        for call, function, client in raw_calls:
+            if raw.is_agent(call):
+                draft = raw.draft(call, function, client)
+                drafts.append((draft, draft.name))
 
         # Agent ids first, so agents can refer to each other.
         ids: dict[tuple[str, int, int], str] = {}
@@ -231,7 +256,8 @@ class PythonAgentReader(Reader):
                 format=FORMAT,
                 artifact=call.module.rel,
                 locator=f"{call.qualname} at line {call.node.lineno}",
-                detected_by=f"{draft.framework} agent constructor",
+                detected_by=(f"inferred: {draft.extension['inferred']}" if "inferred" in draft.extension
+                             else f"{draft.framework} agent constructor"),
                 commit=options.commit,
                 pipeline_run=options.pipeline_run,
             ),

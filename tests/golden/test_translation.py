@@ -33,6 +33,7 @@ SOURCES = [
     ("python", "python/openai-agents"),
     ("python", "python/google-adk"),
     ("python", "python/crewai-template"),
+    ("python", "python/anthropic-quickstarts"),
     ("cloudformation", "cloudformation/bedrock-agents"),
     ("cloudformation", "cloudformation/serverless-agents"),
     ("cloudformation", "cloudformation/multi-agent"),

@@ -163,3 +163,59 @@ def test_databricks_app_links_to_its_code(tmp_path):
     assert record.spec.extensions["databricks"]["code"]["framework"] == "openai-agents"
     unlinked = DatabricksBundleReader().read(root, ReadOptions(link_code=False)).records[0]
     assert unlinked.spec.instructions.provenance is Provenance.UNKNOWN
+
+
+RAW_AGENT = '''
+    from anthropic import Anthropic
+    from openai import OpenAI
+
+    SYSTEM = "You are a billing support agent."
+    TOOLS = [
+        {"name": "lookup_invoice", "description": "Look up an invoice.",
+         "input_schema": {"type": "object", "properties": {"invoice_id": {"type": "string"}}}},
+        {"type": "web_search_20250305", "name": "web_search"},
+    ]
+    client = Anthropic()
+    oai = OpenAI()
+
+    def run_support(messages):
+        return client.messages.with_raw_response.create(model="claude-sonnet-4-5", system=SYSTEM, tools=TOOLS,
+                                                        messages=messages, max_tokens=1024)
+
+    def summarize(text):
+        return oai.chat.completions.create(model="gpt-5", messages=[{"role": "user", "content": text}])
+
+    def make_client(region):
+        if region:
+            return Anthropic()
+        return Anthropic(base_url="https://proxy.internal")
+
+    def run_dynamic(messages, use_proxy):
+        llm = Anthropic() if use_proxy else Anthropic()
+        llm = Anthropic(base_url="https://proxy.internal")
+        llm = None
+        return llm.messages.create(model="claude-sonnet-4-5", tools=TOOLS, messages=messages)
+'''
+
+
+def test_model_calls_with_tools_are_inferred_agents(tmp_path):
+    result = read(tmp_path, {"bot.py": RAW_AGENT})
+    agents = {r.agent.rsplit("/", 1)[-1]: r for r in result.records}
+    assert set(agents) == {"run-support", "run-dynamic"}, "a call without tools is not an agent"
+    support = agents["run-support"]
+    assert support.platform == "anthropic-api"
+    assert support.source.detected_by.startswith("inferred:")
+    assert (support.spec.model.requested.value, support.spec.model.provider.value) == ("claude-sonnet-4-5", "anthropic")
+    assert support.spec.instructions.text == "You are a billing support agent."
+    assert support.spec.model.parameters == {"max_tokens": 1024}
+    refs = {t.ref: t for t in support.spec.tools}
+    assert refs["tool/python.bot:lookup_invoice"].input_schema["properties"] == {"invoice_id": {"type": "string"}}
+    assert refs["tool/anthropic.web_search"].scope.value is Scope.READ
+    # A client assigned more than once is still recognized by its SDK, with the provider unknown.
+    dynamic = agents["run-dynamic"]
+    assert dynamic.spec.model.provider.provenance is Provenance.UNKNOWN
+    assert "chosen at run time" in dynamic.spec.model.provider.basis
+
+
+def test_inference_can_be_turned_off(tmp_path):
+    assert read(tmp_path, {"bot.py": RAW_AGENT}, infer_code_agents=False).records == []

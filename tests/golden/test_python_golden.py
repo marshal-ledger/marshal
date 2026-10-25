@@ -72,3 +72,15 @@ def test_crewai_template():
     assert researcher.spec.instructions.text.startswith("Role: {topic} Senior Data Researcher")
     assert researcher.spec.description.value.startswith("Uncover cutting-edge developments")
     assert researcher.spec.extensions["python"]["config"] == "config/agents.yaml#researcher"
+
+
+def test_raw_api_agent_loop():
+    result = read("python/anthropic-quickstarts")
+    loop = {r.agent: r for r in result.records}["anthropic-quickstarts/sampling-loop"]
+    assert loop.platform == "anthropic-api"
+    assert loop.source.detected_by.startswith("inferred:")
+    # The system prompt is an f-string over values computed at run time: kept with placeholders.
+    assert loop.spec.instructions.provenance is Provenance.DERIVED
+    assert "<SYSTEM_CAPABILITY>" in loop.spec.instructions.text
+    assert loop.spec.model.requested.provenance is Provenance.UNKNOWN
+    assert loop.spec.extensions["python"]["tools_unresolved"]

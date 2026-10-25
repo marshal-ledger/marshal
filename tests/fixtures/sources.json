@@ -264,6 +264,18 @@
         "template-single-subagent.agent",
         "verification-gate.agent"
       ]
+    },
+    {
+      "id": "python/anthropic-quickstarts",
+      "repo": "anthropics/anthropic-quickstarts",
+      "commit": "930ad10bb2e21a9ef97fe1a88d2037e18a24465c",
+      "root": "",
+      "files": [
+        "computer-use-demo/computer_use_demo/__init__.py",
+        "computer-use-demo/computer_use_demo/loop.py",
+        "agents/__init__.py",
+        "agents/agent.py"
+      ]
     }
   ]
 }

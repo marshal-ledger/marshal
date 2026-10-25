@@ -587,3 +587,235 @@ ORCHESTRATION_HINTS = {
     "google.adk.agents.ParallelAgent": "ADK workflow agent; its sub-agents are recorded",
     "google.adk.agents.LoopAgent": "ADK workflow agent; its sub-agents are recorded",
 }
+
+
+# ---------------------------------------------------------------------------
+# Agents built directly on model APIs, without a framework.
+
+# Client class → (API, provider, model-call methods). The provider is who serves the model.
+_RAW_CLIENTS: dict[str, tuple[str, Optional[str], tuple[str, ...]]] = {
+    "openai.OpenAI": ("openai", "openai", ("chat.completions.create", "chat.completions.parse", "beta.chat.completions.parse", "responses.create")),
+    "openai.AsyncOpenAI": ("openai", "openai", ("chat.completions.create", "chat.completions.parse", "beta.chat.completions.parse", "responses.create")),
+    "openai.AzureOpenAI": ("openai", "azure-openai", ("chat.completions.create", "responses.create")),
+    "openai.AsyncAzureOpenAI": ("openai", "azure-openai", ("chat.completions.create", "responses.create")),
+    "openai": ("openai", "openai", ("chat.completions.create", "responses.create")),
+    "databricks_openai.DatabricksOpenAI": ("openai", "databricks", ("chat.completions.create", "responses.create")),
+    "databricks_openai.AsyncDatabricksOpenAI": ("openai", "databricks", ("chat.completions.create", "responses.create")),
+    "anthropic.Anthropic": ("anthropic", "anthropic", ("messages.create", "messages.stream", "beta.messages.create")),
+    "anthropic.AsyncAnthropic": ("anthropic", "anthropic", ("messages.create", "messages.stream", "beta.messages.create")),
+    "anthropic.AnthropicBedrock": ("anthropic", "bedrock", ("messages.create", "messages.stream")),
+    "anthropic.AsyncAnthropicBedrock": ("anthropic", "bedrock", ("messages.create", "messages.stream")),
+    "anthropic.AnthropicVertex": ("anthropic", "google", ("messages.create", "messages.stream")),
+    "anthropic.AsyncAnthropicVertex": ("anthropic", "google", ("messages.create", "messages.stream")),
+    "google.genai.Client": ("google", "google", ("models.generate_content", "models.generate_content_stream", "aio.models.generate_content")),
+    "litellm": ("litellm", None, ("completion", "acompletion")),
+    "boto3.client": ("bedrock", "bedrock", ("converse", "converse_stream")),
+}
+RAW_CALLS = {f"{client}.{method}": client for client, (_, _, methods) in _RAW_CLIENTS.items() for method in methods}
+# When the client can't be resolved statically (for example it is chosen at run time), the SDK the
+# module imports and the method chain still identify the API.
+_SDK_METHODS = {
+    "anthropic": ("anthropic", ("messages.create", "messages.stream", "beta.messages.create", "beta.messages.stream")),
+    "openai": ("openai", ("chat.completions.create", "chat.completions.parse", "responses.create")),
+    "google.genai": ("google", ("models.generate_content", "models.generate_content_stream")),
+}
+for _sdk, (_api, _methods) in _SDK_METHODS.items():
+    _RAW_CLIENTS[f"{_sdk}:unresolved"] = (_api, None, _methods)
+
+
+def normalize_call_name(name: Optional[str]) -> Optional[str]:
+    """Drop SDK response wrappers: ``messages.with_raw_response.create`` is ``messages.create``."""
+    if not name:
+        return name
+    return name.replace(".with_raw_response", "").replace(".with_streaming_response", "")
+
+
+def unresolved_client(chain: str, imported: set[str]) -> Optional[str]:
+    """The SDK behind a model call whose client couldn't be resolved, from its method chain."""
+    chain = normalize_call_name(chain) or ""
+    for sdk, (_, methods) in _SDK_METHODS.items():
+        if sdk in imported and any(chain.endswith("." + method) for method in methods):
+            return f"{sdk}:unresolved"
+    return None
+_PLATFORMS = {"openai": "openai-api", "anthropic": "anthropic-api", "google": "google-genai", "litellm": "litellm", "bedrock": "bedrock-runtime"}
+_HOSTED_RAW = {
+    "web_search": ("tool/openai.web_search", Scope.READ), "web_search_preview": ("tool/openai.web_search", Scope.READ),
+    "code_interpreter": ("tool/openai.code_interpreter", Scope.EXECUTE), "computer_use_preview": ("tool/openai.computer", Scope.WRITE),
+    "image_generation": ("tool/openai.image_generation", Scope.EXECUTE),
+}
+
+
+def _client_call(value: Any) -> Optional[Call]:
+    """The client construction at the root of ``client.chat.completions.create``."""
+    while isinstance(value, Member):
+        value = value.base
+    return value if isinstance(value, Call) else None
+
+
+class RawModelCallProfile:
+    """A model call that passes tools is an agent loop, even without a framework.
+
+    The agent is inferred from the call site, and its record says so.
+    """
+
+    def __init__(self, evaluator: Any):
+        self.evaluator = evaluator
+
+    def matches(self, qualname: Optional[str]) -> bool:
+        return qualname in RAW_CALLS
+
+    def is_agent(self, call: Call) -> bool:
+        if call.qualname and normalize_call_name(call.qualname).startswith("boto3.client."):
+            client = _client_call(call.func)
+            if not (client and client.args and client.args[0] == "bedrock-runtime"):
+                return False
+            config = call.kwargs.get("toolConfig")
+            return isinstance(config, dict) and bool(config.get("tools"))
+        if call.qualname and call.qualname.startswith("google.genai."):
+            config = call.kwargs.get("config")
+            return isinstance(config, Call) and bool(config.kwargs.get("tools"))
+        tools = call.kwargs.get("tools")
+        return bool(tools) and not isinstance(tools, Unknown) or bool(call.kwargs.get("mcp_servers"))
+
+    def draft(self, call: Call, function: Optional[str], client_name: str) -> AgentDraft:
+        api, provider, _ = _RAW_CLIENTS[client_name]
+        draft = AgentDraft(_PLATFORMS[api], call)
+        draft.name = function.rsplit(".", 1)[-1] if function else None
+        draft.extension["inferred"] = "a model call that passes tools"
+        draft.extension["api"] = normalize_call_name(call.qualname) or ast.unparse(call.node.func)
+        kw = call.kwargs
+        client = _client_call(call.func)
+
+        model = kw.get("modelId") if api == "bedrock" else kw.get("model")
+        if api == "litellm" and isinstance(model, str):
+            draft.model, draft.provider = model_from_string(model, "/")
+        elif isinstance(model, str):
+            draft.model = Value[str].declared(model, call.where)
+            if client is not None and client.kwargs.get("base_url") is not None:
+                draft.provider = Value[str].unknown(f"client base_url set at {client.where}")
+            elif provider:
+                draft.provider = Value[str].derived(provider, f"{_tail(client_name)} client")
+            else:
+                draft.provider = Value[str].unknown("the client is chosen at run time")
+        else:
+            draft.model = unknown_value(model, "model")
+            if client is not None and provider and client.kwargs.get("base_url") is None:
+                draft.provider = Value[str].derived(provider, f"{_tail(client_name)} client")
+        if not draft.provider.is_known and not draft.provider.basis:
+            draft.provider = Value[str].unknown("the client is chosen at run time")
+
+        parameters = {"temperature": kw.get("temperature"), "top_p": kw.get("top_p"),
+                      "max_tokens": kw.get("max_tokens", kw.get("max_output_tokens", kw.get("max_completion_tokens")))}
+        if api == "google" and isinstance(kw.get("config"), Call):
+            config = kw["config"].kwargs
+            parameters.update(temperature=config.get("temperature"), top_p=config.get("top_p"), max_tokens=config.get("max_output_tokens"))
+        if api == "bedrock" and isinstance(kw.get("inferenceConfig"), dict):
+            config = kw["inferenceConfig"]
+            parameters.update(temperature=config.get("temperature"), top_p=config.get("topP"), max_tokens=config.get("maxTokens"))
+        draft.parameters = {k: v for k, v in parameters.items() if isinstance(v, (int, float)) and not isinstance(v, bool)}
+
+        draft.instructions = self._instructions(api, call)
+        self._tools(api, call, draft)
+        return draft
+
+    def _instructions(self, api: str, call: Call) -> Any:
+        kw = call.kwargs
+        if api == "anthropic":
+            system = kw.get("system")
+            if isinstance(system, list):
+                texts = [b.get("text") if isinstance(b, dict) else b.kwargs.get("text") if isinstance(b, Call) else None
+                         for b in system]
+                if any(isinstance(t, Template) for t in texts) and all(isinstance(t, (str, Template)) for t in texts):
+                    return texts[0] if len(texts) == 1 else Template(tuple(p for t in texts for p in (t.parts if isinstance(t, Template) else (t,))))
+                return "\n\n".join(t for t in texts if isinstance(t, str)) if all(isinstance(t, str) for t in texts) else Unknown("system blocks computed at run time", call.where)
+            return system
+        if api == "google":
+            config = kw.get("config")
+            return config.kwargs.get("system_instruction") if isinstance(config, Call) else None
+        if api == "bedrock":
+            system = kw.get("system")
+            if isinstance(system, list):
+                texts = [b.get("text") for b in system if isinstance(b, dict)]
+                return "\n\n".join(t for t in texts if isinstance(t, str)) or None
+            return system
+        if call.qualname and call.qualname.endswith("responses.create") and kw.get("instructions") is not None:
+            return kw["instructions"]
+        messages = kw.get("messages") if "messages" in kw else kw.get("input")
+        if isinstance(messages, list):
+            for message in messages:
+                if isinstance(message, dict) and message.get("role") in ("system", "developer"):
+                    return message.get("content")
+            return None
+        return Unknown("messages built at run time", call.where) if messages is not None else None
+
+    def _tools(self, api: str, call: Call, draft: AgentDraft) -> None:
+        kw = call.kwargs
+        module = call.module.name
+        if api == "bedrock":
+            config = kw.get("toolConfig") or {}
+            tools = [t.get("toolSpec") for t in config.get("tools") or [] if isinstance(t, dict)] if isinstance(config, dict) else []
+            for spec in tools:
+                if isinstance(spec, dict) and isinstance(spec.get("name"), str):
+                    schema = (spec.get("inputSchema") or {}).get("json")
+                    draft.tools.append(ToolDraft(ToolUse(ref=f"tool/python.{module}:{spec['name']}", name=spec["name"],
+                                                         description=string_value(spec.get("description")),
+                                                         input_schema=schema if isinstance(schema, dict) else None)))
+            return
+        if api == "google":
+            config = kw.get("config")
+            tools = config.kwargs.get("tools") if isinstance(config, Call) else None
+            for tool in tools if isinstance(tools, list) else []:
+                if isinstance(tool, Func):
+                    draft.tools.append(ToolDraft(function_tool(tool)))
+                elif isinstance(tool, Call):
+                    if tool.kwargs.get("google_search") is not None:
+                        draft.tools.append(ToolDraft(ToolUse(ref="tool/google.search", name="google_search",
+                                                             scope=Value[Scope].derived(Scope.READ, "Google Search grounding"))))
+                    for declaration in tool.kwargs.get("function_declarations") or []:
+                        if isinstance(declaration, Call) and isinstance(declaration.kwargs.get("name"), str):
+                            name = declaration.kwargs["name"]
+                            params = declaration.kwargs.get("parameters")
+                            draft.tools.append(ToolDraft(ToolUse(ref=f"tool/python.{module}:{name}", name=name,
+                                                                 description=string_value(declaration.kwargs.get("description")),
+                                                                 input_schema=params if isinstance(params, dict) else None)))
+            return
+        tools = kw.get("tools")
+        if tools is not None and not isinstance(tools, list):
+            draft.warnings.append(f"{call.where}: tools are built at run time")
+            draft.extension.setdefault("tools_unresolved", []).append(
+                str(tools) if isinstance(tools, Unknown) else f"built by {callee_name(tools.func) if isinstance(tools, Call) else 'code'} at {call.where}"
+            )
+        for tool in tools if isinstance(tools, list) else []:
+            if isinstance(tool, Func):
+                draft.tools.append(ToolDraft(function_tool(tool)))
+                continue
+            if not isinstance(tool, dict):
+                draft.warnings.append(f"{call.where}: a tool is computed at run time")
+                continue
+            kind = tool.get("type")
+            spec = tool.get("function") if isinstance(tool.get("function"), dict) else tool
+            if kind in _HOSTED_RAW:
+                ref, scope = _HOSTED_RAW[kind]
+                draft.tools.append(ToolDraft(ToolUse(ref=ref, name=kind, scope=Value[Scope].derived(scope, f"hosted tool {kind}"))))
+            elif kind == "file_search":
+                for store in tool.get("vector_store_ids") or []:
+                    if isinstance(store, str):
+                        draft.knowledge.append((f"knowledge/openai.vector_store.{store}", "vector_store", store))
+                draft.tools.append(ToolDraft(ToolUse(ref="tool/openai.file_search", name="file_search",
+                                                     scope=Value[Scope].derived(Scope.READ, "file search reads vector stores"))))
+            elif kind == "mcp" and isinstance(tool.get("server_url"), str):
+                draft.tools.append(ToolDraft(ToolUse(ref=f"tool/mcp.{tool['server_url']}", name=string_value(tool.get("server_label")))))
+            elif isinstance(kind, str) and kind.startswith(("web_search_", "code_execution_", "bash_", "text_editor_", "computer_")):
+                # Anthropic server and client tools, versioned by date.
+                base = kind.rsplit("_", 1)[0]
+                scope = Scope.READ if base == "web_search" else Scope.WRITE if base in ("text_editor", "computer") else Scope.EXECUTE
+                draft.tools.append(ToolDraft(ToolUse(ref=f"tool/anthropic.{base}", name=string_value(tool.get("name")) or base,
+                                                     scope=Value[Scope].derived(scope, f"Anthropic tool {kind}"))))
+            elif isinstance(spec.get("name"), str):
+                schema = spec.get("parameters", spec.get("input_schema"))
+                draft.tools.append(ToolDraft(ToolUse(ref=f"tool/python.{module}:{spec['name']}", name=spec["name"],
+                                                     description=string_value(spec.get("description")),
+                                                     input_schema=schema if isinstance(schema, dict) else None)))
+        for server in kw.get("mcp_servers") or [] if isinstance(kw.get("mcp_servers"), list) else []:
+            if isinstance(server, dict) and isinstance(server.get("url"), str):
+                draft.tools.append(ToolDraft(ToolUse(ref=f"tool/mcp.{server['url']}", name=string_value(server.get("name")))))

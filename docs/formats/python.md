@@ -27,6 +27,24 @@ Each call to an agent constructor is one agent.
 | Google ADK | `google-adk` | `google.adk.agents.Agent`, `LlmAgent` |
 | CrewAI | `crewai` | `crewai.Agent`, including agents configured from `config/agents.yaml` |
 
+### Agents without a framework
+
+Code that calls a model API directly is also read. A model call that passes tools is an agent loop, so each such call site is recorded as an agent. Its record's `detected_by` says it was inferred, and `extensions.python.inferred` says why. A model call without tools is not an agent and is not recorded.
+
+| API | Platform id | Calls |
+|---|---|---|
+| OpenAI (also Azure OpenAI, Databricks) | `openai-api` | `chat.completions.create`, `responses.create` |
+| Anthropic (also on Bedrock and Vertex) | `anthropic-api` | `messages.create`, `messages.stream`, `beta.messages.create` |
+| Google GenAI | `google-genai` | `models.generate_content` |
+| LiteLLM | `litellm` | `completion`, `acompletion` |
+| Bedrock Runtime | `bedrock-runtime` | `converse`, `converse_stream` on a `bedrock-runtime` client |
+
+From the call the reader takes the model, the provider (from the client class), the system prompt (`system`, `instructions`, a `system` or `developer` message, `system_instruction`), generation parameters, and the tools declared there: function schemas, hosted tools, MCP servers. Tool refs are `tool/python.<module>:<tool name>`, the same as a function of that name in the module. `with_raw_response` wrappers are recognized. When the client can't be resolved statically, because it's chosen at run time, the agent is still recorded from the SDK the module imports, with the provider unknown. Turn inference off with `ReadOptions(infer_code_agents=False)`.
+
+Parameters passed as `**kwargs` can't be seen statically, so such calls are not recorded. For code like that, commit an [ADL](adl.md) file next to it.
+
+### Orchestration
+
 Orchestration is reported as skipped, and its member agents are recorded: custom LangGraph `StateGraph`s, CrewAI `Crew`s, and ADK `SequentialAgent`, `ParallelAgent` and `LoopAgent`.
 
 The agent id is `<directory name>/<agent name slug>`. The name comes from the constructor's `name` (or CrewAI's `role` or config key), else from the variable or function the agent is assigned to or returned from.
