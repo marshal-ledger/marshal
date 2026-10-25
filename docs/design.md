@@ -2,8 +2,6 @@
 
 **A vendor-neutral, open-source ledger for enterprise AI agents. Any format in, any format out, with versions, diffs, portability and audit across every platform.**
 
-*(Name decided. `marshal-ledger` was free on PyPI, npm and GitHub as of 2026-10-25. Bare `marshal` is unusable on PyPI because it is a Python standard-library module; the Python package is `marshal_ledger`. Domains and trademark not yet checked.)*
-
 ---
 
 ## The problem
@@ -73,17 +71,20 @@ Fidelity tiers keep the user experience smooth while coverage grows. Every major
 
 | Format | Type | Starting tier (target) |
 |---|---|---|
-| Databricks Asset Bundles, including Genie spaces | Closed, as-code | Full (first parser) |
-| Copilot Studio solution exports | Closed | Spike in week 1, then Partial |
-| Amazon Bedrock agents (CloudFormation / CDK) | Closed, as-code | Partial |
-| Google Vertex AI agents | Closed | Inventory → Partial |
-| Salesforce Agentforce | Closed | Inventory → Partial |
+| Databricks Asset Bundles: Genie spaces | Closed, as-code | Full |
+| Databricks Asset Bundles: agent apps | Closed, as-code | Partial (model and instructions from pro-code readers) |
+| Copilot Studio agent definitions (YAML clone, solution export) | Closed | Partial → Full |
+| Amazon Bedrock Agents (CloudFormation / CDK) | Closed, as-code | Partial → Full |
+| Amazon Bedrock AgentCore Runtime | Closed, as-code | Inventory |
+| Google Vertex AI Agent Engine | Closed | Inventory |
+| Google ADK Agent Config, Conversational Agents export | Closed / open-source | Partial |
+| Salesforce Agentforce (Agent Script, planner metadata) | Closed | Partial → Full |
 | LangGraph, CrewAI, OpenAI Agents SDK | Pro-code | Partial via static extraction |
 | ADL | Open standard | Full |
 | Open Agent Spec | Open standard | Full |
 | AGNTCY OASF | Open standard | Full (metadata) |
 
-*Verify each format's current export path and schema before building its adapter. ADL's spec repo notes a US provisional patent application alongside its Apache 2.0 license; review that before deep integration.*
+*Each adapter targets the platform's current documented export path. See [Platform exportability](platform-exportability.md) for what each closed platform exposes. ADL's specification repository notes a US provisional patent application alongside its Apache 2.0 license.*
 
 ## Data model
 
@@ -100,9 +101,9 @@ Fidelity tiers keep the user experience smooth while coverage grows. Every major
 - `proposed`: captured before deploy, from the PR. Powers review.
 - `shipped`: confirmed after deploy succeeds. Diffs compare against the last shipped version, so failed deploys never show up as live.
 
-## Ledger record (draft)
+## Ledger record
 
-Every field records where its value came from: `declared` (in the source artifact), `annotation` (such as MCP tool hints), `derived` (computed by the ledger), or `unknown`.
+The full v0 model is documented in [Ledger model v0](ledger-model.md). Every field records where its value came from: `declared` (in the source artifact), `annotation` (such as MCP tool hints), `derived` (computed by the ledger), or `unknown`. An abbreviated record:
 
 ```yaml
 apiVersion: marshal/v0
@@ -242,12 +243,12 @@ $ marshal port invoice-agent --to bedrock
 
 | Weeks | Deliverable |
 |---|---|
-| 1 | Exportability spike across Copilot Studio, Bedrock, Vertex and Agentforce. Ledger model v0. Databricks reader |
-| 2–3 | Version store with agent → version → deployment, proposed/shipped events, `ledger ls` and `ledger diff` |
+| 1 | Exportability survey across Copilot Studio, Bedrock, Vertex and Agentforce. Ledger model v0. Databricks reader |
+| 2–3 | Version store with agent → version → deployment, proposed/shipped events, `marshal ls` and `marshal diff` |
 | 4 | GitHub Action, risk-ranked PR comments, secret redaction, hash-only mode |
-| 5–6 | Readers and writers for ADL, Open Agent Spec and OASF, round-trip tests, `ledger convert` with fidelity reports |
-| 7 | Capability matrix v0, quality and portability scores, `ledger port` |
-| 8 | Copilot Studio and Bedrock adapters at the tier the spike supports; inventory-only readers for the rest |
+| 5–6 | Readers and writers for ADL, Open Agent Spec and OASF, round-trip tests, `marshal convert` with fidelity reports |
+| 7 | Capability matrix v0, quality and portability scores, `marshal port` |
+| 8 | Copilot Studio, Bedrock Agents and Agentforce adapters at Partial tier; inventory readers for AgentCore and Agent Engine |
 | 9 | Discovery and dependency queries, simple read-only web view |
 | 10 | Docs, capability matrix contribution guide, sample repo with real public agents, launch |
 
@@ -262,9 +263,9 @@ $ marshal port invoice-agent --to bedrock
 - Round-trip tests passing for all Full-tier formats
 - Outside contributions to the capability matrix
 
-## Tech stack (suggested)
+## Tech stack
 
-- **Core, readers, writers:** Python, with Pydantic models generated from a JSON Schema spec
+- **Core, readers, writers:** Python and Pydantic. The JSON Schema for ledger records is generated from the models and published with each release
 - **Store:** SQLite or DuckDB locally; Postgres for shared deployments
 - **CI:** GitHub Action first; GitLab and Azure DevOps later
 - **UI:** a lightweight read-only web view
@@ -272,7 +273,6 @@ $ marshal port invoice-agent --to bedrock
 
 ## Open questions
 
-- How much of each closed platform's config is actually exportable today? (Answered by the week 1 spike.)
 - How should completeness be weighted so the score reflects real governance risk?
 - Should the capability matrix be versioned per platform release?
 - Which open standard gains the most adoption, and should the ledger model track it closely or stay deliberately independent?
