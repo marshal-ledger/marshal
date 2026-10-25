@@ -1,0 +1,278 @@
+# Marshal — an agent ledger
+
+**A vendor-neutral, open-source ledger for enterprise AI agents. Any format in, any format out, with versions, diffs, portability and audit across every platform.**
+
+*(Name decided. `marshal-ledger` was free on PyPI, npm and GitHub as of 2026-10-25; bare `marshal` is free on PyPI. Domains and trademark not yet checked.)*
+
+---
+
+## The problem
+
+Large organizations run agents on several platforms at once: Databricks, Copilot Studio, Bedrock, Vertex, Agentforce, and pro-code frameworks in their own repos. Each platform stores definitions in its own format, and new open standards (ADL, Open Agent Spec, OASF) add more formats rather than replacing the old ones. Nobody can answer basic questions across all of them:
+
+- What agents exist, where do they run, and which team owns them?
+- What changed between the version in production last month and today?
+- Which agents use this tool, this knowledge source, or this write permission?
+- Could this agent move to another platform, and what exactly would be lost?
+- Has another team already built something like the agent I'm about to build?
+
+Platform vendors have no reason to answer these questions across competitors' platforms, and the open standards ask authors to rewrite agents in a new format, which most teams won't do.
+
+## The approach
+
+Marshal never asks anyone to author in a new format or change how they deploy. It reads the artifacts teams already produce, builds a normalized, versioned record, and translates to whatever format someone needs next.
+
+**Principles**
+
+- **Any format in, any format out.** Closed platform formats and open standards are all just adapters. No format is privileged, including our own.
+- **Passive.** A CI step and optional API pollers collect definitions automatically. Nobody maintains the ledger by hand.
+- **Read-only by default.** It never writes to repos or platforms, which keeps the security review simple.
+- **Honest about fidelity.** Every record and every translation carries a quality and fidelity score. The ledger never guesses, and an unknown value is stored as `unknown`.
+- **Self-hosted.** It runs inside the organization's network, on their own database.
+
+## Architecture
+
+```
+COLLECTORS (passive)
+  CI step (proposed + shipped events)  → deploy artifacts
+  API pollers (optional, admin read)   → UI-built agents, drift
+  File import                          → exports, specs, manifests
+          ↓
+READERS (one per format)
+  Databricks · Copilot Studio · Bedrock · Vertex · Agentforce
+  LangGraph · CrewAI · OpenAI Agents SDK · ADL · Agent Spec · OASF
+          ↓
+LEDGER MODEL (hub) + VERSION STORE
+  agents · versions · deployments
+  tools · knowledge · permissions (shared entities)
+  per-field provenance and quality scores
+          ↓
+WRITERS (one per format)          CAPABILITIES
+  any reader's format, plus  →    inventory · risk-ranked diff
+  fidelity report                 portability scores · discovery
+                                  audit trail · conversion
+```
+
+**Hub-and-spoke translation.** Every format gets one reader and one writer, both mapping to the ledger model. Adding a format costs two adapters, not one translator per pair of formats. The ledger model is a superset: it holds everything a standard holds, plus provenance, deployments, unknowns and platform extension blocks.
+
+**Translation is easy to write and hard to make faithful.** Generating adapters is fast. Making them trustworthy is the real work. Every adapter ships with:
+
+- **Round-trip tests:** read → write → read must produce the same ledger record, or the differences must be declared.
+- **Golden fixtures:** real public agent definitions for each format, never synthetic ones.
+- **A declared loss table:** which fields this writer can't express, so fidelity reports are computed, not guessed.
+
+## Supported formats
+
+Fidelity tiers keep the user experience smooth while coverage grows. Every major provider is supported at some tier from early on, and the score tells the user exactly what that tier means for their agent.
+
+| Tier | Meaning |
+|---|---|
+| **Full** | Read and write, round-trip tested |
+| **Partial** | Read and write, with declared gaps |
+| **Inventory** | Read metadata only (name, owner, platform, version, deployments) |
+
+| Format | Type | Starting tier (target) |
+|---|---|---|
+| Databricks Asset Bundles, including Genie spaces | Closed, as-code | Full (first parser) |
+| Copilot Studio solution exports | Closed | Spike in week 1, then Partial |
+| Amazon Bedrock agents (CloudFormation / CDK) | Closed, as-code | Partial |
+| Google Vertex AI agents | Closed | Inventory → Partial |
+| Salesforce Agentforce | Closed | Inventory → Partial |
+| LangGraph, CrewAI, OpenAI Agents SDK | Pro-code | Partial via static extraction |
+| ADL | Open standard | Full |
+| Open Agent Spec | Open standard | Full |
+| AGNTCY OASF | Open standard | Full (metadata) |
+
+*Verify each format's current export path and schema before building its adapter. ADL's spec repo notes a US provisional patent application alongside its Apache 2.0 license; review that before deep integration.*
+
+## Data model
+
+**Agent → Version → Deployment**
+
+- **Agent:** the logical identity, such as `invoice-agent`.
+- **Version:** content-addressed, a hash of the normalized definition. Environment-bound fields (endpoints, connection references, environment variables) are excluded from the hash, so the same definition in dev and prod is literally the same version.
+- **Deployment:** version + platform + environment + time + pipeline run. "Which version runs where" is a query.
+
+**Shared entities.** Tools, knowledge sources and permissions are first-class records shared across agents, so the ledger can answer "who depends on this?" In the MVP, entities match only on exact identity. Recognizing that a Copilot connector, an MCP tool and an OpenAPI operation wrap the same underlying API is the hard entity-resolution problem and a planned milestone.
+
+**Two events per deploy.**
+
+- `proposed`: captured before deploy, from the PR. Powers review.
+- `shipped`: confirmed after deploy succeeds. Diffs compare against the last shipped version, so failed deploys never show up as live.
+
+## Ledger record (draft)
+
+Every field records where its value came from: `declared` (in the source artifact), `annotation` (such as MCP tool hints), `derived` (computed by the ledger), or `unknown`.
+
+```yaml
+apiVersion: marshal/v0
+kind: AgentVersion
+agent: invoice-agent
+version: sha256:7c41...
+source:
+  format: databricks-asset-bundle
+  artifact: databricks.yml
+  commit: 3f9c2e1
+  pipeline_run: gh-actions/8812
+spec:
+  model:
+    requested: claude-sonnet            # alias the agent asks for
+    resolved: unknown                   # only filled where a gateway is connected
+  instructions:
+    hash: sha256:ab12...
+    text: prompts/invoice.md            # omitted in hash-only mode
+  tools:
+    - ref: tool/sap.update_po
+      scope:      { value: write,   provenance: declared }
+      reversible: { value: unknown, provenance: unknown }
+  knowledge:
+    - ref: knowledge/uc.finance.vendor_faq_idx
+  permissions:
+    identity: service_principal
+    principal: sp-invoice-agent
+  extensions:
+    databricks: { ... }                 # platform-specific fields kept intact
+quality:
+  completeness: 0.82
+  unknown_fields: [tools[0].reversible, model.resolved]
+```
+
+## Quality and portability scores
+
+Scores are how the ledger stays useful even where support is partial.
+
+**Completeness.** How much of the record is declared or derived versus `unknown`, weighted by importance (permissions and write tools count more than descriptions).
+
+**Portability, per target platform.** Two parts, always shown separately:
+
+1. **Platform limitations** from the public capability matrix: what the target can't express at all.
+   *"Copilot Studio has no equivalent for Unity Catalog vector index references."*
+2. **Agent-specific issues:** features this particular agent uses that don't translate.
+   *"Uses 2 Databricks-only functions; 1 tool has unknown write scope."*
+
+**Translation fidelity.** Every conversion produces a report listing what carried over losslessly, what was approximated, and what was dropped.
+
+```
+$ marshal port invoice-agent --to copilot-studio
+
+Portability: 71 / 100
+  Platform limitations (copilot-studio):
+    ✗ UC vector index → no native equivalent; needs a knowledge source rebuild
+  Agent-specific issues:
+    ~ instructions reference a Genie space by ID
+    ? tool sap.update_po: write scope unknown in source
+Fidelity: 14 fields lossless · 3 approximated · 2 dropped
+```
+
+### The capability matrix
+
+A public, community-maintained data file per platform listing what it supports: tool types, knowledge source types, identity modes, guardrails and model options. It keeps portability scores honest and gives contributors an easy first PR.
+
+## Capabilities
+
+### MVP
+
+| Capability | What it does |
+|---|---|
+| **Inventory** | Every agent, version and deployment across platforms |
+| **Risk-ranked diff** | Normalized diff between versions, sorted by severity: permission escalation, new write tools, model changes and removed knowledge first. Posted as a PR comment |
+| **Conversion** | Any supported format to any other, with a fidelity report |
+| **Portability scores** | Per target, split into platform limitations and agent-specific issues |
+| **Discovery** | Search by tool, knowledge source, model or permission; "who depends on this?" |
+| **Audit trail** | Who changed what, when, through which pipeline |
+
+### Later
+
+- **Entity resolution** across connector types for the same underlying API
+- **Forking with lineage:** copy another team's agent into your platform's format and track the upstream
+- **Agent bill of materials:** everything a version depended on, pinned where sources are connected
+- **Rollback recipes:** the exact commit, artifact and command to revert to, run by the team's own pipeline
+- **Policy checks:** rules like "write-scope or irreversible tools need approval," the same on every platform
+- **Resolved-model enrichment** where an AI gateway is connected
+
+### Non-goals
+
+- Runtime evaluation or testing (needs traces most teams don't have)
+- Hosting or executing agents
+- Writing to repos or platforms by default
+- Scoring or monitoring individual people
+
+## Security posture
+
+- **Secret redaction in every reader**, by design. Deploy artifacts often carry credentials and environment variables; they never reach the store.
+- **Hash-only mode** per org: store instruction hashes instead of prompt text. Diffs then report "instructions changed" without showing content.
+- **CI path stands alone.** Pollers need admin-level read credentials, so they're optional, not required for core value.
+- **Self-hosted** with no external calls.
+
+## Demo
+
+**GitHub Action, around the deploy step teams already have:**
+
+```yaml
+- uses: marshal-ledger/collect@v1
+  with: { event: proposed, artifacts: databricks.yml }
+- run: databricks bundle deploy -t prod
+- uses: marshal-ledger/collect@v1
+  with: { event: shipped, artifacts: databricks.yml, target: prod }
+```
+
+**PR comment, ranked by risk:**
+
+```
+invoice-agent (Databricks)  v14 → v15
+
+  HIGH  + tool: sap.update_po (write, reversibility unknown)
+  HIGH  ~ permissions: principal gained 1 grant
+  MED   - knowledge: vendor-faq-2023
+  LOW   ~ instructions: 3 lines changed
+
+  Completeness 82% · Portability: Bedrock 88 · Copilot Studio 71
+```
+
+**CLI:**
+
+```
+$ marshal ls --tool "sap.*"
+$ marshal diff invoice-agent@v12 invoice-agent@v15
+$ marshal convert agent.adl.yaml --to agent-spec
+$ marshal port invoice-agent --to bedrock
+```
+
+## Plan
+
+| Weeks | Deliverable |
+|---|---|
+| 1 | Exportability spike across Copilot Studio, Bedrock, Vertex and Agentforce. Ledger model v0. Databricks reader |
+| 2–3 | Version store with agent → version → deployment, proposed/shipped events, `ledger ls` and `ledger diff` |
+| 4 | GitHub Action, risk-ranked PR comments, secret redaction, hash-only mode |
+| 5–6 | Readers and writers for ADL, Open Agent Spec and OASF, round-trip tests, `ledger convert` with fidelity reports |
+| 7 | Capability matrix v0, quality and portability scores, `ledger port` |
+| 8 | Copilot Studio and Bedrock adapters at the tier the spike supports; inventory-only readers for the rest |
+| 9 | Discovery and dependency queries, simple read-only web view |
+| 10 | Docs, capability matrix contribution guide, sample repo with real public agents, launch |
+
+## Target users and success metrics
+
+**First users:** platform and AI enablement teams at organizations running agents on two or more platforms.
+
+**Success looks like:**
+
+- 3 platform teams running the Action in real pipelines
+- Every major platform supported at Inventory tier or better
+- Round-trip tests passing for all Full-tier formats
+- Outside contributions to the capability matrix
+
+## Tech stack (suggested)
+
+- **Core, readers, writers:** Python, with Pydantic models generated from a JSON Schema spec
+- **Store:** SQLite or DuckDB locally; Postgres for shared deployments
+- **CI:** GitHub Action first; GitLab and Azure DevOps later
+- **UI:** a lightweight read-only web view
+- **Packaging:** Docker image and Helm chart for self-hosting
+
+## Open questions
+
+- How much of each closed platform's config is actually exportable today? (Answered by the week 1 spike.)
+- How should completeness be weighted so the score reflects real governance risk?
+- Should the capability matrix be versioned per platform release?
+- Which open standard gains the most adoption, and should the ledger model track it closely or stay deliberately independent?
