@@ -170,3 +170,26 @@ action:
     [record] = CopilotStudioReader().read(root).records
     identity = record.spec.permissions.identity
     assert identity.value is None and "flows" in identity.basis
+
+
+def test_standard_connector_operations_get_their_documented_effect(tmp_path):
+    root = write_solution(tmp_path / "s")
+    [record] = CopilotStudioReader().read(root).records
+    tools = {t.ref: t for t in record.spec.tools}
+    send = tools["tool/powerplatform.shared_office365.SendEmailV2"]
+    assert send.scope.value.value == "write" and send.scope.provenance.value == "derived"
+    assert send.reversible.value is False
+    assert "learn.microsoft.com/en-us/connectors/office365" in send.scope.basis
+    listing = tools["tool/powerplatform.shared_commondataserviceforapps.ListRecords"]
+    assert (listing.scope.value.value, listing.reversible.value) == ("read", True)
+
+
+def test_operations_outside_the_table_stay_unknown():
+    from marshal_ledger.model import ToolUse
+    from marshal_ledger.readers.copilotstudio import derive_effect
+
+    for ref in ("tool/powerplatform.shared_office365users.HttpRequest", "tool/powerplatform.shared_custom.Thing",
+                "tool/powerplatform.flow.1234"):
+        use = ToolUse(ref=ref)
+        derive_effect(use)
+        assert not use.scope.is_known and not use.reversible.is_known

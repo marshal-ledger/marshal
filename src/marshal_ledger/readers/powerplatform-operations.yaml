@@ -1,0 +1,74 @@
+# What Microsoft's standard Power Platform connector operations do, by operation ID.
+#
+# Copilot Studio actions and topic calls name a connector operation but not its effect.
+# For the operations listed here, the reader derives the tool's scope from this table,
+# citing the connector reference as the basis. Operations not listed stay unknown.
+#
+#   read:         returns data and changes nothing (also derived reversible)
+#   write:        creates, changes, deletes or sends something
+#   irreversible: a write that sends a message, which can't be recalled
+#
+# Operations whose effect depends on their input, such as HttpRequest or Dataverse's
+# PerformBoundAction, are deliberately left out.
+
+shared_office365users:
+  source: https://learn.microsoft.com/en-us/connectors/office365users/
+  read: [DirectReports, DirectReports_V2, Manager, Manager_V2, MyProfile, MyProfile_V2, MyTrendingDocuments,
+         RelevantPeople, TrendingDocuments, UserPhoto, UserPhoto_V2, UserPhotoMetadata, UserProfile,
+         UserProfile_V2, SearchUser, SearchUserV2]
+  write: [UpdateMyProfile, UpdateMyPhoto]
+
+shared_commondataserviceforapps:
+  source: https://learn.microsoft.com/en-us/connectors/commondataserviceforapps/
+  read: [ListRecords, ListRecordsWithOrganization, GetItem, GetItemWithOrganization, GetRelevantRows,
+         GetEntityFileImageFieldContent, GetEntityFileImageFieldContentWithOrganization]
+  write: [CreateRecord, CreateRecordWithOrganization, UpdateOnlyRecord, UpdateOnlyRecordWithOrganization,
+          UpdateRecord, UpdateRecordWithOrganization, DeleteRecord, DeleteRecordWithOrganization,
+          AssociateEntities, AssociateEntitiesWithOrganization, DisassociateEntities,
+          DisassociateEntitiesWithOrganization, UpdateEntityFileImageFieldContent,
+          UpdateEntityFileImageFieldContentWithOrganization]
+
+shared_office365:
+  source: https://learn.microsoft.com/en-us/connectors/office365/
+  read: [ExportEmail, ExportEmail_V2, FindMeetingTimes, FindMeetingTimes_V2, GetAttachment, GetAttachment_V2,
+         GetEventsCalendarView, GetEventsCalendarViewV2, GetEventsCalendarViewV3, CalendarGetTables,
+         CalendarGetTables_V2, ContactGetItem, ContactGetItem_V2, ContactGetTables, ContactGetTablesV2,
+         ContactGetItems, ContactGetItems_V2, GetEmail, GetEmailV2, GetEmails, GetEmailsV2, GetEmailsV3,
+         CalendarGetItem, V2CalendarGetItem, V3CalendarGetItem, CalendarGetItems, V2CalendarGetItems,
+         V3CalendarGetItems, V4CalendarGetItems, GetMailTips, GetMailTips_V2, GetOutlookCategoryNames,
+         GetRoomLists, GetRoomLists_V2, GetRooms, GetRooms_V2, GetRoomsInRoomList, GetRoomsInRoomList_V2]
+  write: [AssignCategory, AssignCategoryBulk, ContactPostItem, ContactPostItem_V2, CalendarPostItem,
+          V2CalendarPostItem, V3CalendarPostItem, V4CalendarPostItem, ContactDeleteItem, ContactDeleteItem_V2,
+          DeleteEmail, DeleteEmail_V2, CalendarDeleteItem, CalendarDeleteItem_V2, DraftEmail, Flag, Flag_V2,
+          MarkAsRead, MarkAsRead_V2, MarkAsRead_V3, Move, MoveV2, RespondToEvent, RespondToEvent_V2,
+          SetAutomaticRepliesSetting, SetAutomaticRepliesSetting_V2, ContactPatchItem, ContactPatchItem_V2,
+          CalendarPatchItem, V2CalendarPatchItem, V3CalendarPatchItem, V4CalendarPatchItem,
+          UpdateMyContactPhoto, UpdateDraftEmail]
+  irreversible: [ForwardEmail, ForwardEmail_V2, ReplyTo, ReplyToV2, ReplyToV3, SendDraftEmail, SendEmail,
+                 SendEmailV2, SharedMailboxSendEmail, SharedMailboxSendEmailV2, SendApprovalMail,
+                 SendMailWithOptions]
+
+shared_teams:
+  source: https://learn.microsoft.com/en-us/connectors/teams/
+  read: [GetSection, GetTeam, GetTeamProfilePicture, GetTag, GetAiInsight, GetAllAdhocCallRecordings,
+         GetAllAdhocCallTranscripts, AtMentionTag, AtMentionUser, GetOnlineMeeting, GetCallRecording,
+         GetCallRecordingContent, GetCallTranscript, GetCallTranscriptContent, GetChannel, GetMeetingRecording,
+         GetMeetingRecordingContent, GetMeetingTranscript, GetMeetingTranscriptContent, GetMessageDetails,
+         GetMessagesFromChannel, GetMessagesFromChat, ListAiInsights, GetAllChannelsForTeam, GetTags,
+         GetAllAssociatedTeams, ListCallRecordings, ListCallTranscripts, GetChannelsForGroup, ListMembers,
+         GetChats, GetAllTeams, ListMeetingRecordings, ListMeetingTranscripts, GetAllOwnedTeams,
+         ListRepliesToMessage, ListSectionItems, ListSections, ListTeamMembers, GetTagMembers]
+  write: [AddMemberToChannel, AddMemberToTeam, AddMemberToTag, AddMemberToChat, AddSectionItem, ArchiveChannel,
+          CreateChannel, CreateChat, CreateSection, CreateTag, CreateATeam, CreateTeamsMeeting, DeleteTagMember,
+          DeleteSection, DeleteTag, JoinMemberToChannel, MoveSectionItem, RemoveMemberFromChannel,
+          RemoveMemberFromChat, RemoveMemberFromTeam, RemoveSectionItem]
+  irreversible: [PostFeedNotification, PostMessageToSelf, PostCardAndWaitForResponse, PostCardToConversation,
+                 PostMessageToConversation, ReplyWithMessageToConversation, ReplyWithCardToConversation,
+                 PostMessageToChannel, PostMessageToChannelV2, PostMessageToChannelV3, PostChannelNotification,
+                 PostUserNotification, PostReplyToMessage, PostReplyToMessageV2, SubscribeUserMessageWithOptions,
+                 SubscribeChannelFlowContinuation, SubscribeUserFlowContinuation, PostChannelAdaptiveCard,
+                 PostUserAdaptiveCard]
+
+shared_msnweather:
+  source: https://learn.microsoft.com/en-us/connectors/msnweather/
+  read: [CurrentWeather, TodaysForecast, TomorrowsForecast]

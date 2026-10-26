@@ -97,6 +97,24 @@ def _value(v: Any) -> str:
     return f'<span title="{_e(v.provenance.value)}: {_e(v.basis)}">{_e(value)}</span>'
 
 
+_CREDENTIALS = {"end user": "signed-in user", "maker": "maker's connection"}
+
+
+def _credentials(spec: Any) -> dict[str, str]:
+    """Whose credentials each tool uses, where a reader recorded it in the format's extension."""
+    found: dict[str, str] = {}
+    for ext in spec.extensions.values():
+        if not isinstance(ext, dict):
+            continue
+        for entry in (ext.get("actions") or {}).values():
+            if isinstance(entry, dict) and entry.get("tool") and entry.get("credentials"):
+                found[str(entry["tool"])] = _CREDENTIALS.get(str(entry["credentials"]), str(entry["credentials"]))
+        for ref, entry in (ext.get("topic_calls") or {}).items():
+            if isinstance(entry, dict) and entry.get("credentials"):
+                found[str(ref)] = _CREDENTIALS.get(str(entry["credentials"]), str(entry["credentials"]))
+    return found
+
+
 def _table(headers: list[str], rows: list[list[str]], empty: str = "None") -> str:
     if not rows:
         return f'<p class="muted">{_e(empty)}</p>'
@@ -194,10 +212,12 @@ def create_web_app(store_path: str, settings: WebSettings) -> FastAPI:
         elif spec.instructions.hash:
             parts.append(f'<h2>Instructions</h2><p class="muted">Stored as a hash only: <span class=mono>{_e(spec.instructions.hash[:23])}…</span></p>')
 
-        parts.append("<h2>Tools</h2>" + _table(["Tool", "Scope", "Reversible", "Confirmation"], [[
+        credentials = _credentials(spec)
+        parts.append("<h2>Tools</h2>" + _table(["Tool", "Scope", "Reversible", "Confirmation"] + (["Credentials"] if credentials else []), [[
             f'<a href="deps?{urlencode({"q": t.ref})}" class=mono>{_e(t.name or t.ref)}</a>' + (f'<div class="muted mono">{_e(t.ref)}</div>' if t.name else ""),
             _value(t.scope), _value(t.reversible), _value(t.requires_confirmation),
-        ] for t in spec.tools], "No tools."))
+        ] + ([_e(credentials[t.ref]) if t.ref in credentials else '<span class="muted">–</span>'] if credentials else [])
+            for t in spec.tools], "No tools."))
         parts.append("<h2>Knowledge</h2>" + _table(["Source", "Type", "Scope"], [[
             f'<a href="deps?{urlencode({"q": k.ref})}" class=mono>{_e(k.name or k.ref)}</a>' + (f'<div class="muted mono">{_e(k.ref)}</div>' if k.name else ""),
             _e(k.type), _value(k.scope),
@@ -221,6 +241,10 @@ def create_web_app(store_path: str, settings: WebSettings) -> FastAPI:
             try:
                 report = assess(record, target)
             except Exception:  # a broken matrix file shouldn't take the page down
+                continue
+            if report.current:
+                portability.append([_e(load_matrix(target).display_name), '<span class="muted">–</span>',
+                                    '<span class="muted">Current platform</span>'])
                 continue
             portability.append([_e(load_matrix(target).display_name), f"<strong>{report.score}</strong>",
                                 "<br>".join(_e(i.message) for i in report.limitations[:4])

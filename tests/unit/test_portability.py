@@ -73,3 +73,13 @@ def test_cli_port(tmp_path, capsys):
     assert "Portability:" in out and "Amazon Bedrock Agents" in out
     assert main(["port", str(adl), "--to", "all", "--output", "json", "--db", str(tmp_path / "x.sqlite")]) == 0
     assert {r["target"] for r in json.loads(capsys.readouterr().out)} == set(platforms())
+
+
+def test_an_agent_on_the_target_platform_is_current():
+    agent = record(tools=("tool/custom.thing",))
+    on_platform = agent.model_copy(update={"platform": "copilot-studio"})
+    report = assess(on_platform, "copilot-studio")
+    assert report.current and report.score == 100 and not report.limitations
+    assert "Already on Microsoft Copilot Studio" in report.text()
+    assert report.to_dict()["current"] is True
+    assert not assess(agent, "copilot-studio").current

@@ -48,12 +48,13 @@ A solution can hold several agents; each component belongs to the agent its `par
 | `model.requested`, `provider` | `aISettings.model.modelNameHint` and `provider`; GPT hints → `azure-openai`, Claude hints → `anthropic` | declared / derived |
 | `tools[]` | Connector actions as `tool/powerplatform.<connector>.<operation>`; MCP connectors as `tool/mcp.powerplatform.<connector>`; flows as `tool/powerplatform.flow.<id>`; prompts as `tool/powerplatform.ai_plugin.<name>`; connected agents and sub-agents as `agent/<id>`; `webBrowsing` and `codeInterpreter` capabilities; HTTP requests, connector operations and flows that topics call | declared / derived |
 | `tools[].input_schema` | Inputs the model fills in (`AutomaticTaskInput`) | declared |
+| `tools[].scope`, `reversible` | For standard Microsoft connector operations (Office 365 Users and Outlook, Dataverse, Teams, MSN Weather), from Microsoft's connector reference: reads are `read` and reversible; writes are `write`; operations that send a message are also irreversible. The table is [`powerplatform-operations.yaml`](../../src/marshal_ledger/readers/powerplatform-operations.yaml). Other operations, and ones whose effect depends on their input such as `HttpRequest`, stay unknown. | derived |
 | `tools[].requires_confirmation` | An action's `confirmation` prompt | declared |
 | `knowledge[]` | Sites as `knowledge/<url>`, so a SharePoint site shared with another agent is the same entity; uploaded files; scope read | declared / derived |
 | `permissions.identity` | Derived from the connection mode of every action, topic call and trigger: all `Invoker` → `on_behalf_of_user`; all `Maker` (the schema default) → `shared_credential`; both → `mixed`. A flow's connections are defined in the flow, not the agent, so an agent that calls flows is `unknown` unless its other connections already show both modes. | derived |
 | `permissions.access[]` | `accessControlPolicy`; `authenticationMode: None` adds "unauthenticated users" | declared |
 | `bindings` | Connection reference names, Dataverse bot id | |
-| `extensions.copilot-studio` | Settings, conversation starters, AI settings, per-action connector and credential mode, topics, the calls topics make and their credential mode, triggers | declared |
+| `extensions.copilot-studio` | Settings, conversation starters, AI settings, per-action tool, connector and credential mode, topics, the calls topics make and their credential mode, triggers | declared |
 
 A `Maker` connection uses the credentials the agent's author configured, for every user. An `Invoker` connection uses each end user's own. The difference is often the most important governance fact about a Copilot Studio agent, so every action records its mode, and the agent's identity summarizes them.
 

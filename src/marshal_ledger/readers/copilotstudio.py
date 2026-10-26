@@ -21,12 +21,14 @@ Mapping rules are documented in ``docs/formats/copilot-studio.md``.
 
 from __future__ import annotations
 
+import functools
 import json
 import re
 import tempfile
 import xml.etree.ElementTree as ET
 import zipfile
 from dataclasses import dataclass, field
+from importlib import resources
 from pathlib import Path, PurePosixPath
 from typing import Any, Iterator, Optional
 
@@ -145,6 +147,36 @@ def _schema(inputs: list[Any]) -> Optional[dict[str, Any]]:
     if not props:
         return None
     return {"type": "object", "properties": props, **({"required": required} if required else {})}
+
+
+@functools.cache
+def _operations() -> dict[tuple[str, str], tuple[str, str]]:
+    """(connector, operation id) → (effect, documentation URL), from powerplatform-operations.yaml."""
+    path = resources.files("marshal_ledger") / "readers" / "powerplatform-operations.yaml"
+    table: dict[tuple[str, str], tuple[str, str]] = {}
+    for connector, entry in (yaml.safe_load(path.read_text(encoding="utf-8")) or {}).items():
+        for effect in ("read", "write", "irreversible"):
+            for operation in entry.get(effect) or []:
+                table[(connector, str(operation))] = (effect, str(entry["source"]))
+    return table
+
+
+def derive_effect(use: ToolUse) -> None:
+    """Scope and reversibility of a standard connector operation, from Microsoft's connector reference."""
+    if not use.ref.startswith("tool/powerplatform.") or use.scope.is_known:
+        return
+    connector, _, operation = use.ref.removeprefix("tool/powerplatform.").partition(".")
+    found = _operations().get((connector, operation))
+    if found is None:
+        return
+    effect, source = found
+    if effect == "read":
+        use.scope = Value[Scope].derived(Scope.READ, f"{operation} reads data ({source})")
+        use.reversible = Value[bool].derived(True, "reads have no side effects")
+    else:
+        use.scope = Value[Scope].derived(Scope.WRITE, f"{operation} changes data ({source})")
+        if effect == "irreversible":
+            use.reversible = Value[bool].derived(False, f"{operation} sends a message, which can't be recalled")
 
 
 @dataclass
@@ -516,6 +548,8 @@ class CopilotStudioReader(Reader):
                         entity(EntityKind.TOOL, ref)
         if topics:
             extension["topics"] = topics
+        for use in spec.tools:
+            derive_effect(use)
         if topic_calls:
             extension["topic_calls"] = {ref: {**e, "topics": sorted(e["topics"])} for ref, e in sorted(topic_calls.items())}
 
@@ -646,6 +680,7 @@ class CopilotStudioReader(Reader):
             return None, None, extra
         if mode:
             extra["credentials"] = "end user" if mode == "Invoker" else "maker"
+        extra["tool"] = use.ref
         return use, mode, extra
 
     @staticmethod

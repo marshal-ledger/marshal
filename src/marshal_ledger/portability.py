@@ -111,8 +111,12 @@ class PortabilityReport:
     agent_issues: list[Issue] = field(default_factory=list)
     unknowns: list[str] = field(default_factory=list)
     fidelity: Optional[FidelityReport] = None
+    current: bool = False
+    """The agent is already on the target platform, so there is nothing to move."""
 
     def text(self) -> str:
+        if self.current:
+            return f"{self.agent} → {self.target_name}\n\nAlready on {self.target_name}; nothing to move."
         lines = [f"{self.agent} → {self.target_name}", "", f"Portability: {self.score} / 100"]
         marks = {"none": "✗", "adapt": "~"}
         if self.limitations:
@@ -137,6 +141,7 @@ class PortabilityReport:
             "agent": self.agent,
             "target": self.target,
             "score": self.score,
+            **({"current": True} if self.current else {}),
             "limitations": [i.to_dict() for i in self.limitations],
             "agent_issues": [i.to_dict() for i in self.agent_issues],
             "unknowns": self.unknowns,
@@ -165,6 +170,11 @@ def assess(record: AgentVersion, target: str) -> PortabilityReport:
     weights: dict[str, float] = {}
     penalties: dict[str, float] = {}
     report = PortabilityReport(agent=record.agent, target=matrix.platform, target_name=matrix.display_name, score=100)
+    if record.platform == matrix.platform:
+        # Rewriting an agent in its own platform's format can lose detail (topics are recorded by
+        # name, for example), but that is a limit of the conversion, not a cost of staying put.
+        report.current = True
+        return report
 
     def limit(element: str, kind: str, rule: Rule, subject: str) -> None:
         weights[element] = _WEIGHTS[kind]

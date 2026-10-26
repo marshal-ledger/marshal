@@ -71,3 +71,26 @@ def test_served_with_the_ingest_api(db, signer):
     assert client.get("/healthz").json() == {"status": "ok"}
     assert client.get("/", headers={"X-Forwarded-Email": "ana@acme.example"}).status_code == 200
     assert client.post("/v0/events", json={}).status_code == 401
+
+
+def test_tools_show_whose_credentials_they_use(ledger_location):
+    spec = AgentSpec(
+        display_name=Value[str].declared("Helpdesk"),
+        tools=[ToolUse(ref="tool/powerplatform.shared_office365.SendEmailV2"), ToolUse(ref="tool/powerplatform.flow.1")],
+        extensions={"copilot-studio": {
+            "actions": {"SendMail": {"tool": "tool/powerplatform.shared_office365.SendEmailV2", "credentials": "maker"}},
+            "topic_calls": {"tool/powerplatform.flow.1": {"topics": ["Greeting"]}},
+        }},
+    )
+    agent = build_record(agent="helpdesk", platform="copilot-studio", source=Source(format="copilot-studio", artifact="a"), spec=spec)
+    with Store(ledger_location) as s:
+        s.record([agent], event=DeploymentEvent.SHIPPED, environment="prod", at=T0, channel=Channel.CI)
+    client = TestClient(create_web_app(str(ledger_location), WebSettings(enabled=True, allow_unauthenticated=True)))
+    page = client.get("/agent", params={"id": "helpdesk"}).text
+    assert "<th>Credentials</th>" in page and "maker&#x27;s connection" in page
+    assert "Current platform" in page  # its own platform isn't scored for portability
+
+
+def test_no_credentials_column_without_credential_data(db):
+    client = TestClient(create_web_app(db, WebSettings(enabled=True, allow_unauthenticated=True)))
+    assert "<th>Credentials</th>" not in client.get("/agent", params={"id": "finance/invoice"}).text

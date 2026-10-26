@@ -31,6 +31,8 @@ Each element of the agent has a weight: identity 3, each tool 3, model 2, instru
 
 Unknown values in the source, such as a tool whose scope isn't declared, are listed with `?` but don't count against the score. A low completeness score is the better signal for those.
 
+An agent assessed against the platform it already runs on isn't scored. It's reported as the current platform, because rewriting it in its own format can lose detail that moving it wouldn't.
+
 ## The capability matrix
 
 One YAML file per platform in [`src/marshal_ledger/capabilities/`](../src/marshal_ledger/capabilities/): Copilot Studio, Bedrock Agents, Agentforce, Google ADK on Agent Engine, and Databricks. Rules match entity refs (for tools and knowledge) or values (for identity kinds and model providers). The first match wins, and every list ends with a `"*"` default.
