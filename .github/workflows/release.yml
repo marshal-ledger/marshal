@@ -142,6 +142,8 @@ jobs:
           sbom: true              # an SPDX software bill of materials, attached to the image
           provenance: mode=max    # SLSA build provenance, attached to the image
       - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6  # v4.1.2
+        with:
+          cosign-release: v2.6.5   # cosign 2 signatures, which admission controllers and older verifiers read
       - name: Sign the image
         env:
           IMAGE: ${{ vars.IMAGE_REPOSITORY }}@${{ steps.build.outputs.digest }}

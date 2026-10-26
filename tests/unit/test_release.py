@@ -53,7 +53,9 @@ def test_action_references_use_the_current_major_tag():
 
 @pytest.mark.parametrize("doc", ["docs/deployment.md", "docs/github-action.md"])
 def test_versions_in_docs_are_the_published_release(doc):
-    versions = set(re.findall(r"(?<![\w.])v?(\d+\.\d+\.\d+)\b", (ROOT / doc).read_text()))
+    # Marshal's own versions: image tags, release tags and Action refs (not, say, a runner version).
+    versions = set(re.findall(r"(?:marshal:|@v|checkout v)(\d+\.\d+\.\d+)\b", (ROOT / doc).read_text()))
+    assert versions, f"{doc} no longer names a release; update this test"
     assert versions == {PUBLISHED}, f"{doc} mentions {sorted(versions)}; update it to {PUBLISHED}"
 
 

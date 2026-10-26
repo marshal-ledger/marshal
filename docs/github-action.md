@@ -2,7 +2,7 @@
 
 `marshal-ledger/marshal/collect` reads agent definitions from the checked-out repository, sends them to the Marshal ingest API, and on pull requests posts the risk-ranked changes as a comment. Later runs on the same pull request update the comment in place.
 
-The job needs these permissions:
+It runs on GitHub-hosted runners, and on self-hosted runners or GitHub Enterprise Server with runner v2.327.1 or later, which run Node 24 actions. The job needs these permissions:
 
 ```yaml
 permissions:
