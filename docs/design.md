@@ -23,7 +23,7 @@ Marshal never asks anyone to author in a new format or change how they deploy. I
 **Principles**
 
 - **Any format in, any format out.** Closed platform formats and open standards are all just adapters. No format is privileged, including our own.
-- **Passive.** A CI step and optional API pollers collect definitions automatically. Nobody maintains the ledger by hand.
+- **Passive.** A CI step and optional scheduled exports collect definitions automatically. Nobody maintains the ledger by hand.
 - **Read-only by default.** It never writes to repos or platforms, which keeps the security review simple.
 - **Honest about fidelity.** Every record and every translation carries a quality and fidelity score. The ledger never guesses, and an unknown value is stored as `unknown`.
 - **Self-hosted.** It runs inside the organization's network, on their own database.
@@ -33,7 +33,7 @@ Marshal never asks anyone to author in a new format or change how they deploy. I
 ```
 COLLECTORS (passive)
   CI step (proposed + shipped events)  → deploy artifacts
-  API pollers (optional, admin read)   → UI-built agents, drift
+  Scheduled exports (optional)        → UI-built agents, drift
   File import                          → exports, specs, manifests
           ↓
 READERS (one per format)
@@ -100,9 +100,9 @@ Fidelity tiers keep the user experience smooth while coverage grows. Every major
 
 - `proposed`: captured before deploy, from the PR. Powers review.
 - `shipped`: confirmed after deploy succeeds. Diffs compare against the last shipped version, so failed deploys never show up as live.
-- `observed`: read from the live platform by a poller or a manual import. An observation that differs from what was shipped is drift: a change made outside the pipeline, such as an edit in a platform's web UI.
+- `observed`: the live definition, exported by a scheduled job or imported by hand. An observation that differs from what was shipped is drift: a change made outside the pipeline, such as an edit in a platform's web UI.
 
-Every event records its channel (`ci`, `poller` or `manual`), and each agent's freshness per environment is the age of its last confirmation, judged by channel. Manual imports age out fastest. Freshness and drift are shown beside the risk-ranked diff, so a reviewer can tell a risky change from an untrustworthy record.
+Every event records its channel (`ci`, `scheduled` or `manual`), and each agent's freshness per environment is the age of its last confirmation, judged by channel. Manual imports age out fastest. Freshness and drift are shown beside the risk-ranked diff, so a reviewer can tell a risky change from an untrustworthy record.
 
 ## Ingestion and authentication
 
@@ -241,9 +241,9 @@ A public, community-maintained data file per platform listing what it supports: 
 Marshal never starts a connection to an agent platform. Records reach it in two ways, both initiated by systems that already have access:
 
 - **Files** that readers parse: repositories, exports, generated templates.
-- **Pushes** to the ingest API, from pipelines and from any optional poller.
+- **Pushes** to the ingest API, from deploy pipelines and from optional scheduled export jobs.
 
-A poller is a separate component the organization runs wherever it already has network access to a platform, such as a scheduled Power Platform or cloud pipeline. It reads the live definition with that platform's own tools and pushes an `observed` event. Where no poller exists, Marshal still works: drift isn't detected, and records that only came from manual imports are reported as stale instead of current.
+A scheduled export is a job the organization runs wherever it already has access to a platform, for example a nightly GitHub Actions or Azure DevOps workflow. It exports the live definition with that platform's own tools and pushes an `observed` event; ready-made workflows are in [`examples/scheduled/`](../examples/scheduled/). Where no scheduled export exists, Marshal still works: drift isn't detected, and records that only came from manual imports are reported as stale instead of current.
 
 ## Demo
 

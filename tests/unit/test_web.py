@@ -27,7 +27,7 @@ def db(ledger_location):
     with Store(path) as s:
         s.record([record()], event=DeploymentEvent.SHIPPED, environment="prod", at=T0, channel=Channel.CI)
         s.record([record("edited", tools=("tool/sap.update_po", "tool/sap.delete_po"))],
-                 event=DeploymentEvent.OBSERVED, environment="prod", at=T0, channel=Channel.POLLER)
+                 event=DeploymentEvent.OBSERVED, environment="prod", at=T0, channel=Channel.SCHEDULED)
     return str(path)
 
 

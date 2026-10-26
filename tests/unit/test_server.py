@@ -140,11 +140,11 @@ def test_config_loads_from_yaml(tmp_path):
     assert config.issuers[0].audience == "marshal"
 
 
-def test_observed_events_need_the_shipped_policy_and_are_recorded_as_poller(client, signer, config):
+def test_observed_events_need_the_shipped_policy_and_are_recorded_as_scheduled(client, signer, config):
     pr = signer.github(ref="refs/pull/9/merge")
     assert client.post("/v0/events", json=body("observed"), headers=auth(pr)).status_code == 403
     assert client.post("/v0/events", json=body("shipped"), headers=auth(signer.github())).status_code == 200
     response = client.post("/v0/events", json=body("observed"), headers=auth(signer.github()))
-    assert response.json()["reports"][0]["channel"] == "poller"
+    assert response.json()["reports"][0]["channel"] == "scheduled"
     with Store(config.store) as store:
-        assert [e.channel.value for e, _, _ in store.history("finance/invoice")] == ["ci", "poller"]
+        assert [e.channel.value for e, _, _ in store.history("finance/invoice")] == ["ci", "scheduled"]

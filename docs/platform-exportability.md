@@ -46,7 +46,7 @@ Sources: [databricks/cli bundle schema](https://github.com/databricks/cli/blob/m
 
 1. **Copilot Studio extension for VS Code** (generally available). *Clone agent* downloads an agent's full definition as a YAML folder that can be committed to Git. *Apply changes* pushes edits back. Clone is an interactive editor command; no headless CLI is documented. It applies to agents on the standard harness.
 2. **Power Platform solutions** (`pac solution export`). Microsoft's recommended path for moving agents between environments. The agent lives in Dataverse as `bot` and `botcomponent` records.
-3. **Dataverse Web API.** Reads the same records directly. It suits an optional poller with admin read access.
+3. **Dataverse Web API.** Reads the same records directly. It suits an optional scheduled export with admin read access.
 
 **What a clone holds.**
 
@@ -153,7 +153,7 @@ The new Builder's types need API version 66.0 or later. `GenAiPlannerBundle` is 
 - Action implementations (Flow, Apex) are separate metadata. Write behavior has to be derived from them.
 - The agent user's permissions are in permission sets.
 - No model setting appeared in the Agent Script examples reviewed.
-- `GenAiPlannerBundle`, `AiAuthoringBundle` and `GenAiFunction` don't support SOQL, so a poller must use metadata retrieve. `BotDefinition` and `BotVersion` do support SOQL.
+- `GenAiPlannerBundle`, `AiAuthoringBundle` and `GenAiFunction` don't support SOQL, so a scheduled export must use metadata retrieve. `BotDefinition` and `BotVersion` do support SOQL.
 
 **Recommended reader.** Agent Script first: it is declarative, versioned and carries identity. It needs a small parser, since the format is not YAML. Fall back to `GenAiPlannerBundle` XML for legacy agents. Partial tier at first, with Full likely for Agent Script. The original plan put Agentforce at Inventory; this is better than that.
 

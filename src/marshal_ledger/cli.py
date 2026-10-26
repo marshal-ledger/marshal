@@ -272,7 +272,7 @@ def _serve(args: argparse.Namespace) -> int:
 
 
 def _policy(args: argparse.Namespace) -> FreshnessPolicy:
-    return FreshnessPolicy(manual_days=args.manual_max_age, poller_days=args.poller_max_age)
+    return FreshnessPolicy(manual_days=args.manual_max_age, scheduled_days=args.scheduled_max_age)
 
 
 def _ls(args: argparse.Namespace) -> int:
@@ -426,8 +426,8 @@ def _add_freshness_args(parser: argparse.ArgumentParser) -> None:
     defaults = FreshnessPolicy()
     parser.add_argument("--manual-max-age", type=float, default=defaults.manual_days, metavar="DAYS",
                         help=f"manual imports are stale after this many days (default {defaults.manual_days:g})")
-    parser.add_argument("--poller-max-age", type=float, default=defaults.poller_days, metavar="DAYS",
-                        help=f"poller observations are stale after this many days (default {defaults.poller_days:g})")
+    parser.add_argument("--scheduled-max-age", type=float, default=defaults.scheduled_days, metavar="DAYS",
+                        help=f"scheduled observations are stale after this many days (default {defaults.scheduled_days:g})")
 
 
 def _log(args: argparse.Namespace) -> int:
@@ -489,8 +489,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     collect = commands.add_parser("collect", help="read agent definitions and record an event in a local store")
     _add_read_args(collect)
     add_event_args(collect)
-    collect.add_argument("--channel", choices=[Channel.MANUAL.value, Channel.POLLER.value], default=Channel.MANUAL.value,
-                         help="how this collection runs: by a person (default) or by a scheduled poller")
+    collect.add_argument("--channel", choices=[Channel.MANUAL.value, Channel.SCHEDULED.value], default=Channel.MANUAL.value,
+                         help="how this collection runs: by a person (default) or by a scheduled export job")
     _add_db_arg(collect)
     collect.set_defaults(handler=_collect)
 

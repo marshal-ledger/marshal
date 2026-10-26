@@ -260,7 +260,7 @@ class DeploymentEvent(str, Enum):
     SHIPPED = "shipped"
     """Confirmed after the deploy succeeded."""
     OBSERVED = "observed"
-    """Read from the live platform, by a poller or a manual import. When it differs
+    """Read from the live platform, by a scheduled export or a manual import. When it differs
     from what was last shipped, the agent has drifted."""
 
 
@@ -269,8 +269,8 @@ class Channel(str, Enum):
 
     CI = "ci"
     """An authenticated pipeline, through the ingest API."""
-    POLLER = "poller"
-    """A scheduled read of the platform's own API."""
+    SCHEDULED = "scheduled"
+    """A scheduled job, run by the organization where it has access, that exported the live definition."""
     MANUAL = "manual"
     """A person ran a collection or imported a file."""
 

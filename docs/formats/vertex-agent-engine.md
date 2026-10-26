@@ -8,7 +8,7 @@ Marshal never calls the API. A job the organization runs where it already has ac
 $ gcloud ai reasoning-engines list --region=us-central1 --format=json > engines.json
 ```
 
-The job then commits the file, or reads it with `marshal collect --event observed --channel poller` and pushes the result. See [Network posture](../design.md#network-posture).
+The job then commits the file, or pushes it with `marshal push engines.json --event observed`. See [Network posture](../design.md#network-posture).
 
 | Ledger field | Source | Provenance |
 |---|---|---|

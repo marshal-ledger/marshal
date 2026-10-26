@@ -30,14 +30,14 @@ def status(store, days_later):
 
 def test_observation_matching_shipped_is_not_drift(store):
     store.record([record()], event=SHIPPED, environment="prod", at=T0, channel=Channel.CI)
-    store.record([record()], event=OBSERVED, environment="prod", at=T0 + timedelta(1), channel=Channel.POLLER)
+    store.record([record()], event=OBSERVED, environment="prod", at=T0 + timedelta(1), channel=Channel.SCHEDULED)
     env = status(store, 1)
-    assert (env.shipped, env.observed, env.drift, env.channel) == (1, 1, False, Channel.POLLER)
+    assert (env.shipped, env.observed, env.drift, env.channel) == (1, 1, False, Channel.SCHEDULED)
 
 
 def test_observation_that_differs_is_drift_until_the_next_ship(store):
     store.record([record()], event=SHIPPED, environment="prod", at=T0, channel=Channel.CI)
-    store.record([record("edited in the UI")], event=OBSERVED, environment="prod", at=T0 + timedelta(1), channel=Channel.POLLER)
+    store.record([record("edited in the UI")], event=OBSERVED, environment="prod", at=T0 + timedelta(1), channel=Channel.SCHEDULED)
     assert status(store, 1).drift
     # Shipping again supersedes the observation until the next one.
     store.record([record()], event=SHIPPED, environment="prod", at=T0 + timedelta(2), channel=Channel.CI)
@@ -48,7 +48,7 @@ def test_staleness_depends_on_channel(store):
     store.record([record()], event=SHIPPED, environment="prod", at=T0, channel=Channel.MANUAL)
     assert not status(store, 29).stale
     assert status(store, 31).stale
-    store.record([record()], event=OBSERVED, environment="prod", at=T0 + timedelta(31), channel=Channel.POLLER)
+    store.record([record()], event=OBSERVED, environment="prod", at=T0 + timedelta(31), channel=Channel.SCHEDULED)
     assert not status(store, 37).stale
     assert status(store, 39).stale
 
@@ -62,9 +62,9 @@ def test_ci_events_do_not_go_stale_by_age(store):
 
 def test_ingest_reports_drift(store):
     ingest(store, [record()], event=SHIPPED, environment="prod", channel=Channel.CI)
-    [report] = ingest(store, [record("edited")], event=OBSERVED, environment="prod", channel=Channel.POLLER)
-    assert report.drift and report.baseline == "v1" and report.channel == "poller"
-    [same] = ingest(store, [record()], event=OBSERVED, environment="prod", channel=Channel.POLLER)
+    [report] = ingest(store, [record("edited")], event=OBSERVED, environment="prod", channel=Channel.SCHEDULED)
+    assert report.drift and report.baseline == "v1" and report.channel == "scheduled"
+    [same] = ingest(store, [record()], event=OBSERVED, environment="prod", channel=Channel.SCHEDULED)
     assert not same.drift
 
 
@@ -89,4 +89,40 @@ def test_version_2_store_migrates_and_marks_authenticated_events_as_ci(tmp_path)
     with Store(path) as s:
         channels = {e.environment: e.channel for e, _, _ in s.history("a")}
         assert channels == {"prod": Channel.CI, "dev": Channel.MANUAL}
-        s.record([record()], event=OBSERVED, environment="prod", channel=Channel.POLLER)
+        s.record([record()], event=OBSERVED, environment="prod", channel=Channel.SCHEDULED)
+
+
+def test_poller_channel_migrates_to_scheduled(tmp_path):
+    import sqlite3
+
+    from marshal_ledger import store as module
+
+    path = tmp_path / "v3.sqlite"
+    db = sqlite3.connect(path)
+    db.executescript(module._SCHEMA_V1)
+    db.executescript(module._MIGRATIONS[1])
+    db.executescript(module._MIGRATIONS[2])
+    db.execute("INSERT INTO meta (key, value) VALUES ('schema_version', '3')")
+    db.execute("INSERT INTO agents VALUES ('a', 'p', NULL, 't', 't')")
+    db.execute("INSERT INTO versions VALUES ('a', 'sha256:x', 1, ?, 't')", (record().model_dump_json(by_alias=True),))
+    db.execute("INSERT INTO events (agent, version, platform, environment, event, at, bindings, channel) "
+               "VALUES ('a', 'sha256:x', 'p', 'prod', 'observed', ?, '{}', 'poller')", (T0.isoformat(),))
+    db.commit()
+    db.close()
+    with Store(path) as s:
+        assert [e.channel for e, _, _ in s.history("a")] == [Channel.SCHEDULED]
+
+
+def test_postgres_store_at_version_3_migrates(ledger_location):
+    if not ledger_location.startswith("postgresql://"):
+        pytest.skip("Postgres migration (set MARSHAL_TEST_POSTGRES_URL)")
+    import psycopg
+
+    with Store(ledger_location) as s:
+        s.record([record()], event=OBSERVED, environment="prod", at=T0, channel=Channel.SCHEDULED)
+    with psycopg.connect(ledger_location, autocommit=True) as connection:
+        connection.execute("ALTER TABLE events DROP CONSTRAINT events_channel_check")
+        connection.execute("UPDATE events SET channel = 'poller'")
+        connection.execute("UPDATE meta SET value = '3' WHERE key = 'schema_version'")
+    with Store(ledger_location) as s:
+        assert [e.channel for e, _, _ in s.history("finance/invoice")] == [Channel.SCHEDULED]

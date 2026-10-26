@@ -125,7 +125,7 @@ def create_app(config: ServerConfig, key_resolver: KeyResolver | None = None) ->
                 f"{who.repository} at {who.ref or 'an unknown ref'} may not record {request.event.value} events; "
                 "the shipped policy requires a protected ref or deployment environment",
             )
-        channel = Channel.POLLER if request.event is DeploymentEvent.OBSERVED else Channel.CI
+        channel = Channel.SCHEDULED if request.event is DeploymentEvent.OBSERVED else Channel.CI
         records = []
         for record in request.records:
             # The token, not the request body, says which commit and run this was.

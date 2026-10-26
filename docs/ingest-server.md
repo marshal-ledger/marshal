@@ -70,7 +70,7 @@ The response lists one report per agent: its version label, the version last shi
 | Each agent is unbound, or bound to the same issuer and repository | `403` (nothing is written) |
 | The body is a valid event | `422` |
 
-The server sets each event's channel: `ci` for `proposed` and `shipped` events, `poller` for `observed` events, which a scheduled pipeline sends after reading a platform's live definition. An `observed` event that differs from what was last shipped is reported as drift.
+The server sets each event's channel: `ci` for `proposed` and `shipped` events, `scheduled` for `observed` events, which a scheduled job sends after exporting a platform's live definition. An `observed` event that differs from what was last shipped is reported as drift.
 
 The server never trusts values a client could forge. It recomputes every version hash and quality score, re-runs credential redaction, applies `hash_only`, and records the commit and pipeline run from the token where the token carries them. Each event stores the caller's issuer, repository, ref and workflow, which `marshal log` shows.
 

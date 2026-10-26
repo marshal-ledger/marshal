@@ -24,7 +24,7 @@ from typing import Any, Iterable, Iterator, Optional
 from .freshness import FreshnessPolicy
 from .model import AgentVersion, Channel, Deployment, DeploymentEvent, Entity
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 _SCHEMA_V1 = """
 CREATE TABLE meta (
@@ -98,7 +98,7 @@ CREATE TABLE events (
     event TEXT NOT NULL CHECK (event IN ('proposed', 'shipped', 'observed')),
     at TEXT NOT NULL, commit_sha TEXT, pipeline_run TEXT, artifact TEXT, bindings TEXT NOT NULL,
     actor_issuer TEXT, actor_repository TEXT, actor_ref TEXT, actor_workflow TEXT,
-    channel TEXT NOT NULL DEFAULT 'manual' CHECK (channel IN ('ci', 'poller', 'manual')),
+    channel TEXT NOT NULL DEFAULT 'manual' CONSTRAINT events_channel_check CHECK (channel IN ('ci', 'scheduled', 'manual')),
     FOREIGN KEY (agent, version) REFERENCES versions(agent, version)
 );
 CREATE INDEX events_by_agent ON events(agent, id);
@@ -161,6 +161,44 @@ FROM events;
 DROP TABLE events;
 ALTER TABLE events_v3 RENAME TO events;
 CREATE INDEX events_by_agent ON events(agent, id);
+""",
+    # Renames the poller channel to scheduled.
+    3: """
+CREATE TABLE events_v4 (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    agent            TEXT NOT NULL,
+    version          TEXT NOT NULL,
+    platform         TEXT NOT NULL,
+    environment      TEXT NOT NULL,
+    event            TEXT NOT NULL CHECK (event IN ('proposed', 'shipped', 'observed')),
+    at               TEXT NOT NULL,
+    commit_sha       TEXT,
+    pipeline_run     TEXT,
+    artifact         TEXT,
+    bindings         TEXT NOT NULL,
+    actor_issuer     TEXT,
+    actor_repository TEXT,
+    actor_ref        TEXT,
+    actor_workflow   TEXT,
+    channel          TEXT NOT NULL DEFAULT 'manual' CHECK (channel IN ('ci', 'scheduled', 'manual')),
+    FOREIGN KEY (agent, version) REFERENCES versions(agent, version)
+);
+INSERT INTO events_v4 SELECT id, agent, version, platform, environment, event, at, commit_sha, pipeline_run,
+    artifact, bindings, actor_issuer, actor_repository, actor_ref, actor_workflow,
+    CASE channel WHEN 'poller' THEN 'scheduled' ELSE channel END
+FROM events;
+DROP TABLE events;
+ALTER TABLE events_v4 RENAME TO events;
+CREATE INDEX events_by_agent ON events(agent, id);
+""",
+}
+
+# Postgres stores are created at the current schema; each entry upgrades one from version N.
+_MIGRATIONS_POSTGRES: dict[int, str] = {
+    3: """
+ALTER TABLE events DROP CONSTRAINT IF EXISTS events_channel_check;
+UPDATE events SET channel = 'scheduled' WHERE channel = 'poller';
+ALTER TABLE events ADD CONSTRAINT events_channel_check CHECK (channel IN ('ci', 'scheduled', 'manual'));
 """,
 }
 
@@ -364,8 +402,12 @@ class Store:
             return
         row = self._q("SELECT value FROM meta WHERE key = 'schema_version'").fetchone()
         found = int(row["value"]) if row else 0
-        if found != SCHEMA_VERSION:
+        if found > SCHEMA_VERSION or found not in _MIGRATIONS_POSTGRES and found != SCHEMA_VERSION:
             raise StoreError(f"store schema version {found}, expected {SCHEMA_VERSION}")
+        for version in range(found, SCHEMA_VERSION):
+            with self._tx():
+                self._db.execute(_MIGRATIONS_POSTGRES[version])
+                self._q("UPDATE meta SET value = ? WHERE key = 'schema_version'", (str(version + 1),))
 
     # -- writes ----------------------------------------------------------
 
