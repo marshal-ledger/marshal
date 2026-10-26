@@ -7,6 +7,12 @@ from .service import AgentReport
 COMMENT_MARKER = "<!-- marshal-ledger:report -->"
 
 
+def _portability(report: AgentReport) -> str:
+    if not report.portability:
+        return ""
+    return " · Portability: " + " · ".join(f"{name} {score}" for name, score in report.portability.items())
+
+
 def _transition(report: AgentReport) -> str:
     if report.baseline is None:
         return f"new → {report.label}"
@@ -23,7 +29,7 @@ def text(reports: list[AgentReport]) -> str:
             lines += [f"  {c.line()}" for c in report.changes]
         else:
             lines.append("  no changes from what is shipped")
-        lines += ["", f"  Completeness {report.completeness:.0%}"]
+        lines += ["", f"  Completeness {report.completeness:.0%}" + _portability(report)]
         blocks.append("\n".join(lines))
     return "\n\n".join(blocks)
 
@@ -53,7 +59,7 @@ def markdown(reports: list[AgentReport]) -> str:
             "```",
             *(c.line() for c in report.changes),
             "```",
-            f"Completeness {report.completeness:.0%}",
+            f"Completeness {report.completeness:.0%}" + _portability(report),
             "",
         ]
     if unchanged:

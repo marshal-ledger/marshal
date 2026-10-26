@@ -37,6 +37,8 @@ class AgentReport:
     changes: list[RankedChange] = field(default_factory=list)
     redactions: int = 0
     channel: str = Channel.MANUAL.value
+    portability: dict[str, int] = field(default_factory=dict)
+    """Target platform display name → portability score, when requested."""
     drift: bool = False
     """An observed live definition differs from what was last shipped."""
 

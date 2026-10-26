@@ -197,7 +197,7 @@ Fidelity: 14 fields lossless · 3 approximated · 2 dropped
 
 ### The capability matrix
 
-A public, community-maintained data file per platform listing what it supports: tool types, knowledge source types, identity modes, guardrails and model options. It keeps portability scores honest and gives contributors an easy first PR.
+A public, community-maintained data file per platform listing what it supports: tool types, knowledge source types, identity modes and model options, each as native, needs rework, or unsupported. It keeps portability scores honest and gives contributors an easy first PR. See [Portability](portability.md).
 
 ## Capabilities
 

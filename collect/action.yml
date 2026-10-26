@@ -28,6 +28,10 @@ inputs:
     description: On pull requests, create or update a comment with the risk-ranked changes.
     required: false
     default: "true"
+  portability:
+    description: Space-separated platforms to score portability to in the report, such as "bedrock copilot-studio".
+    required: false
+    default: ""
   python-version:
     description: Python version to run Marshal with.
     required: false
@@ -59,12 +63,14 @@ runs:
         MARSHAL_TARGET: ${{ inputs.target }}
         MARSHAL_ENVIRONMENT: ${{ inputs.environment }}
         MARSHAL_AUDIENCE: ${{ inputs.audience }}
+        MARSHAL_PORTABILITY: ${{ inputs.portability }}
       run: |
         report="${RUNNER_TEMP}/marshal-report.md"
         args=(push "$MARSHAL_ARTIFACTS" --event "$MARSHAL_EVENT" --url "$MARSHAL_URL"
               --audience "$MARSHAL_AUDIENCE" --commit "$GITHUB_SHA" --report "$report")
         if [ -n "$MARSHAL_TARGET" ]; then args+=(--target "$MARSHAL_TARGET"); fi
         if [ -n "$MARSHAL_ENVIRONMENT" ]; then args+=(--environment "$MARSHAL_ENVIRONMENT"); fi
+        for platform in $MARSHAL_PORTABILITY; do args+=(--portability "$platform"); done
         marshal "${args[@]}"
         echo "report=$report" >> "$GITHUB_OUTPUT"
         cat "$report" >> "$GITHUB_STEP_SUMMARY"

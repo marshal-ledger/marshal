@@ -7,7 +7,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Sequence
+from typing import Any, Sequence
 
 import yaml
 
@@ -67,6 +67,18 @@ def _read(args: argparse.Namespace) -> int:
     return 0
 
 
+def _add_portability(reports: list[AgentReport], records: list[Any], targets: list[str]) -> None:
+    from .portability import assess, load_matrix
+
+    by_agent = {r.agent: r for r in records}
+    for report in reports:
+        record = by_agent.get(report.agent)
+        if record is None:
+            continue
+        for target in targets:
+            report.portability[load_matrix(target).display_name] = assess(record, target).score
+
+
 def _emit(reports: list[AgentReport], args: argparse.Namespace) -> None:
     for report in reports:
         note = "new version" if report.new_version else "known version"
@@ -98,6 +110,8 @@ def _collect(args: argparse.Namespace) -> int:
             hash_only=args.hash_only,
             channel=Channel(args.channel),
         )
+    if args.portability:
+        _add_portability(reports, result.records, args.portability)
     _emit(reports, args)
     return 0
 
@@ -128,6 +142,8 @@ def _push(args: argparse.Namespace) -> int:
         )
     except ClientError as exc:
         return _fail(str(exc))
+    if args.portability:
+        _add_portability(reports, result.records, args.portability)
     _emit(reports, args)
     return 0
 
@@ -185,6 +201,44 @@ def _convert(args: argparse.Namespace) -> int:
         Path(args.report).write_text(
             json.dumps([c.report.to_dict() for c in conversions], indent=2, default=str) + "\n", encoding="utf-8"
         )
+    return 0
+
+
+def _port(args: argparse.Namespace) -> int:
+    from .portability import assess, platforms
+
+    targets = platforms() if "all" in args.to else args.to
+    unknown = [t for t in targets if t not in platforms()]
+    if unknown:
+        return _fail(f"no capability matrix for {', '.join(unknown)}; platforms: {', '.join(platforms())}", 2)
+    agent, selector = _split(args.agent)
+    records = []
+    with _open_store(args) as store:
+        if store.has_agent(agent):
+            try:
+                records = [store.resolve(agent, selector or "latest").record]
+            except StoreError as exc:
+                return _fail(str(exc))
+    if not records:
+        path = Path(args.agent)
+        if not path.exists():
+            return _fail(f"{args.agent} is neither an agent in the store nor a path")
+        reader_cls = READERS[args.format] if args.format else detect(path)
+        if reader_cls is None:
+            return _fail(f"no reader recognizes {path}")
+        records = reader_cls().read(path, ReadOptions()).records
+        if not records:
+            return _fail("no agents found")
+    reports = [assess(record, target) for record in records for target in targets]
+    if args.output == "json":
+        json.dump([r.to_dict() for r in reports], sys.stdout, indent=2, default=str)
+        sys.stdout.write("\n")
+    elif len(targets) == 1:
+        print("\n\n".join(r.text() for r in reports))
+    else:
+        for record in records:
+            scores = [f"{r.target_name} {r.score}" for r in reports if r.agent == record.agent]
+            print(f"{record.agent}  Portability: " + " · ".join(scores))
     return 0
 
 
@@ -381,6 +435,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.add_argument("--environment", help="environment the event applies to (default: --target)")
         parser.add_argument("--pipeline-run", help="pipeline run identifier to record")
         parser.add_argument("--report", metavar="FILE", help="also write a Markdown report, for a PR comment")
+        parser.add_argument("--portability", action="append", metavar="PLATFORM",
+                            help="add the agent's portability score to this platform to the report (repeatable)")
 
     collect = commands.add_parser("collect", help="read agent definitions and record an event in a local store")
     _add_read_args(collect)
@@ -411,6 +467,20 @@ def main(argv: Sequence[str] | None = None) -> int:
     convert_.add_argument("--out", metavar="DIR", help="write one file per agent here (required for several agents)")
     convert_.add_argument("--report", metavar="FILE", help="also write the fidelity reports as JSON")
     convert_.set_defaults(handler=_convert)
+
+    port = commands.add_parser(
+        "port",
+        help="assess how portable an agent is to other platforms",
+        description="Score an agent's portability to target platforms: platform limitations from the capability "
+        "matrix, and agent-specific issues from converting it. AGENT is an agent in the store (with an optional "
+        "@selector) or a path to read.",
+    )
+    port.add_argument("agent", metavar="AGENT[@SELECTOR]|PATH")
+    port.add_argument("--to", action="append", required=True, help="target platform, repeatable, or 'all'")
+    port.add_argument("--format", choices=sorted(READERS), help="source format when AGENT is a path")
+    port.add_argument("--output", choices=["text", "json"], default="text")
+    _add_db_arg(port)
+    port.set_defaults(handler=_port)
 
     serve = commands.add_parser("serve", help="run the ingest API")
     serve.add_argument("--config", required=True, help="server configuration file (YAML)")

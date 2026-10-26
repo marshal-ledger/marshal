@@ -1,0 +1,29 @@
+platform: databricks
+display_name: Databricks (Apps and Genie)
+sources:
+  - https://docs.databricks.com/aws/en/generative-ai/agent-framework/
+tools:
+  - {pattern: "tool/*.user_input", level: native, label: asking the user for input, advice: built into the platform's conversation handling}
+  - {pattern: "tool/mcp.powerplatform.*", level: adapt, label: Power Platform MCP connectors, advice: these are Microsoft-hosted; connect to the MCP server directly or register it as an external MCP server}
+  - {pattern: "tool/salesforce.escalate", level: adapt, label: escalation to a human, advice: implement the hand-off in the app}
+  - {pattern: "tool/databricks.*", level: native, label: Unity Catalog functions and vector search}
+  - {pattern: "tool/python.*", level: native, label: Python tools in the app's agent code}
+  - {pattern: "tool/mcp.*", level: native, label: MCP servers}
+  - {pattern: "agent/*", level: native, label: Genie spaces and other agents}
+  - {pattern: "*", level: adapt, label: other tools, advice: register the tool as a Unity Catalog function or call it from the agent code}
+knowledge:
+  - {pattern: "knowledge/databricks.uc.*", level: native, label: Unity Catalog tables, volumes and vector indexes}
+  - {pattern: "*", level: adapt, label: other knowledge sources, advice: load the data into Unity Catalog and a vector search index}
+identity:
+  - {pattern: service_principal, level: native, label: the app's service principal}
+  - {pattern: on_behalf_of_user, level: native, label: on-behalf-of-user authorization}
+  - {pattern: mixed, level: native, label: service principal and user authorization}
+  - {pattern: "*", level: adapt, label: shared credentials, advice: store the credential in a secret scope and grant it to the app}
+models:
+  - {pattern: databricks, level: native, label: Databricks-served models}
+  - {pattern: openai, level: native, label: external models through Model Serving}
+  - {pattern: azure-openai, level: native, label: external models through Model Serving}
+  - {pattern: anthropic, level: native, label: external models through Model Serving}
+  - {pattern: google, level: native, label: external models through Model Serving}
+  - {pattern: "*", level: adapt, label: other models, advice: serve the model through a Model Serving endpoint}
+confirmation: adapt

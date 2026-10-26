@@ -31,6 +31,7 @@ A complete workflow is in [`examples/github-workflow.yml`](../examples/github-wo
 | `environment` | no | Environment the event applies to; defaults to `target` |
 | `audience` | no | OIDC audience (default `marshal`) |
 | `comment` | no | Comment on pull requests (default `true`) |
+| `portability` | no | Space-separated platforms to score portability to in the comment, such as `bedrock copilot-studio` |
 | `python-version` | no | Python used to run Marshal (default `3.12`) |
 
 The report is also added to the job summary and exposed as the `report` output.

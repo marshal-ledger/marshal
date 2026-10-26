@@ -1,0 +1,23 @@
+platform: agentforce
+display_name: Salesforce Agentforce
+writer: agentforce
+sources:
+  - https://developer.salesforce.com/docs/ai/agentforce/guide/agent-dx-nga-author-agent.html
+tools:
+  - {pattern: "tool/*.user_input", level: native, label: asking the user for input, advice: built into the platform's conversation handling}
+  - {pattern: "tool/mcp.powerplatform.*", level: adapt, label: Power Platform MCP connectors, advice: these are Microsoft-hosted; call the underlying API from a Flow}
+  - {pattern: "tool/salesforce.*", level: native, label: Flows, Apex, prompt templates and standard actions}
+  - {pattern: "tool/openapi.*", level: adapt, label: OpenAPI operations, advice: register the API as an external service and call it from a Flow}
+  - {pattern: "tool/http.*", level: adapt, label: HTTP APIs, advice: call the API from a Flow or Apex action through a named credential}
+  - {pattern: "agent/*", level: adapt, label: other agents, advice: rebuild the other agent as a subagent, or call it through an action}
+  - {pattern: "*", level: adapt, label: other tools, advice: expose the tool as an API and call it from a Flow or Apex action}
+knowledge:
+  - {pattern: "knowledge/salesforce.data_library.*", level: native, label: Agentforce data libraries}
+  - {pattern: "*", level: adapt, label: other knowledge sources, advice: load the content into an Agentforce data library}
+identity:
+  - {pattern: service_principal, level: native, label: a dedicated agent user}
+  - {pattern: on_behalf_of_user, level: native, label: the signed-in user (employee agents)}
+  - {pattern: "*", level: adapt, label: shared or mixed credentials, advice: run as a dedicated agent user, with named credentials for external systems}
+models:
+  - {pattern: "*", level: adapt, label: platform-chosen model, advice: Agentforce's reasoning engine chooses the model}
+confirmation: native
