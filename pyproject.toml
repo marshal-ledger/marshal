@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling>=1.27", "hatch-fancy-pypi-readme>=24.1"]
+requires = ["hatchling>=1.32.4", "hatch-fancy-pypi-readme>=25.1.0"]
 build-backend = "hatchling.build"
 
 [project]
@@ -12,8 +12,8 @@ license-files = ["LICENSE"]
 authors = [{ name = "Marshal contributors" }]
 keywords = ["ai-agents", "agent-registry", "governance", "audit", "copilot-studio", "agentforce", "bedrock", "databricks"]
 dependencies = [
-    "pydantic>=2.6",
-    "pyyaml>=6.0",
+    "pydantic>=2.14.1",
+    "pyyaml>=6.0.3",
 ]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
@@ -33,17 +33,17 @@ classifiers = [
 
 [project.optional-dependencies]
 server = [
-    "fastapi>=0.110",
-    "uvicorn>=0.29",
-    "pyjwt[crypto]>=2.8",
+    "fastapi>=0.162.0",
+    "uvicorn>=0.54.0",
+    "pyjwt[crypto]>=2.15.1",
 ]
 postgres = [
-    "psycopg[binary]>=3.1",
+    "psycopg[binary]>=3.3.6",
 ]
 dev = [
-    "pytest>=8",
-    "httpx>=0.27",
-    "jsonschema>=4.21",
+    "pytest>=9.1.1",
+    "httpx>=0.28.1",
+    "jsonschema>=4.26.0",
     "marshal-ledger[server]",
     "marshal-ledger[postgres]",
 ]
