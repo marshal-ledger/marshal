@@ -42,6 +42,7 @@ SOURCES = [
     ("copilot-studio", "copilot-studio/mcp-agent"),
     ("agentforce", "agentforce/agent-script"),
     ("adk-config", "adk-config/samples"),
+    ("salesforce-metadata", "salesforce-metadata/coral-cloud"),
 ]
 # Formats whose writer reproduces the whole source, so a native round trip must be lossless.
 # A CloudFormation template also defines the agent's IAM roles and executors, which the

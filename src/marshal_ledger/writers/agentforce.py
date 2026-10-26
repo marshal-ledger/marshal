@@ -217,16 +217,23 @@ class AgentforceWriter(Writer):
                 lines.append(f"{_INDENT * 2}{name}:")
                 if use.description:
                     lines.append(f"{_INDENT * 3}description: {_quote(use.description)}")
-                lines += self._parameters("inputs", use.input_schema, 3, inputs=True)
-                lines += self._parameters("outputs", use.output_schema, 3, inputs=False)
+                lines += self._parameters("inputs", use.input_schema, 3, inputs=True, notes=notes,
+                                          path=f"tools[{use.ref}].input_schema")
+                lines += self._parameters("outputs", use.output_schema, 3, inputs=False, notes=notes,
+                                          path=f"tools[{use.ref}].output_schema")
                 lines.append(f"{_INDENT * 3}target: {_quote(target)}")
                 if use.requires_confirmation.is_known:
                     lines.append(f"{_INDENT * 3}require_user_confirmation: {_quote(bool(use.requires_confirmation.value))}")
         return lines
 
-    def _parameters(self, label: str, schema: Any, depth: int, inputs: bool) -> list[str]:
+    def _parameters(self, label: str, schema: Any, depth: int, inputs: bool, notes: dict[str, str] | None = None,
+                    path: str = "") -> list[str]:
         if not isinstance(schema, dict) or not schema.get("properties"):
             return []
+        if notes is not None and any(not isinstance(p, dict) or "type" not in p or set(p) - {"type", "description", "items"}
+                                     or (p.get("type") == "array" and "items" not in p)
+                                     for p in schema["properties"].values()):
+            notes[path] = "Agent Script parameters keep a type and a description; untyped parameters are written as string"
         required = set(schema.get("required") or [])
         lines = [f"{_INDENT * depth}{label}:"]
         for name, prop in schema["properties"].items():

@@ -15,6 +15,7 @@ from .base import DocumentReader, ReadOptions, ReadResult, Reader, Skipped
 from .databricks import DatabricksBundleReader
 from .oasf import OasfReader
 from .python import PythonAgentReader
+from .salesforcemetadata import SalesforceMetadataReader
 
 # Detection order: bundle formats (identified by a file name) before document formats.
 READERS: dict[str, type[Reader]] = {
@@ -27,6 +28,7 @@ READERS: dict[str, type[Reader]] = {
     AgentforceReader.format: AgentforceReader,
     AdkConfigReader.format: AdkConfigReader,
     AgentEngineReader.format: AgentEngineReader,
+    SalesforceMetadataReader.format: SalesforceMetadataReader,
     # Last: a directory of Python code is the least specific match.
     PythonAgentReader.format: PythonAgentReader,
 }

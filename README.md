@@ -4,7 +4,7 @@ A vendor-neutral, open-source ledger for enterprise AI agents. Any format in, an
 
 Marshal reads the agent definitions teams already produce, such as Databricks bundles, Copilot Studio agents, Bedrock templates, Agentforce metadata and open standards. It builds a normalized, versioned record of every agent: what model it asks for, what tools and data it can reach, and who it acts as. Every field says where its value came from, and nothing is guessed.
 
-**Status:** pre-alpha. Implemented so far: the ledger model; readers for Databricks Asset Bundles, AWS CloudFormation (Bedrock Agents, AgentCore), Microsoft Copilot Studio, Salesforce Agentforce, Google ADK Agent Config, Vertex AI Agent Engine (inventory), ADL, Open Agent Spec, OASF, and agent code (OpenAI Agents SDK, LangChain/LangGraph, Google ADK, CrewAI); writers for the open standards, Bedrock, Copilot Studio, Agentforce and ADK Agent Config, with measured fidelity; the version store; risk-ranked diffs; the ingest API with OIDC authentication; and the GitHub Action.
+**Status:** pre-alpha. Implemented so far: the ledger model; readers for Databricks Asset Bundles, AWS CloudFormation (Bedrock Agents, AgentCore), Microsoft Copilot Studio, Salesforce Agentforce (Agent Script and legacy metadata), Google ADK Agent Config, Vertex AI Agent Engine (inventory), ADL, Open Agent Spec, OASF, and agent code (OpenAI Agents SDK, LangChain/LangGraph, Google ADK, CrewAI); writers for the open standards, Bedrock, Copilot Studio, Agentforce and ADK Agent Config, with measured fidelity; the version store; risk-ranked diffs; the ingest API with OIDC authentication; and the GitHub Action.
 
 ## Try it
 
