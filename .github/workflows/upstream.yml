@@ -1,0 +1,42 @@
+name: upstream
+
+# Weekly check that the agent formats Marshal reads haven't changed upstream.
+# Opens one issue per changed source (label: upstream) and closes it when the
+# snapshot is updated. See CONTRIBUTING.md, "Keeping up with upstream formats".
+
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e '.[dev]'
+      - name: Make sure the issue label exists
+        run: gh label create upstream --color 0E8A16 --description "An upstream agent format changed" || true
+      - name: Golden tests on each source's latest definitions
+        run: |
+          python scripts/fetch_fixtures.py --ref HEAD --cache "$RUNNER_TEMP/latest"
+          MARSHAL_FIXTURE_CACHE="$RUNNER_TEMP/latest" pytest tests/golden -q -p no:warnings > "$RUNNER_TEMP/golden.txt" 2>&1 || true
+          tail -n 5 "$RUNNER_TEMP/golden.txt"
+      - name: Compare upstream definitions with the snapshots
+        run: python scripts/check_upstream.py --issues --golden-result "$RUNNER_TEMP/golden.txt" --report "$RUNNER_TEMP/upstream.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: upstream-report
+          path: |
+            ${{ runner.temp }}/upstream.json
+            ${{ runner.temp }}/golden.txt

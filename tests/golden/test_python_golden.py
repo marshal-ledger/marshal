@@ -1,5 +1,6 @@
 """Golden tests for the Python reader against real, public agent code."""
 
+import os
 from pathlib import Path
 
 import pytest
@@ -8,7 +9,7 @@ from marshal_ledger.model import Provenance
 from marshal_ledger.readers import ReadOptions
 from marshal_ledger.readers.python import PythonAgentReader
 
-CACHE = Path(__file__).resolve().parent.parent / "fixtures" / ".cache"
+CACHE = Path(os.environ.get("MARSHAL_FIXTURE_CACHE") or Path(__file__).resolve().parent.parent / "fixtures" / ".cache")
 
 
 def read(fixture_id: str):

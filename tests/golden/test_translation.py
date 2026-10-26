@@ -9,6 +9,7 @@
 """
 
 import json
+import os
 from pathlib import Path
 
 import jsonschema
@@ -19,7 +20,7 @@ from marshal_ledger.convert import convert
 from marshal_ledger.readers import READERS
 from marshal_ledger.writers import WRITERS
 
-CACHE = Path(__file__).resolve().parent.parent / "fixtures" / ".cache"
+CACHE = Path(os.environ.get("MARSHAL_FIXTURE_CACHE") or Path(__file__).resolve().parent.parent / "fixtures" / ".cache")
 
 SOURCES = [
     ("adl", "adl/examples"),

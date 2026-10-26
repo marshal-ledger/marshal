@@ -1,5 +1,6 @@
 """Golden tests for legacy Agentforce metadata, against Salesforce's public Coral Cloud sample app."""
 
+import os
 from pathlib import Path
 
 import pytest
@@ -7,7 +8,7 @@ import pytest
 from marshal_ledger.model import IdentityKind, Provenance
 from marshal_ledger.readers.salesforcemetadata import SalesforceMetadataReader
 
-CACHE = Path(__file__).resolve().parent.parent / "fixtures" / ".cache"
+CACHE = Path(os.environ.get("MARSHAL_FIXTURE_CACHE") or Path(__file__).resolve().parent.parent / "fixtures" / ".cache")
 
 
 def records():

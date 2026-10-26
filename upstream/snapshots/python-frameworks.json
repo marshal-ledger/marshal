@@ -1,0 +1,10 @@
+[
+ "anthropic 2.3",
+ "crewai 1.15",
+ "google-adk 2.13",
+ "google-genai 2.33",
+ "langchain 1.4",
+ "langgraph 1.2",
+ "openai 3.37",
+ "openai-agents 0.24"
+]

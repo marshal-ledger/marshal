@@ -1,0 +1,95 @@
+{
+  "_comment": "Upstream definitions Marshal's readers and writers depend on. scripts/check_upstream.py compares each source's current surface (field, type and keyword names) with upstream/snapshots/<id>.json, and the weekly workflow opens an issue for each change. Update snapshots with: python scripts/check_upstream.py --update",
+  "sources": [
+    {
+      "id": "databricks-bundle",
+      "name": "Databricks Asset Bundle schema",
+      "extractor": "databricks_bundle",
+      "repo": "databricks/cli",
+      "path": "bundle/schema/jsonschema.json",
+      "docs": "docs/formats/databricks.md"
+    },
+    {
+      "id": "cloudformation-bedrock",
+      "name": "CloudFormation: Bedrock Agents and AgentCore",
+      "extractor": "cloudformation",
+      "url": "https://schema.cloudformation.us-east-1.amazonaws.com/CloudformationSchema.zip",
+      "types": [
+        "aws-bedrock-agent",
+        "aws-bedrock-agentalias",
+        "aws-bedrock-knowledgebase"
+      ],
+      "prefixes": [
+        "aws-bedrockagentcore-"
+      ],
+      "docs": "docs/formats/cloudformation.md"
+    },
+    {
+      "id": "copilot-studio",
+      "name": "Copilot Studio authoring schema",
+      "extractor": "copilot_studio",
+      "repo": "microsoft/skills-for-copilot-studio",
+      "path": "reference/bot.schema.yaml-authoring.json",
+      "docs": "docs/formats/copilot-studio.md"
+    },
+    {
+      "id": "agent-script",
+      "name": "Agentforce Agent Script keywords",
+      "extractor": "agent_script",
+      "repo": "forcedotcom/sf-skills",
+      "path": "plugins/builder/agentforce-adlc/skills/agentforce-generate/assets/agents",
+      "docs": "docs/formats/agentforce.md"
+    },
+    {
+      "id": "adl",
+      "name": "ADL schema",
+      "extractor": "adl",
+      "repo": "Ironstead-Group/agent-definition-language",
+      "path": "packages/adl-core/src/schemas",
+      "docs": "docs/formats/adl.md"
+    },
+    {
+      "id": "agent-spec",
+      "name": "Open Agent Specification",
+      "extractor": "agent_spec",
+      "repo": "oracle/agent-spec",
+      "path": "docs/pyagentspec/source/agentspec/json_spec",
+      "docs": "docs/formats/agent-spec.md"
+    },
+    {
+      "id": "oasf",
+      "name": "AGNTCY OASF",
+      "extractor": "oasf",
+      "repo": "agntcy/oasf",
+      "docs": "docs/formats/oasf.md"
+    },
+    {
+      "id": "adk-config",
+      "name": "Google ADK Agent Config",
+      "extractor": "adk_config",
+      "repo": "google/adk-python",
+      "docs": "docs/formats/adk-config.md",
+      "paths": [
+        "src/google/adk/agents/llm_agent_config.py",
+        "src/google/adk/agents/base_agent_config.py",
+        "src/google/adk/tools/tool_configs.py"
+      ]
+    },
+    {
+      "id": "python-frameworks",
+      "name": "Python agent frameworks",
+      "extractor": "pypi_minor",
+      "packages": [
+        "openai-agents",
+        "langchain",
+        "langgraph",
+        "google-adk",
+        "crewai",
+        "anthropic",
+        "openai",
+        "google-genai"
+      ],
+      "docs": "docs/formats/python.md"
+    }
+  ]
+}

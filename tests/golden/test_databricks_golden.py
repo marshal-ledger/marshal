@@ -1,5 +1,6 @@
 """Golden tests against real, public Databricks bundles (see tests/fixtures/sources.json)."""
 
+import os
 from pathlib import Path
 
 import pytest
@@ -8,7 +9,7 @@ from marshal_ledger.model import IdentityKind, Provenance, Scope
 from marshal_ledger.readers import ReadOptions
 from marshal_ledger.readers.databricks import DatabricksBundleReader
 
-CACHE = Path(__file__).resolve().parent.parent / "fixtures" / ".cache"
+CACHE = Path(os.environ.get("MARSHAL_FIXTURE_CACHE") or Path(__file__).resolve().parent.parent / "fixtures" / ".cache")
 
 
 def fixture(fixture_id: str) -> Path:

@@ -26,6 +26,21 @@ A format has a reader (`src/marshal_ledger/readers/`), usually a writer (`src/ma
 
 Golden fixtures are real, public agent definitions, never synthetic ones. Add them to [`tests/fixtures/sources.json`](tests/fixtures/sources.json), pinned to a commit. They are fetched rather than committed, so each file stays under its own license. Check the license before adding a source.
 
+## Keeping up with upstream formats
+
+Agent formats change upstream. A weekly workflow ([`upstream.yml`](.github/workflows/upstream.yml)) checks two things:
+
+- **Surfaces.** [`upstream/watch.json`](upstream/watch.json) lists the published definitions the readers depend on: the Databricks bundle schema, AWS's CloudFormation schemas for Bedrock and AgentCore, the Copilot Studio authoring schema, Agent Script keywords, the ADL, Agent Spec and OASF schemas, ADK Agent Config, and the agent frameworks' minor releases. `scripts/check_upstream.py` extracts each one's surface (field, type and keyword names) and compares it with [`upstream/snapshots/`](upstream/snapshots/).
+- **Latest fixtures.** The golden fixtures are fetched from each source's latest commit instead of the pinned one, and the golden tests run against them.
+
+Each change opens or updates one issue labelled `upstream`. To resolve it:
+
+1. Update the reader or writer, and add a golden fixture for any new construct.
+2. Accept the new surface with `python scripts/check_upstream.py --update`.
+3. Move the fixture's pinned commit forward, in the same pull request.
+
+The issue closes on the next run. To check locally, run `python scripts/check_upstream.py`.
+
 ## Standards for what is committed
 
 Everything in the repository is written for users and contributors. Keep personal notes and to-do lists out of commits.

@@ -1,5 +1,6 @@
 """Golden tests for the Copilot Studio reader against Microsoft's public example workspaces."""
 
+import os
 from pathlib import Path
 
 import pytest
@@ -8,7 +9,7 @@ from marshal_ledger.convert import convert
 from marshal_ledger.model import IdentityKind, Scope
 from marshal_ledger.readers.copilotstudio import CopilotStudioReader
 
-CACHE = Path(__file__).resolve().parent.parent / "fixtures" / ".cache"
+CACHE = Path(os.environ.get("MARSHAL_FIXTURE_CACHE") or Path(__file__).resolve().parent.parent / "fixtures" / ".cache")
 
 
 def records(fixture_id):

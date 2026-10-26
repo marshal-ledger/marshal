@@ -1,5 +1,6 @@
 """Golden tests for the CloudFormation reader against public AWS sample templates."""
 
+import os
 from pathlib import Path
 
 import pytest
@@ -7,7 +8,7 @@ import pytest
 from marshal_ledger.model import IdentityKind, Provenance, Scope
 from marshal_ledger.readers.cloudformation import CloudFormationReader
 
-CACHE = Path(__file__).resolve().parent.parent / "fixtures" / ".cache"
+CACHE = Path(os.environ.get("MARSHAL_FIXTURE_CACHE") or Path(__file__).resolve().parent.parent / "fixtures" / ".cache")
 
 
 def records(fixture_id):
