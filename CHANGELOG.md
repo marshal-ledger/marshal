@@ -2,7 +2,7 @@
 
 Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](https://semver.org). Before 1.0, a minor release may change the ledger model, the ingest API or the command line; each such change is listed here.
 
-## 0.1.0 (unreleased)
+## 0.1.0 (2026-10-26)
 
 The first release.
 
