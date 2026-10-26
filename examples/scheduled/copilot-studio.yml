@@ -48,7 +48,7 @@ jobs:
           SOLUTION: ${{ matrix.solution }}
         run: pac solution export --name "$SOLUTION" --path "$RUNNER_TEMP/$SOLUTION.zip" --overwrite
 
-      - uses: marshal-ledger/marshal/collect@v1
+      - uses: marshal-ledger/marshal/collect@v0
         with:
           event: observed
           artifacts: ${{ runner.temp }}/${{ matrix.solution }}.zip

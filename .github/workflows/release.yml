@@ -1,0 +1,135 @@
+# Publish a release when a version tag such as v0.1.0 is pushed.
+#
+# Always: checks the tag against every version number and the changelog, runs the tests,
+# builds the wheel, sdist and Helm chart, creates a GitHub release with the changelog
+# section as notes, and moves the major tag (v0, v1, ...) that workflows use for the
+# GitHub Action.
+#
+# Optional, each off until configured:
+# - PyPI: set the repository variable PUBLISH_PYPI to true, add a GitHub environment
+#   named pypi, and register this workflow as a trusted publisher for marshal-ledger on PyPI.
+# - Container image: set IMAGE_REPOSITORY (such as ghcr.io/marshal-ledger/marshal). For a
+#   registry other than ghcr.io, also set REGISTRY_USERNAME and the secret REGISTRY_PASSWORD.
+#
+# See "Releasing" in CONTRIBUTING.md.
+name: release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --quiet pyyaml
+      - name: Check versions and changelog
+        run: python scripts/release.py check "$GITHUB_REF_NAME"
+      - name: Check the tag is on main
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+      - id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+  test:
+    needs: check
+    permissions:
+      contents: read
+      id-token: write   # the Action's end-to-end test
+    uses: ./.github/workflows/test.yml
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --quiet build twine
+      - run: python -m build
+      - run: twine check --strict dist/*
+      - uses: azure/setup-helm@v4
+      - run: helm package charts/marshal --destination chart
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release
+          path: |
+            dist/
+            chart/
+
+  github-release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --quiet pyyaml
+      - uses: actions/download-artifact@v4
+        with:
+          name: release
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/release.py notes "$GITHUB_REF_NAME" > "$RUNNER_TEMP/notes.md"
+          gh release create "$GITHUB_REF_NAME" dist/* chart/* --verify-tag \
+            --title "$GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/notes.md"
+      - name: Move the major tag the GitHub Action is used by
+        run: |
+          major="${GITHUB_REF_NAME%%.*}"
+          git tag --force "$major" "$GITHUB_SHA"
+          git push --force origin "refs/tags/$major"
+
+  pypi:
+    needs: build
+    if: vars.PUBLISH_PYPI == 'true'
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write   # trusted publishing; no API token is stored
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+
+  image:
+    needs: [check, test]
+    if: vars.IMAGE_REPOSITORY != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write   # used only when the registry is ghcr.io
+    steps:
+      - uses: actions/checkout@v4
+      - id: registry
+        env:
+          IMAGE_REPOSITORY: ${{ vars.IMAGE_REPOSITORY }}
+        run: echo "host=${IMAGE_REPOSITORY%%/*}" >> "$GITHUB_OUTPUT"
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ steps.registry.outputs.host }}
+          username: ${{ vars.REGISTRY_USERNAME || github.actor }}
+          password: ${{ secrets.REGISTRY_PASSWORD || github.token }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ vars.IMAGE_REPOSITORY }}:${{ needs.check.outputs.version }}

@@ -250,10 +250,10 @@ A scheduled export is a job the organization runs wherever it already has access
 **GitHub Action, around the deploy step teams already have:**
 
 ```yaml
-- uses: marshal-ledger/marshal/collect@v1
+- uses: marshal-ledger/marshal/collect@v0
   with: { event: proposed, artifacts: ., target: prod, url: https://marshal.acme.example }
 - run: databricks bundle deploy -t prod
-- uses: marshal-ledger/marshal/collect@v1
+- uses: marshal-ledger/marshal/collect@v0
   with: { event: shipped, artifacts: ., target: prod, url: https://marshal.acme.example }
 ```
 

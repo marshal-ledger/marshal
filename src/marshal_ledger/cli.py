@@ -242,6 +242,20 @@ def _port(args: argparse.Namespace) -> int:
     return 0
 
 
+def _demo(args: argparse.Namespace) -> int:
+    from .demo import DemoError, build
+
+    target = Path(args.path)
+    if target.exists() and not args.force:
+        return _fail(f"{target} exists; pass --force to replace it")
+    try:
+        count = build(target, Path(args.fixtures) if args.fixtures else None)
+    except DemoError as exc:
+        return _fail(str(exc))
+    print(f"\nDemo ledger: {target} ({count} agents)\nBrowse it:   marshal web --db {target}")
+    return 0
+
+
 def _web(args: argparse.Namespace) -> int:
     try:
         import uvicorn
@@ -529,6 +543,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     port.add_argument("--output", choices=["text", "json"], default="text")
     _add_db_arg(port)
     port.set_defaults(handler=_port)
+
+    demo = commands.add_parser("demo", help="build a demo store from public agent definitions, downloaded from GitHub")
+    demo.add_argument("path", nargs="?", default="demo.sqlite", help="store file to create (default: demo.sqlite)")
+    demo.add_argument("--fixtures", metavar="DIR", help="keep the downloaded definitions here and reuse them next time")
+    demo.add_argument("--force", action="store_true", help="replace the store file if it exists")
+    demo.set_defaults(handler=_demo)
 
     web = commands.add_parser("web", help="browse a store in a read-only web view")
     web.add_argument("--host", default="127.0.0.1")

@@ -57,7 +57,7 @@ jobs:
           cd "$RUNNER_TEMP/agents"
           sf project retrieve start --metadata AiAuthoringBundle --target-org observed
 
-      - uses: marshal-ledger/marshal/collect@v1
+      - uses: marshal-ledger/marshal/collect@v0
         with:
           event: observed
           artifacts: ${{ runner.temp }}/agents

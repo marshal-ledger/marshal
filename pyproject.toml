@@ -4,10 +4,12 @@ build-backend = "hatchling.build"
 
 [project]
 name = "marshal-ledger"
-version = "0.1.0.dev0"
+dynamic = ["version"]
 description = "Marshal — a vendor-neutral, open-source ledger for enterprise AI agents."
 readme = "README.md"
 requires-python = ">=3.10"
+authors = [{ name = "Marshal contributors" }]
+keywords = ["ai-agents", "agent-registry", "governance", "audit", "copilot-studio", "agentforce", "bedrock", "databricks"]
 dependencies = [
     "pydantic>=2.6",
     "pyyaml>=6.0",
@@ -15,7 +17,17 @@ dependencies = [
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Security",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: System :: Systems Administration",
 ]
 
 [project.optional-dependencies]
@@ -40,6 +52,12 @@ marshal = "marshal_ledger.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/marshal-ledger/marshal"
+Documentation = "https://github.com/marshal-ledger/marshal/tree/main/docs"
+Changelog = "https://github.com/marshal-ledger/marshal/blob/main/CHANGELOG.md"
+Issues = "https://github.com/marshal-ledger/marshal/issues"
+
+[tool.hatch.version]
+path = "src/marshal_ledger/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/marshal_ledger"]

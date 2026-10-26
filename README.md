@@ -36,10 +36,12 @@ Marshal reads the agent definitions teams already produce: Databricks bundles, C
 Build a demo from 28 public agents and browse it:
 
 ```console
-$ pip install -e '.[server]'
-$ python scripts/build_demo.py demo.sqlite
+$ pip install 'marshal-ledger[server]'
+$ marshal demo
 $ marshal web --db demo.sqlite
 ```
+
+`marshal demo` downloads the agents' definitions from their public GitHub repositories, pinned to a commit.
 
 Then on your own agents. See [Getting started](docs/getting-started.md):
 

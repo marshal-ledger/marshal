@@ -1,0 +1,32 @@
+# Changelog
+
+Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](https://semver.org). Before 1.0, a minor release may change the ledger model, the ingest API or the command line; each such change is listed here.
+
+## 0.1.0 (unreleased)
+
+The first release.
+
+### Ledger
+
+- A normalized, versioned record of each agent: model, instructions, tools, knowledge sources, permissions and identity. Every value says whether the artifact declared it, a rule derived it, or it is unknown, and why.
+- Version hashes that ignore environment-bound values, so the same definition shipped to two environments is one version.
+- Proposed, shipped and observed events per environment, with drift between shipped and live, and freshness by channel.
+- Risk-ranked diffs: permission escalations, new write tools, identity and model changes first.
+- Dependents of any tool, knowledge source or grant target across every platform.
+- A SQLite or Postgres store.
+
+### Formats
+
+- Readers for Databricks Asset Bundles, AWS CloudFormation and CDK output (Bedrock Agents, AgentCore), Copilot Studio agent workspaces and exported solutions, Agentforce Agent Script and legacy metadata, Google ADK Agent Config, saved Vertex AI Agent Engine API responses, Python agent code (OpenAI Agents SDK, LangChain and LangGraph, Google ADK, CrewAI, direct model API calls), ADL, Open Agent Spec and AGNTCY OASF.
+- Writers for Copilot Studio, Agent Script, Bedrock Agents (CloudFormation), ADK Agent Config, ADL, Agent Spec and OASF, each with a fidelity report computed by reading the output back.
+- Portability scores for moving an agent to another platform, from a capability matrix.
+- Scope and reversibility derived for standard Microsoft connector operations, from Microsoft's connector reference.
+
+### Running it
+
+- `marshal` command line: `read`, `collect`, `push`, `ls`, `diff`, `status`, `log`, `deps`, `entities`, `convert`, `port`, `web`, `serve` and `demo`.
+- An ingest API that authenticates pipelines with their CI provider's OIDC token (GitHub Actions, GitLab), with repository allowlists and a shipped-event policy.
+- A read-only web view behind the organization's SSO proxy.
+- A GitHub Action that records events and comments on pull requests with risk-ranked changes.
+- Example scheduled workflows that export Copilot Studio and Agentforce agents and report drift.
+- A container image and a Helm chart.

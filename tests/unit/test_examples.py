@@ -6,7 +6,7 @@ import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
-WORKFLOWS = sorted((ROOT / "examples").rglob("*.yml"))
+WORKFLOWS = sorted((ROOT / "examples").rglob("*.yml")) + sorted((ROOT / ".github" / "workflows").glob("*.yml"))
 SCHEDULED = sorted((ROOT / "examples" / "scheduled").glob("*.yml"))
 
 

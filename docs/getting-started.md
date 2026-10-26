@@ -3,12 +3,12 @@
 ## See it on real agents
 
 ```console
-$ pip install -e '.[server]'
-$ python scripts/build_demo.py demo.sqlite
+$ pip install 'marshal-ledger[server]'
+$ marshal demo
 $ marshal web --db demo.sqlite
 ```
 
-The demo records 28 public agents from Databricks, Bedrock, AgentCore, Copilot Studio, Agentforce, Google ADK and ADL, with a short history. Open the inventory, then:
+`marshal demo` downloads public agent definitions from GitHub, each pinned to a commit, and records 28 agents from Databricks, Bedrock, AgentCore, Copilot Studio, Agentforce, Google ADK and ADL, with a short history. Open the inventory, then:
 
 - **`agent_openai_agents_sdk/agent_openai_agents_sdk`:** a proposed change that adds a write tool, ranked HIGH.
 - **`eval_testAgent`:** a Copilot Studio agent that drifted after one of its tools was switched to the maker's credentials.

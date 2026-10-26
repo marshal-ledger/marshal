@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_call:   # the release workflow runs the tests on the tagged commit
 
 permissions:
   contents: read
@@ -51,3 +52,47 @@ jobs:
       - uses: actions/checkout@v4
       - run: docker build -t marshal:ci .
       - run: docker run --rm marshal:ci --version
+
+  # Runs the GitHub Action from this checkout against a local ingest server that trusts this
+  # repository's OIDC tokens. Pull requests from forks get no OIDC token, so they skip it.
+  action:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --quiet '.[server]'
+      - run: python scripts/fetch_fixtures.py
+      - name: Start an ingest server
+        env:
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          cat > "$RUNNER_TEMP/server.yaml" <<YAML
+          store: $RUNNER_TEMP/ledger.sqlite
+          issuers:
+            - issuer: https://token.actions.githubusercontent.com
+              provider: github
+              repositories: ["$REPOSITORY"]
+          YAML
+          marshal serve --config "$RUNNER_TEMP/server.yaml" --port 8080 > "$RUNNER_TEMP/server.log" 2>&1 &
+          for _ in $(seq 30); do curl -fs http://127.0.0.1:8080/healthz && exit 0; sleep 1; done
+          cat "$RUNNER_TEMP/server.log"; exit 1
+      - id: collect
+        uses: ./collect
+        with:
+          event: proposed
+          artifacts: tests/fixtures/.cache/databricks/agent-langgraph
+          target: prod
+          url: http://127.0.0.1:8080
+          comment: "false"
+      - name: The event reached the store
+        env:
+          REPORT: ${{ steps.collect.outputs.report }}
+        run: |
+          test -s "$REPORT"
+          marshal log agent_langgraph/agent_langgraph --db "$RUNNER_TEMP/ledger.sqlite" | grep proposed

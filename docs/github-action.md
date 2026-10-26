@@ -14,13 +14,15 @@ permissions:
 A complete workflow is in [`examples/github-workflow.yml`](../examples/github-workflow.yml). The pattern is to record `proposed` on pull requests and `shipped` after the deploy step succeeds:
 
 ```yaml
-- uses: marshal-ledger/marshal/collect@v1
+- uses: marshal-ledger/marshal/collect@v0
   with:
     event: proposed
     artifacts: .
     target: prod
     url: https://marshal.acme.example
 ```
+
+`@v0` follows the latest 0.x release. To decide when to upgrade, pin a release tag such as `@v0.1.0`, or a commit SHA. The Action installs Marshal from the same commit, so the client always matches the Action's version.
 
 | Input | Required | Meaning |
 |---|---|---|
