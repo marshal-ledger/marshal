@@ -283,18 +283,20 @@ $ marshal port invoice-agent --to bedrock
 
 ## Roadmap
 
-| Phase | Deliverable |
-|---|---|
-| 1 | Exportability survey across Copilot Studio, Bedrock, Vertex and Agentforce. Ledger model v0. Databricks reader |
-| 2 | Version store with agent → version → deployment, proposed/shipped events, `marshal ls` and `marshal diff` |
-| 3 | Ingest API with OIDC authentication, GitHub Action, risk-ranked PR comments, secret redaction, hash-only mode |
-| 4 | Readers and writers for ADL, Open Agent Spec and OASF, round-trip tests, `marshal convert` with fidelity reports |
-| 5 | Pro-code readers by static extraction: LangGraph, OpenAI Agents SDK, CrewAI, Google ADK. Linked to platform records, so a Databricks App, AgentCore runtime or Agent Engine deployment gains its model, instructions and tools from source |
-| 6 | Copilot Studio, Bedrock Agents and Agentforce adapters at Partial tier; inventory readers for AgentCore and Agent Engine |
-| 7 | Capability matrix v0, quality and portability scores, `marshal port` |
-| 8 | Discovery and dependency queries, simple read-only web view |
-| 9 | Postgres store, container image and Helm chart, SSO for the web view |
-| 10 | Docs, capability matrix contribution guide, sample repo with real public agents, launch |
+| Phase | Deliverable | Status |
+|---|---|---|
+| 1 | Exportability survey across Copilot Studio, Bedrock, Vertex and Agentforce. Ledger model v0. Databricks reader | Implemented |
+| 2 | Version store with agent → version → deployment, proposed/shipped events, `marshal ls` and `marshal diff` | Implemented |
+| 3 | Ingest API with OIDC authentication, GitHub Action, risk-ranked PR comments, secret redaction, hash-only mode | Implemented |
+| 4 | Readers and writers for ADL, Open Agent Spec and OASF, round-trip tests, `marshal convert` with fidelity reports | Implemented |
+| 5 | Pro-code readers by static extraction: OpenAI Agents SDK, LangChain/LangGraph, CrewAI, Google ADK, and direct model API calls; linked to Databricks Apps | Implemented |
+| 6 | Copilot Studio, Bedrock Agents and Agentforce adapters; ADK Agent Config; inventory for AgentCore and Agent Engine; legacy Agentforce metadata | Implemented |
+| 7 | Capability matrix v0, portability scores, `marshal port`; collection channels, drift and freshness | Implemented |
+| 8 | Discovery and dependency queries, read-only web view | Implemented |
+| 9 | Postgres store, container image and Helm chart; sign-in through the organization's SSO proxy | Implemented |
+| 10 | Documentation, demo from public agents, launch | In progress |
+
+Later milestones are listed under [Capabilities](#later): entity resolution, forking with lineage, an agent bill of materials, rollback recipes, policy checks, and resolved-model enrichment.
 
 Pro-code readers come before the closed-platform adapters. Most agents on Databricks, AgentCore and Agent Engine are code agents, and their platform artifacts carry permissions and packaging but not behavior. The capability matrix follows the platform adapters, so portability scores cover every platform from the start.
 
