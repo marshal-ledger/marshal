@@ -38,6 +38,23 @@ jobs:
           MARSHAL_TEST_POSTGRES_URL: postgresql://postgres:marshal-ci@localhost:5432/marshal
         run: pytest tests/unit/test_store.py tests/unit/test_freshness.py tests/unit/test_service.py tests/unit/test_server.py tests/unit/test_web.py
 
+  # The oldest versions the declared minimums allow, so they stay honest. The schema test is
+  # skipped: older pydantic writes the same schema with different formatting.
+  lowest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: "3.10"
+      - run: pip install --quiet uv
+      - run: python scripts/fetch_fixtures.py
+      - name: Tests (lowest direct dependencies)
+        run: >-
+          uv run --isolated --resolution lowest-direct --python 3.10
+          --with 'pytest>=8' --with 'httpx>=0.27' --with 'jsonschema>=4.21' --with-editable '.[server,postgres]'
+          pytest -q --deselect tests/unit/test_schema.py::test_committed_schema_matches_model
+
   chart:
     runs-on: ubuntu-latest
     steps:

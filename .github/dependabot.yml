@@ -11,8 +11,12 @@ updates:
       actions:
         patterns: ["*"]
 
+  # Marshal is installed into existing environments, so its minimum versions stay as low as
+  # it works with; the "lowest" CI job tests them. Dependabot raises a minimum only when the
+  # current one excludes a release, or for a security fix.
   - package-ecosystem: pip
     directory: "/"
+    versioning-strategy: increase-if-necessary
     schedule:
       interval: weekly
     groups:
