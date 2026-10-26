@@ -10,7 +10,6 @@ from marshal_ledger import __version__
 
 ROOT = Path(__file__).resolve().parents[2]
 RELEASE = re.sub(r"\.dev\d+$", "", __version__)  # the release being prepared, or the one just made
-MAJOR = f"v{RELEASE.split('.')[0]}"
 
 
 def release_script():
@@ -20,14 +19,30 @@ def release_script():
     return module
 
 
-def test_chart_app_version_is_the_package_version():
-    assert release_script().chart_app_version() == __version__
+def latest_published() -> str:
+    """The release users get today: this one, or between releases the newest dated changelog section."""
+    if __version__ == RELEASE:
+        return RELEASE
+    dated = [m["version"] for m in release_script().HEADING.finditer((ROOT / "CHANGELOG.md").read_text())
+             if re.fullmatch(r"\d{4}-\d{2}-\d{2}", m["date"])]
+    return dated[0] if dated else RELEASE
+
+
+PUBLISHED = latest_published()
+MAJOR = f"v{PUBLISHED.split('.')[0]}"
+
+
+def test_chart_app_version_is_the_published_release():
+    """The chart's default image tag is its appVersion, so it names a release that has an image."""
+    assert release_script().chart_app_version() == PUBLISHED
 
 
 def test_changelog_has_a_section_for_the_version():
     date, body = release_script().changelog_section(RELEASE)
-    assert body
-    assert date == "unreleased" if __version__ != RELEASE else re.fullmatch(r"\d{4}-\d{2}-\d{2}", date)
+    if __version__ != RELEASE:
+        assert date == "unreleased"
+    else:
+        assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", date) and body, "a release has a dated section listing its changes"
 
 
 def test_action_references_use_the_current_major_tag():
@@ -37,9 +52,9 @@ def test_action_references_use_the_current_major_tag():
 
 
 @pytest.mark.parametrize("doc", ["docs/deployment.md", "docs/github-action.md"])
-def test_versions_in_docs_are_the_current_release(doc):
+def test_versions_in_docs_are_the_published_release(doc):
     versions = set(re.findall(r"(?<![\w.])v?(\d+\.\d+\.\d+)\b", (ROOT / doc).read_text()))
-    assert versions == {RELEASE}, f"{doc} mentions {sorted(versions)}; update it to {RELEASE}"
+    assert versions == {PUBLISHED}, f"{doc} mentions {sorted(versions)}; update it to {PUBLISHED}"
 
 
 def test_release_check_and_notes(monkeypatch):
