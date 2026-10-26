@@ -59,3 +59,19 @@ class Signer:
 @pytest.fixture(scope="session")
 def signer():
     return Signer()
+
+
+@pytest.fixture
+def ledger_location(tmp_path):
+    """A fresh store location: SQLite by default, or Postgres when MARSHAL_TEST_POSTGRES_URL is set."""
+    import os
+
+    url = os.environ.get("MARSHAL_TEST_POSTGRES_URL")
+    if not url:
+        return str(tmp_path / "ledger.sqlite")
+    import psycopg
+
+    with psycopg.connect(url, autocommit=True) as connection:
+        connection.execute("DROP SCHEMA public CASCADE")
+        connection.execute("CREATE SCHEMA public")
+    return url

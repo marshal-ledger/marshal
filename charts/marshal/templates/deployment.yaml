@@ -1,0 +1,70 @@
+{{- if and .Values.persistence.enabled (gt (int .Values.replicaCount) 1) }}
+{{- fail "a SQLite store on a volume supports one replica; use Postgres for more" }}
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "marshal.fullname" . }}
+  labels: {{- include "marshal.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels: {{- include "marshal.selector" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "marshal.selector" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ toYaml .Values.config | sha256sum }}
+    spec:
+      securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: marshal
+          image: "{{ required "image.repository is required" .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["serve", "--config", "/etc/marshal/marshal-server.yaml", "--host", "0.0.0.0", "--port", "8080"]
+          env:
+            - name: MARSHAL_STORE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "store.existingSecret is required" .Values.store.existingSecret }}
+                  key: {{ .Values.store.secretKey }}
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet: {path: /healthz, port: http}
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 20
+          securityContext: {{- toYaml .Values.securityContext | nindent 12 }}
+          resources: {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/marshal
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+            {{- if .Values.persistence.enabled }}
+            - name: data
+              mountPath: /var/lib/marshal
+            {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "marshal.fullname" . }}
+        - name: tmp
+          emptyDir: {}
+        {{- if .Values.persistence.enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "marshal.fullname" . }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations: {{- toYaml . | nindent 8 }}
+      {{- end }}

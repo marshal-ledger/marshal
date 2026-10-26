@@ -22,8 +22,8 @@ def record(description="Reconciles invoices", tools=("tool/sap.update_po",)):
 
 
 @pytest.fixture
-def db(tmp_path):
-    path = tmp_path / "ledger.sqlite"
+def db(ledger_location):
+    path = ledger_location
     with Store(path) as s:
         s.record([record()], event=DeploymentEvent.SHIPPED, environment="prod", at=T0, channel=Channel.CI)
         s.record([record("edited", tools=("tool/sap.update_po", "tool/sap.delete_po"))],

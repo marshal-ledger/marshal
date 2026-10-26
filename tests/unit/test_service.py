@@ -23,8 +23,8 @@ def record(instructions="Reconcile invoices.", tools=()):
 
 
 @pytest.fixture
-def store(tmp_path):
-    with Store(tmp_path / "ledger.sqlite") as s:
+def store(ledger_location):
+    with Store(ledger_location) as s:
         yield s
 
 

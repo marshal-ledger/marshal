@@ -20,8 +20,8 @@ def record(agent="finance/invoice", description="Reconciles invoices", tools=(),
 
 
 @pytest.fixture
-def store(tmp_path):
-    with Store(tmp_path / "ledger.sqlite") as s:
+def store(ledger_location):
+    with Store(ledger_location) as s:
         yield s
 
 
@@ -155,3 +155,30 @@ def test_dependents_and_entities(store):
     assert store.dependents("tool/sap.read_po", shipped_only=True) == []
     counts = {e.ref: n for e, n in store.entities()}
     assert counts == {"tool/sap.update_po": 0}, "only stored entities are listed; counts follow latest versions"
+
+
+def test_concurrent_writers_get_distinct_sequence_numbers(ledger_location):
+    if not ledger_location.startswith("postgresql://"):
+        pytest.skip("concurrency is exercised against Postgres (set MARSHAL_TEST_POSTGRES_URL)")
+    import threading
+
+    with Store(ledger_location) as s:
+        s.record([record()], event=SHIPPED, environment="prod", at=T0)
+    errors = []
+
+    def write(n):
+        try:
+            with Store(ledger_location) as s:
+                s.record([record(description=f"variant {n}")], event=PROPOSED, environment="prod")
+        except Exception as exc:  # surfaced below
+            errors.append(exc)
+
+    threads = [threading.Thread(target=write, args=(n,)) for n in range(8)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert errors == []
+    with Store(ledger_location) as s:
+        labels = sorted(int(seq) for _, seq, _ in s.history("finance/invoice"))
+    assert labels == list(range(1, 10))

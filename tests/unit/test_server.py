@@ -29,9 +29,9 @@ def body(event="proposed", environment="prod", records=None):
 
 
 @pytest.fixture
-def config(tmp_path):
+def config(ledger_location):
     return ServerConfig(
-        store=str(tmp_path / "ledger.sqlite"),
+        store=ledger_location,
         issuers=[
             IssuerConfig(issuer=GITHUB, provider="github", repositories=["acme/*"]),
             IssuerConfig(issuer=GITLAB, provider="gitlab", repositories=["acme/*"]),

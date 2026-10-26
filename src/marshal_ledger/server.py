@@ -12,6 +12,7 @@ Run with ``marshal serve --config marshal-server.yaml``. Requires the
 from __future__ import annotations
 
 import fnmatch
+import os
 from pathlib import Path
 from typing import Any, Optional
 
@@ -54,7 +55,7 @@ class ServerConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     store: str
-    """Path of the SQLite store."""
+    """A SQLite file path, a postgresql:// URL, or env:VARIABLE to read either from the environment."""
     issuers: list[IssuerConfig] = Field(min_length=1)
     policy: Policy = Field(default_factory=Policy)
     hash_only: bool = False
@@ -64,7 +65,15 @@ class ServerConfig(BaseModel):
 
     @classmethod
     def load(cls, path: str | Path) -> "ServerConfig":
-        return cls.model_validate(yaml.safe_load(Path(path).read_text(encoding="utf-8")))
+        config = cls.model_validate(yaml.safe_load(Path(path).read_text(encoding="utf-8")))
+        if config.store.startswith("env:"):
+            # Keeps credentials out of the configuration file: store: env:MARSHAL_STORE_URL
+            variable = config.store.removeprefix("env:")
+            value = os.environ.get(variable)
+            if not value:
+                raise ValueError(f"environment variable {variable} for the store is not set")
+            config.store = value
+        return config
 
 
 class EventRequest(BaseModel):

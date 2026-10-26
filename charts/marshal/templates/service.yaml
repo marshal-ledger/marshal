@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "marshal.fullname" . }}
+  labels: {{- include "marshal.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  selector: {{- include "marshal.selector" . | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: http

@@ -1,0 +1,70 @@
+# Container image built from the repository's Dockerfile and pushed to your registry.
+image:
+  repository: ""   # required, for example registry.example.com/marshal
+  tag: ""          # defaults to the chart's appVersion
+  pullPolicy: IfNotPresent
+
+# Postgres is required for more than one replica. Use a SQLite store only with
+# replicaCount 1 and persistence enabled.
+replicaCount: 2
+
+store:
+  # A Secret holding the store location, such as postgresql://user:password@host:5432/marshal.
+  existingSecret: ""   # required
+  secretKey: url
+
+# Rendered into marshal-server.yaml. The store is supplied from the Secret above.
+# See docs/ingest-server.md for every setting.
+config:
+  hash_only: false
+  issuers: []
+  #  - issuer: https://token.actions.githubusercontent.com
+  #    provider: github
+  #    audience: marshal
+  #    repositories: ["your-org/*"]
+  policy:
+    shipped:
+      refs: ["refs/heads/main"]
+      environments: []
+  web:
+    enabled: true
+    user_header: X-Forwarded-Email
+
+persistence:
+  # For a single-replica SQLite store only.
+  enabled: false
+  size: 1Gi
+  storageClassName: ""
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  # Expose the ingest API to runners, and the web view only through your SSO proxy.
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts: []
+  #  - host: marshal.example.com
+  #    paths: [{path: /, pathType: Prefix}]
+  tls: []
+
+resources:
+  requests: {cpu: 100m, memory: 256Mi}
+  limits: {memory: 512Mi}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  fsGroup: 10001
+  seccompProfile: {type: RuntimeDefault}
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities: {drop: [ALL]}
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

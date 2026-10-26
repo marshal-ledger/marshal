@@ -1,0 +1,12 @@
+.git
+.venv
+.claude
+dist
+build
+**/__pycache__
+**/*.pyc
+tests
+docs
+examples
+collect
+*.sqlite

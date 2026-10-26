@@ -15,6 +15,7 @@ from __future__ import annotations
 import fnmatch
 import json
 import sqlite3
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -76,6 +77,43 @@ CREATE TABLE version_refs (
     PRIMARY KEY (agent, version, ref, relation)
 );
 CREATE INDEX version_refs_by_ref ON version_refs(ref);
+"""
+
+# Postgres stores start at the current schema. Future migrations need a Postgres
+# counterpart alongside each SQLite one.
+_SCHEMA_POSTGRES = """
+CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+CREATE TABLE agents (
+    id TEXT PRIMARY KEY, platform TEXT NOT NULL, display_name TEXT,
+    first_seen TEXT NOT NULL, last_seen TEXT NOT NULL
+);
+CREATE TABLE versions (
+    agent TEXT NOT NULL REFERENCES agents(id), version TEXT NOT NULL, seq INTEGER NOT NULL,
+    record TEXT NOT NULL, first_seen TEXT NOT NULL,
+    PRIMARY KEY (agent, version), UNIQUE (agent, seq)
+);
+CREATE TABLE events (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    agent TEXT NOT NULL, version TEXT NOT NULL, platform TEXT NOT NULL, environment TEXT NOT NULL,
+    event TEXT NOT NULL CHECK (event IN ('proposed', 'shipped', 'observed')),
+    at TEXT NOT NULL, commit_sha TEXT, pipeline_run TEXT, artifact TEXT, bindings TEXT NOT NULL,
+    actor_issuer TEXT, actor_repository TEXT, actor_ref TEXT, actor_workflow TEXT,
+    channel TEXT NOT NULL DEFAULT 'manual' CHECK (channel IN ('ci', 'poller', 'manual')),
+    FOREIGN KEY (agent, version) REFERENCES versions(agent, version)
+);
+CREATE INDEX events_by_agent ON events(agent, id);
+CREATE TABLE entities (
+    ref TEXT PRIMARY KEY, kind TEXT NOT NULL, platform TEXT NOT NULL, identifier TEXT NOT NULL, display_name TEXT
+);
+CREATE TABLE version_refs (
+    agent TEXT NOT NULL, version TEXT NOT NULL, ref TEXT NOT NULL,
+    relation TEXT NOT NULL CHECK (relation IN ('tool', 'knowledge', 'grant')),
+    PRIMARY KEY (agent, version, ref, relation)
+);
+CREATE INDEX version_refs_by_ref ON version_refs(ref);
+CREATE TABLE agent_owners (
+    agent TEXT PRIMARY KEY REFERENCES agents(id), issuer TEXT NOT NULL, repository TEXT NOT NULL, bound_at TEXT NOT NULL
+);
 """
 
 # Each entry upgrades the schema from version N to N + 1.
@@ -241,14 +279,50 @@ def _refs(record: AgentVersion) -> Iterator[tuple[str, str]]:
 
 
 class Store:
-    """A ledger store backed by SQLite."""
+    """A ledger store: SQLite for local use, Postgres for shared deployments.
 
-    def __init__(self, path: str | Path):
-        self.path = str(path)
-        self._db = sqlite3.connect(self.path)
-        self._db.row_factory = sqlite3.Row
-        self._db.execute("PRAGMA foreign_keys = ON")
+    ``location`` is a SQLite file path (optionally ``sqlite:///path``) or a
+    ``postgresql://`` URL. Postgres needs the ``postgres`` extra.
+    """
+
+    def __init__(self, location: str | Path):
+        self.path = str(location)
+        self._postgres = self.path.startswith(("postgresql://", "postgres://"))
+        if self._postgres:
+            try:
+                import psycopg
+                from psycopg.rows import dict_row
+            except ImportError as exc:  # pragma: no cover - depends on the environment
+                raise StoreError("Postgres stores need: pip install 'marshal-ledger[postgres]'") from exc
+            # Autocommit: reads run on their own, and each transaction block is a real, committed transaction.
+            self._db = psycopg.connect(self.path, row_factory=dict_row, autocommit=True)
+        else:
+            self._db = sqlite3.connect(self.path.removeprefix("sqlite:///"))
+            self._db.row_factory = sqlite3.Row
+            self._db.execute("PRAGMA foreign_keys = ON")
         self._migrate()
+
+    def _sql(self, sql: str) -> str:
+        return sql.replace("?", "%s") if self._postgres else sql
+
+    def _q(self, sql: str, params: Iterable[Any] = ()) -> Any:
+        return self._db.execute(self._sql(sql), tuple(params))
+
+    def _qm(self, sql: str, rows: list[tuple[Any, ...]]) -> None:
+        if self._postgres:
+            with self._db.cursor() as cursor:
+                cursor.executemany(self._sql(sql), rows)
+        else:
+            self._db.executemany(sql, rows)
+
+    @contextmanager
+    def _tx(self) -> Iterator[None]:
+        if self._postgres:
+            with self._db.transaction():
+                yield
+        else:
+            with self._db:
+                yield
 
     def close(self) -> None:
         self._db.close()
@@ -260,6 +334,9 @@ class Store:
         self.close()
 
     def _migrate(self) -> None:
+        if self._postgres:
+            self._migrate_postgres()
+            return
         has_meta = self._db.execute(
             "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'meta'"
         ).fetchone()
@@ -277,6 +354,18 @@ class Store:
                 "BEGIN;\n" + _MIGRATIONS[version]
                 + f"\nUPDATE meta SET value = '{version + 1}' WHERE key = 'schema_version';\nCOMMIT;"
             )
+
+    def _migrate_postgres(self) -> None:
+        exists = self._q("SELECT to_regclass('meta') AS meta").fetchone()["meta"]
+        if exists is None:
+            with self._tx():
+                self._db.execute(_SCHEMA_POSTGRES)
+                self._q("INSERT INTO meta (key, value) VALUES ('schema_version', ?)", (str(SCHEMA_VERSION),))
+            return
+        row = self._q("SELECT value FROM meta WHERE key = 'schema_version'").fetchone()
+        found = int(row["value"]) if row else 0
+        if found != SCHEMA_VERSION:
+            raise StoreError(f"store schema version {found}, expected {SCHEMA_VERSION}")
 
     # -- writes ----------------------------------------------------------
 
@@ -300,14 +389,14 @@ class Store:
         records = list(records)
         when = _iso(at or _now())
         results: list[Recorded] = []
-        with self._db:
+        with self._tx():
             if actor is not None:
                 self._check_owners(records, actor, when)
             for entity in entities:
-                self._db.execute(
+                self._q(
                     "INSERT INTO entities (ref, kind, platform, identifier, display_name) "
                     "VALUES (?, ?, ?, ?, ?) "
-                    "ON CONFLICT (ref) DO UPDATE SET display_name = COALESCE(excluded.display_name, display_name)",
+                    "ON CONFLICT (ref) DO UPDATE SET display_name = COALESCE(excluded.display_name, entities.display_name)",
                     (entity.ref, entity.kind.value, entity.platform, entity.identifier, entity.display_name),
                 )
             for record in records:
@@ -317,7 +406,7 @@ class Store:
     def _check_owners(self, records: list[AgentVersion], actor: Actor, when: str) -> None:
         refused = []
         for record in records:
-            row = self._db.execute(
+            row = self._q(
                 "SELECT issuer, repository FROM agent_owners WHERE agent = ?", (record.agent,)
             ).fetchone()
             if row is not None and (row["issuer"], row["repository"]) != (actor.issuer, actor.repository):
@@ -327,15 +416,15 @@ class Store:
 
     def owner(self, agent: str) -> Optional[tuple[str, str]]:
         """The (issuer, repository) an agent is bound to, if any."""
-        row = self._db.execute("SELECT issuer, repository FROM agent_owners WHERE agent = ?", (agent,)).fetchone()
+        row = self._q("SELECT issuer, repository FROM agent_owners WHERE agent = ?", (agent,)).fetchone()
         return (row["issuer"], row["repository"]) if row else None
 
     def transfer(self, agent: str, issuer: str, repository: str) -> None:
         """Bind ``agent`` to another repository. An administrative operation."""
         if not self.has_agent(agent):
             raise StoreError(f"unknown agent {agent!r}")
-        with self._db:
-            self._db.execute(
+        with self._tx():
+            self._q(
                 "INSERT INTO agent_owners (agent, issuer, repository, bound_at) VALUES (?, ?, ?, ?) "
                 "ON CONFLICT (agent) DO UPDATE SET issuer = excluded.issuer, "
                 "repository = excluded.repository, bound_at = excluded.bound_at",
@@ -347,38 +436,41 @@ class Store:
         channel: Channel = Channel.MANUAL,
     ) -> Recorded:
         display = record.spec.display_name.value
-        self._db.execute(
+        self._q(
             "INSERT INTO agents (id, platform, display_name, first_seen, last_seen) VALUES (?, ?, ?, ?, ?) "
             "ON CONFLICT (id) DO UPDATE SET last_seen = excluded.last_seen, "
-            "display_name = COALESCE(excluded.display_name, display_name)",
+            "display_name = COALESCE(excluded.display_name, agents.display_name)",
             (record.agent, record.platform, display, when, when),
         )
         if actor is not None:
-            self._db.execute(
-                "INSERT OR IGNORE INTO agent_owners (agent, issuer, repository, bound_at) VALUES (?, ?, ?, ?)",
+            self._q(
+                "INSERT INTO agent_owners (agent, issuer, repository, bound_at) VALUES (?, ?, ?, ?) "
+                "ON CONFLICT (agent) DO NOTHING",
                 (record.agent, actor.issuer, actor.repository, when),
             )
-        row = self._db.execute(
+        if self._postgres:
+            self._q("SELECT id FROM agents WHERE id = ? FOR UPDATE", (record.agent,))
+        row = self._q(
             "SELECT seq FROM versions WHERE agent = ? AND version = ?", (record.agent, record.version)
         ).fetchone()
         new_version = row is None
         if new_version:
-            seq = self._db.execute(
-                "SELECT COALESCE(MAX(seq), 0) + 1 FROM versions WHERE agent = ?", (record.agent,)
-            ).fetchone()[0]
+            seq = self._q(
+                "SELECT COALESCE(MAX(seq), 0) + 1 AS next FROM versions WHERE agent = ?", (record.agent,)
+            ).fetchone()["next"]
             # Bindings and source belong to the event, not the version.
             stored = record.model_copy(update={"bindings": {}})
-            self._db.execute(
+            self._q(
                 "INSERT INTO versions (agent, version, seq, record, first_seen) VALUES (?, ?, ?, ?, ?)",
                 (record.agent, record.version, seq, stored.model_dump_json(by_alias=True), when),
             )
-            self._db.executemany(
-                "INSERT OR IGNORE INTO version_refs (agent, version, ref, relation) VALUES (?, ?, ?, ?)",
+            self._qm(
+                "INSERT INTO version_refs (agent, version, ref, relation) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING",
                 [(record.agent, record.version, ref, relation) for ref, relation in _refs(record)],
             )
         else:
             seq = row["seq"]
-        self._db.execute(
+        self._q(
             "INSERT INTO events (agent, version, platform, environment, event, at, commit_sha, "
             "pipeline_run, artifact, bindings, actor_issuer, actor_repository, actor_ref, actor_workflow, channel) "
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -417,7 +509,7 @@ class Store:
     # -- reads -----------------------------------------------------------
 
     def _version_row(self, agent: str, where: str, params: tuple) -> StoredVersion:
-        row = self._db.execute(
+        row = self._q(
             f"SELECT seq, record, first_seen FROM versions WHERE agent = ? AND {where}", (agent, *params)
         ).fetchone()
         if row is None:
@@ -429,7 +521,7 @@ class Store:
         )
 
     def has_agent(self, agent: str) -> bool:
-        return self._db.execute("SELECT 1 FROM agents WHERE id = ?", (agent,)).fetchone() is not None
+        return self._q("SELECT 1 FROM agents WHERE id = ?", (agent,)).fetchone() is not None
 
     def resolve(self, agent: str, selector: str = "latest") -> StoredVersion:
         """Find one version of ``agent``.
@@ -450,7 +542,7 @@ class Store:
             return self._from_event(agent, kind, environment or None)
         digest = selector.removeprefix("sha256:").lower()
         if len(digest) >= 7 and all(c in "0123456789abcdef" for c in digest):
-            rows = self._db.execute(
+            rows = self._q(
                 "SELECT seq FROM versions WHERE agent = ? AND version LIKE ?", (agent, f"sha256:{digest}%")
             ).fetchall()
             if len(rows) == 1:
@@ -468,7 +560,7 @@ class Store:
         if environment:
             sql += " AND environment = ?"
             params.append(environment)
-        row = self._db.execute(sql + " ORDER BY id DESC LIMIT 1", params).fetchone()
+        row = self._q(sql + " ORDER BY id DESC LIMIT 1", params).fetchone()
         if row is None:
             where = " ".join(filter(None, [kind, f"in {environment}" if environment else None]))
             raise StoreError(f"{agent}: no {where or 'recorded'} version")
@@ -478,7 +570,7 @@ class Store:
         """Every event for ``agent``, oldest first, with the version's sequence number and actor."""
         if not self.has_agent(agent):
             raise StoreError(f"unknown agent {agent!r}")
-        rows = self._db.execute(
+        rows = self._q(
             "SELECT e.*, v.seq FROM events e JOIN versions v ON v.agent = e.agent AND v.version = e.version "
             "WHERE e.agent = ? ORDER BY e.id",
             (agent,),
@@ -517,7 +609,7 @@ class Store:
     ) -> list[AgentSummary]:
         """Every agent with its latest version. ``tool`` and ``knowledge`` are glob patterns
         matched against the latest version's references."""
-        rows = self._db.execute("SELECT id, platform, display_name FROM agents ORDER BY id").fetchall()
+        rows = self._q("SELECT id, platform, display_name FROM agents ORDER BY id").fetchall()
         summaries = []
         for row in rows:
             if platform and row["platform"] != platform:
@@ -534,7 +626,7 @@ class Store:
                 continue
             shipped = {
                 r["environment"]: r["seq"]
-                for r in self._db.execute(
+                for r in self._q(
                     "SELECT e.environment, v.seq FROM events e "
                     "JOIN versions v ON v.agent = e.agent AND v.version = e.version "
                     "WHERE e.agent = ? AND e.event = 'shipped' "
@@ -564,7 +656,7 @@ class Store:
             raise StoreError(f"unknown agent {agent!r}")
         policy = policy or FreshnessPolicy()
         now = now or _now()
-        rows = self._db.execute(
+        rows = self._q(
             "SELECT e.id, e.environment, e.event, e.version, e.at, e.channel, v.seq FROM events e "
             "JOIN versions v ON v.agent = e.agent AND v.version = e.version "
             "WHERE e.agent = ? AND e.event IN ('shipped', 'observed') ORDER BY e.id",
@@ -610,7 +702,7 @@ class Store:
             params.append(relation)
         pattern = pattern.lower()
         found = []
-        for row in self._db.execute(sql, params).fetchall():
+        for row in self._q(sql, params).fetchall():
             ref = row["ref"].lower()
             candidates = [ref, ref.split("/", 1)[-1]]
             if row["identifier"]:
@@ -622,11 +714,11 @@ class Store:
     def dependents(self, pattern: str, *, relation: str | None = None, shipped_only: bool = False) -> list[Dependent]:
         """Agents whose latest or shipped versions reference an entity matching ``pattern`` (a glob)."""
         out: list[Dependent] = []
-        for row in self._db.execute("SELECT id, platform FROM agents ORDER BY id").fetchall():
+        for row in self._q("SELECT id, platform FROM agents ORDER BY id").fetchall():
             agent = row["id"]
             latest = self._from_event(agent, None, None)
             shipped: dict[str, list[str]] = {}
-            for env_row in self._db.execute(
+            for env_row in self._q(
                 "SELECT e.environment, e.version FROM events e WHERE e.agent = ? AND e.event = 'shipped' "
                 "AND e.id = (SELECT MAX(id) FROM events x WHERE x.agent = e.agent AND x.environment = e.environment "
                 "AND x.event = 'shipped')", (agent,)
@@ -646,10 +738,10 @@ class Store:
         from .model import EntityKind
 
         latest = {}
-        for row in self._db.execute("SELECT id FROM agents").fetchall():
+        for row in self._q("SELECT id FROM agents").fetchall():
             latest[row["id"]] = self._from_event(row["id"], None, None).record.version
         counts: dict[str, set[str]] = {}
-        for row in self._db.execute("SELECT agent, version, ref FROM version_refs").fetchall():
+        for row in self._q("SELECT agent, version, ref FROM version_refs").fetchall():
             if latest.get(row["agent"]) == row["version"]:
                 counts.setdefault(row["ref"], set()).add(row["agent"])
         sql = "SELECT ref, kind, platform, identifier, display_name FROM entities"
@@ -658,7 +750,7 @@ class Store:
             sql += " WHERE kind = ?"
             params.append(kind)
         result = []
-        for row in self._db.execute(sql + " ORDER BY ref", params).fetchall():
+        for row in self._q(sql + " ORDER BY ref", params).fetchall():
             entity = Entity(ref=row["ref"], kind=EntityKind(row["kind"]), platform=row["platform"],
                             identifier=row["identifier"], display_name=row["display_name"])
             result.append((entity, len(counts.get(row["ref"], ()))))

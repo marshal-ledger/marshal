@@ -5,7 +5,7 @@ The ingest API is how pipelines write to a shared Marshal store. It authenticate
 ## Run
 
 ```console
-$ pip install 'marshal-ledger[server]'
+$ pip install 'marshal-ledger[server,postgres]'
 $ marshal serve --config marshal-server.yaml --host 0.0.0.0 --port 8080
 ```
 
@@ -17,7 +17,7 @@ See [`examples/marshal-server.yaml`](../examples/marshal-server.yaml).
 
 | Key | Meaning |
 |---|---|
-| `store` | Path of the SQLite store |
+| `store` | A SQLite file path, a `postgresql://` URL, or `env:VARIABLE` to read either from the environment |
 | `hash_only` | Store instruction hashes but never instruction text |
 | `issuers[].issuer` | The token issuer, such as `https://token.actions.githubusercontent.com` or a GitLab instance URL |
 | `issuers[].provider` | `github` or `gitlab`, which selects the claim mapping |

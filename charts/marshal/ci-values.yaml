@@ -1,0 +1,11 @@
+# Values used by CI to lint and render the chart.
+image: {repository: registry.example.com/marshal}
+store: {existingSecret: marshal-store}
+config:
+  issuers:
+    - issuer: https://token.actions.githubusercontent.com
+      provider: github
+      repositories: ["example-org/*"]
+ingress:
+  enabled: true
+  hosts: [{host: marshal.example.com, paths: [{path: /, pathType: Prefix}]}]
