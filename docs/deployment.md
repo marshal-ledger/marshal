@@ -11,18 +11,23 @@ The server configuration names the store with `store:`, as a file path, a `postg
 
 ## Container
 
-The [`Dockerfile`](../Dockerfile) builds a minimal image that runs as an unprivileged user. Build it from a release tag and push it to your registry:
+Each release publishes a minimal image that runs as an unprivileged user:
 
 ```console
-$ git checkout v0.1.0                     # a release from the Releases page
-$ docker build -t registry.example.com/marshal:0.1.0 .
 $ docker run -p 8080:8080 \
     -v ./marshal-server.yaml:/etc/marshal/marshal-server.yaml:ro \
     -e MARSHAL_STORE_URL=postgresql://marshal:...@db.internal:5432/marshal \
-    registry.example.com/marshal:0.1.0
+    ghcr.io/marshal-ledger/marshal:0.1.0
 ```
 
-Tag the image with the release you built. The Helm chart's default image tag is the chart's `appVersion`, which is the release it ships with. Each release also attaches the packaged chart.
+To run from your own registry, mirror the release image, or build one from a release tag with the [`Dockerfile`](../Dockerfile):
+
+```console
+$ git checkout v0.1.0
+$ docker build -t registry.example.com/marshal:0.1.0 .
+```
+
+The Helm chart uses the release image by default, tagged with the chart's `appVersion`. Each release also attaches the packaged chart.
 
 `/healthz` answers when the service is up. The image works with a read-only root filesystem when `/tmp` is writable.
 
@@ -33,7 +38,6 @@ The Helm chart in [`charts/marshal`](../charts/marshal) deploys the service with
 ```console
 $ kubectl create secret generic marshal-store --from-literal=url='postgresql://marshal:...@db.internal:5432/marshal'
 $ helm install marshal charts/marshal \
-    --set image.repository=registry.example.com/marshal \
     --set store.existingSecret=marshal-store \
     -f my-values.yaml
 ```

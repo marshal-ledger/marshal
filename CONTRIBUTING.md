@@ -2,6 +2,8 @@
 
 Thanks for helping. The most useful contributions are corrections to the [capability matrix](src/marshal_ledger/capabilities/README.md), new public golden fixtures, and readers and writers for formats Marshal doesn't support yet.
 
+Marshal is licensed under the [Apache License 2.0](LICENSE). By contributing, you agree that your contributions are licensed under it too, as its section 5 describes.
+
 ## Development
 
 ```console

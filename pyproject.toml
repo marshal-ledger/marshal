@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
@@ -8,6 +8,8 @@ dynamic = ["version"]
 description = "Marshal — a vendor-neutral, open-source ledger for enterprise AI agents."
 readme = "README.md"
 requires-python = ">=3.10"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 authors = [{ name = "Marshal contributors" }]
 keywords = ["ai-agents", "agent-registry", "governance", "audit", "copilot-studio", "agentforce", "bedrock", "databricks"]
 dependencies = [

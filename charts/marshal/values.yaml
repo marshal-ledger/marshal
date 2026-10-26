@@ -1,6 +1,6 @@
-# Container image built from the repository's Dockerfile and pushed to your registry.
+# The release image. To run an image you built or mirrored, set your registry's repository.
 image:
-  repository: ""   # required, for example registry.example.com/marshal
+  repository: ghcr.io/marshal-ledger/marshal
   tag: ""          # defaults to the chart's appVersion
   pullPolicy: IfNotPresent
 

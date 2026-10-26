@@ -8,8 +8,9 @@
 # Optional, each off until configured:
 # - PyPI: set the repository variable PUBLISH_PYPI to true, add a GitHub environment
 #   named pypi, and register this workflow as a trusted publisher for marshal-ledger on PyPI.
-# - Container image: set IMAGE_REPOSITORY (such as ghcr.io/marshal-ledger/marshal). For a
-#   registry other than ghcr.io, also set REGISTRY_USERNAME and the secret REGISTRY_PASSWORD.
+# - Container image: set IMAGE_REPOSITORY to ghcr.io/marshal-ledger/marshal, the image the
+#   docs and Helm chart use. For a registry other than ghcr.io, also set REGISTRY_USERNAME
+#   and the secret REGISTRY_PASSWORD.
 #
 # See "Releasing" in CONTRIBUTING.md.
 name: release

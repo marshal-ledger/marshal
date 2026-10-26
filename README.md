@@ -79,3 +79,7 @@ $ pytest
 ```
 
 See [Contributing](CONTRIBUTING.md). Golden fixtures are fetched rather than committed, so each file stays under its upstream license. After changing the model, regenerate the schema with `python scripts/generate_schema.py`. Report vulnerabilities as described in [Security](SECURITY.md).
+
+## License
+
+Marshal is licensed under the [Apache License 2.0](LICENSE).
