@@ -233,7 +233,7 @@ A public, community-maintained data file per platform listing what it supports: 
 - **Secret redaction in every reader**, by design. Deploy artifacts often carry credentials and environment variables; they never reach the store.
 - **Hash-only mode** per org: store instruction hashes instead of prompt text. Diffs then report "instructions changed" without showing content.
 - **No shared secrets in pipelines.** CI authenticates to Marshal with short-lived OIDC tokens; agent teams never hold store credentials.
-- **CI path stands alone.** Pollers need admin-level read credentials, so they're optional, not required for core value.
+- **CI path stands alone.** Scheduled exports need read access to each platform, so they're optional, not required for core value.
 - **Self-hosted** with no external calls.
 
 ### Network posture

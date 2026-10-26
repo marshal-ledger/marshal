@@ -81,7 +81,7 @@ def main() -> int:
             action.write_text(action.read_text().replace("mode: Invoker", "mode: Maker"))
             result = READERS["copilot-studio"]().read(edited)
             ingest(store, result.records, event=DeploymentEvent.OBSERVED, environment="prod",
-                   at=start + timedelta(days=44), channel=Channel.POLLER)
+                   at=start + timedelta(days=44), channel=Channel.SCHEDULED)
     print(f"\nDemo ledger: {target}\nBrowse it:   marshal web --db {target}")
     return 0
 
