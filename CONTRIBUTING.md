@@ -8,7 +8,6 @@ Marshal is licensed under the [Apache License 2.0](LICENSE). By contributing, yo
 
 Changes reach `main` through pull requests, and the CI checks must pass before merging.
 
-
 ```console
 $ pip install -e '.[dev]'
 $ python scripts/fetch_fixtures.py
