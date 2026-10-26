@@ -17,7 +17,7 @@ from typing import Any, Optional
 from urllib.parse import urlencode
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from pydantic import BaseModel, ConfigDict
 
 from . import __version__
@@ -65,13 +65,12 @@ a:hover { color:var(--accent); }
 .side { background:var(--side); border-right:1px solid var(--line); padding:14px 10px; display:flex; flex-direction:column; gap:18px;
   position:sticky; top:0; height:100vh; }
 .brand { display:flex; align-items:center; gap:9px; padding:4px 8px; font-weight:600; letter-spacing:-.01em; }
-.mark { width:22px; height:22px; border-radius:6px; background:var(--fg); color:var(--page); display:grid; place-items:center;
-  font-size:12px; font-weight:700; }
+.mark { width:22px; height:22px; border-radius:5px; flex:none; display:block; box-shadow:0 0 0 1px var(--line-2); }
 .side nav { display:flex; flex-direction:column; gap:1px; }
 .side nav a { display:flex; align-items:center; gap:9px; padding:6px 8px; border-radius:6px; color:var(--fg-2); font-size:13px; font-weight:500; }
 .side nav a:hover { background:var(--hover); color:var(--fg); }
 .side nav a.on { background:var(--surface); color:var(--fg); box-shadow:0 0 0 1px var(--line); }
-.side svg { width:15px; height:15px; flex:none; stroke:currentColor; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
+.side nav svg { width:15px; height:15px; flex:none; stroke:currentColor; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
 .side .who { margin-top:auto; padding:8px; font-size:12px; color:var(--fg-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 main { padding:28px 36px 64px; max-width:1240px; width:100%; }
 .crumbs { font-size:13px; color:var(--fg-2); margin-bottom:10px; } .crumbs a:hover { color:var(--fg); }
@@ -147,6 +146,14 @@ dt { color:var(--fg-2); } dd { margin:0; min-width:0; overflow-wrap:anywhere; }
 }
 """
 
+_LOGO_SHAPES = (
+    '<rect width="488" height="488" fill="#1a1a1a"/>'
+    '<path fill="#fff" d="M66 377V96h94l84 109 84-109h94v281h-38V132h-35L244 268 139 132h-35v245z"/>'
+    '<rect x="174" y="309" width="140" height="14" fill="#8f8f8f"/>'
+)
+_LOGO = f'<svg class="mark" viewBox="0 0 488 488" aria-hidden="true">{_LOGO_SHAPES}</svg>'
+_FAVICON = f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 488">{_LOGO_SHAPES}</svg>'
+
 _ICONS = {
     "agents": '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="4" width="11" height="9" rx="2.5"/><path d="M8 4V1.8"/>'
               '<circle cx="6" cy="8.5" r=".6"/><circle cx="10" cy="8.5" r=".6"/></svg>',
@@ -169,8 +176,8 @@ def _page(title: str, body: str, user: Optional[str], active: str = "") -> HTMLR
     return HTMLResponse(
         "<!doctype html><html lang=en><head><meta charset=utf-8>"
         '<meta name=viewport content="width=device-width,initial-scale=1">'
-        f"<title>{_e(title)} · Marshal</title><style>{_STYLE}</style></head><body><div class=shell>"
-        f'<aside class=side><a class=brand href="./"><span class=mark>M</span>Marshal</a><nav>{nav}</nav>{who}</aside>'
+        f'<title>{_e(title)} · Marshal</title><link rel=icon href="favicon.svg"><style>{_STYLE}</style></head><body><div class=shell>'
+        f'<aside class=side><a class=brand href="./">{_LOGO}Marshal</a><nav>{nav}</nav>{who}</aside>'
         f"<main>{body}</main></div></body></html>"
     )
 
@@ -262,6 +269,10 @@ def create_web_app(store_path: str, settings: WebSettings) -> FastAPI:
 
     def store() -> Store:
         return Store(store_path)
+
+    @app.get("/favicon.svg", include_in_schema=False)
+    def favicon() -> Response:
+        return Response(_FAVICON, media_type="image/svg+xml", headers={"Cache-Control": "max-age=86400"})
 
     @app.get("/", response_class=HTMLResponse)
     def inventory(request: Request, q: str = "", tool: str = "", provider: str = "", platform: str = "") -> HTMLResponse:

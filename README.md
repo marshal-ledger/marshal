@@ -1,3 +1,5 @@
+<img src="docs/assets/marshal-logo.svg" width="72" height="72" alt="Marshal logo">
+
 # Marshal — an agent ledger
 
 A vendor-neutral, open-source ledger for enterprise AI agents. Any format in, any format out, with versions, diffs, portability and audit across every platform.

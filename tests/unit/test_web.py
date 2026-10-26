@@ -94,3 +94,11 @@ def test_tools_show_whose_credentials_they_use(ledger_location):
 def test_no_credentials_column_without_credential_data(db):
     client = TestClient(create_web_app(db, WebSettings(enabled=True, allow_unauthenticated=True)))
     assert "<th>Credentials</th>" not in client.get("/agent", params={"id": "finance/invoice"}).text
+
+
+def test_serves_the_logo_as_the_favicon(db):
+    client = TestClient(create_web_app(db, WebSettings(enabled=True)))
+    icon = client.get("/favicon.svg")  # a static asset, so no SSO header needed
+    assert icon.status_code == 200 and icon.headers["content-type"] == "image/svg+xml"
+    page = client.get("/", headers={"X-Forwarded-Email": "ana@acme.example"}).text
+    assert 'rel=icon href="favicon.svg"' in page and 'class="mark"' in page
