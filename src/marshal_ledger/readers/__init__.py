@@ -13,6 +13,7 @@ from .cloudformation import CloudFormationReader
 from .copilotstudio import CopilotStudioReader
 from .base import DocumentReader, ReadOptions, ReadResult, Reader, Skipped
 from .databricks import DatabricksBundleReader
+from .marshalfile import MarshalFileReader
 from .oasf import OasfReader
 from .python import PythonAgentReader
 from .salesforcemetadata import SalesforceMetadataReader
@@ -29,6 +30,7 @@ READERS: dict[str, type[Reader]] = {
     AdkConfigReader.format: AdkConfigReader,
     AgentEngineReader.format: AgentEngineReader,
     SalesforceMetadataReader.format: SalesforceMetadataReader,
+    MarshalFileReader.format: MarshalFileReader,
     # Last: a directory of Python code is the least specific match.
     PythonAgentReader.format: PythonAgentReader,
 }

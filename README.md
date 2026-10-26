@@ -30,6 +30,7 @@ Marshal reads the agent definitions teams already produce: Databricks bundles, C
 | Vertex AI Agent Engine (saved API responses) | inventory | |
 | Python agent code (OpenAI Agents SDK, LangChain/LangGraph, Google ADK, CrewAI, direct model API calls) | ✓ | |
 | ADL, Open Agent Spec, AGNTCY OASF | ✓ | ✓ |
+| Marshal file: a hand-written definition for agents no reader covers, recorded as attested | ✓ | ✓ |
 
 ## Try it
 
@@ -65,7 +66,7 @@ $ marshal web                                        # browse the store
 - [Design](docs/design.md): the problem, architecture, security and network posture, roadmap
 - [Ledger model v0](docs/ledger-model.md): records, provenance, version hashing, the version store, risk ranking, freshness
 - [Conversion and fidelity](docs/conversion.md) and [Portability](docs/portability.md)
-- Formats: [Databricks](docs/formats/databricks.md), [CloudFormation](docs/formats/cloudformation.md), [Copilot Studio](docs/formats/copilot-studio.md), [Agentforce](docs/formats/agentforce.md), [ADK Agent Config](docs/formats/adk-config.md), [Vertex AI Agent Engine](docs/formats/vertex-agent-engine.md), [Python agent code](docs/formats/python.md), [ADL](docs/formats/adl.md), [Agent Spec](docs/formats/agent-spec.md), [OASF](docs/formats/oasf.md)
+- Formats: [Databricks](docs/formats/databricks.md), [CloudFormation](docs/formats/cloudformation.md), [Copilot Studio](docs/formats/copilot-studio.md), [Agentforce](docs/formats/agentforce.md), [ADK Agent Config](docs/formats/adk-config.md), [Vertex AI Agent Engine](docs/formats/vertex-agent-engine.md), [Python agent code](docs/formats/python.md), [ADL](docs/formats/adl.md), [Agent Spec](docs/formats/agent-spec.md), [OASF](docs/formats/oasf.md), [Marshal file](docs/formats/marshal-file.md)
 - [Platform exportability](docs/platform-exportability.md): what each closed platform exposes
 - [Ingest API](docs/ingest-server.md), [GitHub Action](docs/github-action.md) and [Deployment](docs/deployment.md)
 

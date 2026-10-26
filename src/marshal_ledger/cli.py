@@ -204,6 +204,17 @@ def _convert(args: argparse.Namespace) -> int:
     return 0
 
 
+def _init_agent(args: argparse.Namespace) -> int:
+    from .writers.marshalfile import template
+
+    path = Path(args.path)
+    if path.exists() and not args.force:
+        return _fail(f"{path} exists; pass --force to replace it")
+    path.write_text(template(args.id, args.platform), encoding="utf-8")
+    print(f"wrote {path}; fill it in, then run: marshal read {path}", file=sys.stderr)
+    return 0
+
+
 def _port(args: argparse.Namespace) -> int:
     from .portability import assess, platforms
 
@@ -529,6 +540,18 @@ def main(argv: Sequence[str] | None = None) -> int:
     convert_.add_argument("--out", metavar="DIR", help="write one file per agent here (required for several agents)")
     convert_.add_argument("--report", metavar="FILE", help="also write the fidelity reports as JSON")
     convert_.set_defaults(handler=_convert)
+
+    init_agent = commands.add_parser(
+        "init-agent",
+        help="write a Marshal file to fill in, for an agent no reader covers",
+        description="Write a commented, hand-written agent definition (a Marshal file). Its values are recorded "
+        "as attested by a person; anything left as unknown stays unknown.",
+    )
+    init_agent.add_argument("path", nargs="?", default="agent.marshal.yaml", help="file to write (default: agent.marshal.yaml)")
+    init_agent.add_argument("--id", default="my-agent", help="the agent's id (default: my-agent)")
+    init_agent.add_argument("--platform", default="in-house", help="the platform it runs on (default: in-house)")
+    init_agent.add_argument("--force", action="store_true", help="replace the file if it exists")
+    init_agent.set_defaults(handler=_init_agent)
 
     port = commands.add_parser(
         "port",

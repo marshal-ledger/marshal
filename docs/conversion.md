@@ -11,9 +11,11 @@ Every reader's output can be written by every writer:
 
 | Readers | Writers |
 |---|---|
-| `adl`, `agent-spec`, `oasf`, `cloudformation`, `copilot-studio`, `agentforce`, `adk-config`, `databricks-asset-bundle`, `python` | `adl`, `agent-spec`, `oasf`, `cloudformation`, `copilot-studio`, `agentforce`, `adk-config` |
+| `adl`, `agent-spec`, `oasf`, `cloudformation`, `copilot-studio`, `agentforce`, `adk-config`, `databricks-asset-bundle`, `python`, `marshal-file` | `adl`, `agent-spec`, `oasf`, `cloudformation`, `copilot-studio`, `agentforce`, `adk-config`, `marshal-file` |
 
 Copilot Studio and ADK Agent Config definitions are written as files in a folder, so converting to them needs `--out`.
+
+Converting to `marshal-file` gives a person a hand-written definition to check and maintain. Fields the record doesn't know are written as `unknown`. See [Marshal file](formats/marshal-file.md).
 
 ## How fidelity is computed
 
@@ -46,6 +48,6 @@ A converted agent keeps its ledger identity: its agent id, its platform, and its
 
 Golden tests run against real, public definitions in each format:
 
-- **Round trip.** Every ADL, Agent Spec and OASF fixture is read, written in its own format, and read back. The result must be lossless, with the same version hash. CloudFormation round trips are held to "every loss explained" instead, because a template also defines roles and executors that the writer references rather than generates.
+- **Round trip.** Every ADL, Agent Spec, OASF, Agentforce and Marshal file fixture is read, written in its own format, and read back. The result must be lossless, with the same version hash. CloudFormation round trips are held to "every loss explained" instead, because a template also defines roles and executors that the writer references rather than generates.
 - **Every loss explained.** Every fixture, in every format, converts to every writer. Each lost or defaulted field must have a reason, and the agent must keep its identity.
 - **Schema validity.** Written ADL and Agent Spec documents, and every written Copilot Studio file with a `kind`, must validate against the formats' published schemas.

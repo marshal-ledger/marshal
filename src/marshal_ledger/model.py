@@ -38,6 +38,8 @@ class Provenance(str, Enum):
 
     DECLARED = "declared"
     """Stated in the source artifact."""
+    ATTESTED = "attested"
+    """Stated by a person in a hand-written definition, not read from the platform."""
     ANNOTATION = "annotation"
     """Taken from a hint attached to the source, such as MCP tool annotations."""
     DERIVED = "derived"
@@ -60,6 +62,10 @@ class Value(_Model, Generic[T]):
     @classmethod
     def declared(cls, value: T, basis: str | None = None) -> "Value[T]":
         return cls(value=value, provenance=Provenance.DECLARED, basis=basis)
+
+    @classmethod
+    def attested(cls, value: T, basis: str) -> "Value[T]":
+        return cls(value=value, provenance=Provenance.ATTESTED, basis=basis)
 
     @classmethod
     def derived(cls, value: T, basis: str) -> "Value[T]":

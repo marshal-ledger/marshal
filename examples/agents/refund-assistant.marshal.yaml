@@ -1,0 +1,90 @@
+# A hand-written definition for an agent that runs on an in-house orchestration
+# platform with no export. See docs/formats/marshal-file.md.
+#
+# Every value here is recorded as attested by the person named below, not as
+# declared by the platform. Leave a field out, or write `unknown`, when you
+# can't confirm it.
+marshal: agent/v0
+id: payments/refund-assistant
+platform: orchestrator.internal
+attested_by: payments-platform@example.com
+attested_at: 2026-10-20
+
+display_name: Refund Assistant
+description: >-
+  Answers customer questions about refunds and issues refunds up to the
+  support policy limit, escalating anything larger to a person.
+
+model:
+  requested: claude-sonnet-5-5
+  provider: anthropic
+  parameters:
+    temperature: 0.2
+    max_tokens: 2048
+
+instructions: |
+  You help customers with refunds for orders placed in the last 90 days.
+  Look up the order before answering. Refunds above 200 USD, or for orders
+  older than 90 days, go to a support lead: open an escalation instead.
+  Never reveal another customer's order details.
+
+tools:
+  - ref: tool/orchestrator.internal.orders.lookup
+    name: lookup_order
+    description: Fetch an order and its payment status by order number.
+    scope: read
+    reversible: true
+    requires_confirmation: false
+    input_schema:
+      type: object
+      properties:
+        order_id: {type: string}
+      required: [order_id]
+  - ref: tool/orchestrator.internal.payments.refund
+    name: issue_refund
+    description: Refund all or part of an order to the original payment method.
+    scope: write
+    reversible: false
+    requires_confirmation: true
+  - ref: tool/orchestrator.internal.support.escalate
+    name: open_escalation
+    description: Open a ticket for a support lead.
+    scope: write
+    reversible: true
+    # The platform shows no setting for this, and nobody has checked the code.
+    requires_confirmation: unknown
+
+knowledge:
+  - ref: knowledge/confluence.SUPPORT.refund-policy
+    name: Refund policy
+    type: wiki_space
+    scope: read
+
+permissions:
+  identity: service_principal
+  principal: svc-refund-assistant
+  grants:
+    - target: store/postgres.payments.refunds
+      privilege: INSERT
+      scope: write
+    - target: store/postgres.orders.orders
+      privilege: SELECT
+      scope: read
+  access:
+    - principal: support-agents
+      principal_type: group
+      level: use
+    - principal: payments-platform
+      principal_type: group
+      level: manage
+
+# Environment-bound values: recorded, but not part of the version hash.
+bindings:
+  endpoint: https://orchestrator.internal.example.com/agents/refund-assistant
+  env: [PAYMENTS_API_URL, PAYMENTS_API_KEY]
+
+# Fields with no ledger equivalent, kept as written.
+extensions:
+  orchestrator.internal:
+    refund_limit_usd: 200
+    queue: support-tier-1

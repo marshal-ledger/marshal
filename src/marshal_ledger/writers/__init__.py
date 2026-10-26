@@ -9,6 +9,7 @@ from .agentspec import AgentSpecWriter
 from .base import Writer, Written
 from .cloudformation import CloudFormationWriter
 from .copilotstudio import CopilotStudioWriter
+from .marshalfile import MarshalFileWriter
 from .oasf import OasfWriter
 
 WRITERS: dict[str, type[Writer]] = {
@@ -19,6 +20,7 @@ WRITERS: dict[str, type[Writer]] = {
     CopilotStudioWriter.format: CopilotStudioWriter,
     AgentforceWriter.format: AgentforceWriter,
     AdkConfigWriter.format: AdkConfigWriter,
+    MarshalFileWriter.format: MarshalFileWriter,
 }
 
 __all__ = ["WRITERS", "Writer", "Written"]

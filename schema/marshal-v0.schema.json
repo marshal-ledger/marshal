@@ -280,6 +280,7 @@
       "description": "Where a value came from.",
       "enum": [
         "declared",
+        "attested",
         "annotation",
         "derived",
         "unknown"

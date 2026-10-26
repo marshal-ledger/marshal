@@ -83,6 +83,7 @@ Fidelity tiers keep the user experience smooth while coverage grows. Every major
 | ADL | Open standard | Full |
 | Open Agent Spec | Open standard | Full for agents; flows recorded as their member agents |
 | AGNTCY OASF | Open standard | Full (metadata) |
+| Marshal file (hand-written definitions, for agents no reader covers) | Marshal-native | Full; values recorded as attested |
 
 *Each adapter targets the platform's current documented export path. See [Platform exportability](platform-exportability.md) for what each closed platform exposes, [Conversion and fidelity](conversion.md) for how translation is measured, and [docs/formats](formats/) for each format's mapping and declared losses. ADL is published under Apache 2.0 with an irrevocable patent non-assertion covenant for conforming implementations.*
 
@@ -133,7 +134,7 @@ team pipeline                          Marshal (inside the org network)
 
 ## Ledger record
 
-The full v0 model is documented in [Ledger model v0](ledger-model.md). Every field records where its value came from: `declared` (in the source artifact), `annotation` (such as MCP tool hints), `derived` (computed by the ledger), or `unknown`. An abbreviated record:
+The full v0 model is documented in [Ledger model v0](ledger-model.md). Every field records where its value came from: `declared` (in the source artifact), `attested` (stated by a person in a hand-written definition), `annotation` (such as MCP tool hints), `derived` (computed by the ledger), or `unknown`. An abbreviated record:
 
 ```yaml
 apiVersion: marshal/v0

@@ -20,7 +20,8 @@ from marshal_ledger.convert import convert
 from marshal_ledger.readers import READERS
 from marshal_ledger.writers import WRITERS
 
-CACHE = Path(os.environ.get("MARSHAL_FIXTURE_CACHE") or Path(__file__).resolve().parent.parent / "fixtures" / ".cache")
+ROOT = Path(__file__).resolve().parents[2]
+CACHE = Path(os.environ.get("MARSHAL_FIXTURE_CACHE") or ROOT / "tests" / "fixtures" / ".cache")
 
 SOURCES = [
     ("adl", "adl/examples"),
@@ -46,16 +47,18 @@ SOURCES = [
     ("agentforce", "agentforce/agent-script"),
     ("adk-config", "adk-config/samples"),
     ("salesforce-metadata", "salesforce-metadata/coral-cloud"),
+    # Marshal files are hand-written, so there is no upstream; the example in the repo stands in.
+    ("marshal-file", "examples/agents"),
 ]
 # Formats whose writer reproduces the whole source, so a native round trip must be lossless.
 # A CloudFormation template also defines the agent's IAM roles and executors, which the
 # writer references rather than generates; its round trip is held to "every loss explained".
-FULL = {"adl", "agent-spec", "oasf", "agentforce"}
+FULL = {"adl", "agent-spec", "oasf", "agentforce", "marshal-file"}
 # ADK Agent Config sub-agents live in other files, which a single conversion doesn't write.
 
 
 def records(fmt, fixture):
-    path = CACHE / fixture
+    path = ROOT / fixture if fixture.startswith("examples/") else CACHE / fixture
     if not path.exists():
         pytest.skip(f"fixture {fixture} not fetched; run python scripts/fetch_fixtures.py")
     if fixture == "python/crewai-template":

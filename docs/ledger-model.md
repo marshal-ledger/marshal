@@ -18,11 +18,12 @@ Every scored field is a `Value`:
 ```yaml
 scope:
   value: write
-  provenance: declared        # declared | annotation | derived | unknown
+  provenance: declared        # declared | attested | annotation | derived | unknown
   basis: resources.apps.invoice_agent.resources[2]
 ```
 
 - `declared`: stated in the source artifact.
+- `attested`: stated by a person in a hand-written definition ([Marshal file](formats/marshal-file.md)), not read from the platform. `basis` names the file and, where given, who attested it and when.
 - `annotation`: from a hint attached to the source, such as MCP tool annotations.
 - `derived`: computed by a documented rule from declared values. `basis` names the rule.
 - `unknown`: not available. The ledger stores no value rather than guess.

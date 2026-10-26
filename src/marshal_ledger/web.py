@@ -113,6 +113,7 @@ td:first-child { min-width:220px; }
 .chip { display:inline-block; padding:0 7px; border:1px solid var(--line); border-radius:6px; font-size:12px; line-height:20px; color:var(--fg-2); white-space:nowrap; }
 .unknown { color:var(--fg-3); font-style:italic; }
 .derived { text-decoration:underline dotted var(--fg-3); text-underline-offset:3px; }
+.attested { text-decoration:underline dashed var(--fg-3); text-underline-offset:3px; }
 .meter { display:inline-flex; align-items:center; gap:8px; font-variant-numeric:tabular-nums; }
 .meter i { display:block; width:44px; height:4px; border-radius:2px; background:var(--line); overflow:hidden; }
 .meter i b { display:block; height:100%; background:var(--accent); border-radius:2px; }
@@ -192,12 +193,18 @@ def _value(v: Any, extra: str = "") -> str:
     value = getattr(v.value, "value", v.value)
     if isinstance(value, bool):
         value = "Yes" if value else "No"
-    css = " ".join(c for c in ("derived" if v.provenance.value == "derived" else "", extra) if c)
+    marked = v.provenance.value if v.provenance.value in ("derived", "attested") else ""
+    css = " ".join(c for c in (marked, extra) if c)
     css = f' class="{css}"' if css else ""
     title = f"{v.provenance.value}: {v.basis}"
     if extra == "trunc":
         title = f"{value}\n{title}"
     return f'<span{css} title="{_e(title)}">{_e(value)}</span>'
+
+
+def _legend(spec: Any) -> str:
+    attested = any(v.provenance.value == "attested" for t in spec.tools for v in (t.scope, t.reversible, t.requires_confirmation))
+    return "Dotted values are derived" + ("; dashed values are attested by a person" if attested else "") + "; hover for the basis"
 
 
 def _badge(css: str, text: str, title: str = "") -> str:
@@ -341,6 +348,8 @@ def create_web_app(store_path: str, settings: WebSettings) -> FastAPI:
         spec = record.spec
         name = spec.display_name.value or id
         badges = "".join(_badge(_state(st), f"{st.environment} {_state(st)}") for st in statuses)
+        if record.source.format == "marshal-file":
+            badges += _badge("plain", "hand-written", record.source.detected_by or "")
         parts = [
             f'<div class="crumbs"><a href="./">Agents</a> / {_e(name)}</div>',
             f'<div class="head"><div><h1>{_e(name)}{badges}</h1>'
@@ -383,7 +392,7 @@ def create_web_app(store_path: str, settings: WebSettings) -> FastAPI:
             f'<a href="deps?{urlencode({"q": t.ref})}" class="name">{_e(t.name or t.ref)}</a>' + (f'<div class="id">{_e(t.ref)}</div>' if t.name else ""),
             _value(t.scope), _value(t.reversible), _value(t.requires_confirmation),
         ] + ([_e(credentials[t.ref]) if t.ref in credentials else '<span class="muted">–</span>'] if credentials else [])
-            for t in spec.tools], "No tools."), "Dotted values are derived; hover for the basis" if spec.tools else ""))
+            for t in spec.tools], "No tools."), _legend(spec) if spec.tools else ""))
         parts.append(_card("Knowledge", _table(["Source", "Type", "Scope"], [[
             f'<a href="deps?{urlencode({"q": k.ref})}" class="name">{_e(k.name or k.ref)}</a>' + (f'<div class="id">{_e(k.ref)}</div>' if k.name else ""),
             _e(k.type), _value(k.scope),
