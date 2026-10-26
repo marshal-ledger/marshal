@@ -22,7 +22,7 @@ Marshal reads the agent definitions teams already produce: Databricks bundles, C
 |---|---|---|
 | Databricks Asset Bundles (Genie spaces, agent apps) | ✓ | |
 | AWS CloudFormation and CDK (Bedrock Agents, AgentCore) | ✓ | Bedrock Agents |
-| Microsoft Copilot Studio (agent workspaces) | ✓ | ✓ |
+| Microsoft Copilot Studio (agent workspaces, solutions) | ✓ | ✓ |
 | Salesforce Agentforce (Agent Script, legacy metadata) | ✓ | Agent Script |
 | Google ADK Agent Config | ✓ | ✓ |
 | Vertex AI Agent Engine (saved API responses) | inventory | |
@@ -53,7 +53,7 @@ $ marshal port finance/invoice_agent --to all        # portability to every plat
 $ marshal web                                        # browse the store
 ```
 
-`collect` writes to a local SQLite store (`marshal.sqlite`, or `--db` / `$MARSHAL_DB`). In a shared deployment, pipelines run `marshal push` or the [GitHub Action](docs/github-action.md) against the [ingest API](docs/ingest-server.md).
+`collect` writes to a local SQLite store (`marshal.sqlite`, or `--db` / `$MARSHAL_DB`). In a shared deployment, pipelines run `marshal push` or the [GitHub Action](docs/github-action.md) against the [ingest API](docs/ingest-server.md). Optional [scheduled workflows](examples/scheduled/) export agents built in a web designer, such as Copilot Studio and Agentforce, and report drift from what was shipped.
 
 ## Documentation
 

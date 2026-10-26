@@ -4,7 +4,7 @@ author: Marshal
 
 inputs:
   event:
-    description: "`proposed` (before deploy, typically on pull requests) or `shipped` (after a successful deploy)."
+    description: "`proposed` (before deploy, typically on pull requests), `shipped` (after a successful deploy) or `observed` (a scheduled export of the live definition)."
     required: true
   artifacts:
     description: Path of the agent artifact to read, such as a directory containing databricks.yml.
@@ -67,7 +67,9 @@ runs:
       run: |
         report="${RUNNER_TEMP}/marshal-report.md"
         args=(push "$MARSHAL_ARTIFACTS" --event "$MARSHAL_EVENT" --url "$MARSHAL_URL"
-              --audience "$MARSHAL_AUDIENCE" --commit "$GITHUB_SHA" --report "$report")
+              --audience "$MARSHAL_AUDIENCE" --report "$report")
+        # An observed definition comes from the platform, not from this repository's commit.
+        if [ "$MARSHAL_EVENT" != "observed" ]; then args+=(--commit "$GITHUB_SHA"); fi
         if [ -n "$MARSHAL_TARGET" ]; then args+=(--target "$MARSHAL_TARGET"); fi
         if [ -n "$MARSHAL_ENVIRONMENT" ]; then args+=(--environment "$MARSHAL_ENVIRONMENT"); fi
         for platform in $MARSHAL_PORTABILITY; do args+=(--portability "$platform"); done

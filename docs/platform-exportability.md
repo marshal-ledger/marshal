@@ -65,7 +65,7 @@ connectionreferences.mcs.yml   # connection references (environment-bound)
 
 **Gaps.** Files uploaded as knowledge are listed but not downloaded by default. Connection references are environment-bound. The model is an alias hint, not a resolved model. Microsoft's own authoring tools note that the YAML schema may change without notice, so the reader should validate against the published schema and report unknown kinds rather than fail.
 
-**Reader.** Implemented for the cloned YAML workspace: see [formats/copilot-studio.md](formats/copilot-studio.md). Solution zips are not yet read.
+**Reader.** Implemented for the cloned YAML workspace and for solutions, as exported zips or unpacked folders: see [formats/copilot-studio.md](formats/copilot-studio.md). A [scheduled workflow](../examples/scheduled/copilot-studio.yml) exports solutions nightly. The YAML source control layout written by Dataverse Git integration is not yet read.
 
 Sources: [extension overview](https://learn.microsoft.com/en-us/microsoft-copilot-studio/visual-studio-code-extension-overview), [clone an agent](https://learn.microsoft.com/en-us/microsoft-copilot-studio/visual-studio-code-extension-clone-agent), [edit agent components](https://learn.microsoft.com/en-us/microsoft-copilot-studio/visual-studio-code-extension-edit-agent-components), [microsoft/skills-for-copilot-studio](https://github.com/microsoft/skills-for-copilot-studio) (MIT; includes the authoring schema and example agent files).
 
@@ -117,9 +117,9 @@ Sources: [AWS::Bedrock::Agent](https://docs.aws.amazon.com/AWSCloudFormation/lat
 
 Google's agent products are now documented under the Gemini Enterprise Agent Platform. Four paths matter.
 
-1. **Agent Engine** (the `reasoningEngines` resource). Implemented at inventory tier from saved API responses: see [formats/vertex-agent-engine.md](formats/vertex-agent-engine.md). Hosts code agents. Its spec records the framework (`google-adk`, `langchain`, `langgraph`, `ag2`, `llama-index`, `custom`) and the packaged code. The REST API has `get`, `list` and `patch`, but no export. Model, instructions and tools are in code. **Inventory** tier through an API poller, with the rest from pro-code readers.
+1. **Agent Engine** (the `reasoningEngines` resource). Implemented at inventory tier from saved API responses: see [formats/vertex-agent-engine.md](formats/vertex-agent-engine.md). Hosts code agents. Its spec records the framework (`google-adk`, `langchain`, `langgraph`, `ag2`, `llama-index`, `custom`) and the packaged code. The REST API has `get`, `list` and `patch`, but no export. Model, instructions and tools are in code. **Inventory** tier through a scheduled export of API responses, with the rest from pro-code readers.
 2. **ADK Agent Config.** A declarative `root_agent.yaml` with name, model, description, instruction, tools and sub-agents, loaded by ADK as an `LlmAgent`. It lives in Git and reads statically. Implemented: see [formats/adk-config.md](formats/adk-config.md); ADK agents in code are read by the [Python reader](formats/python.md). Deploying the same agent to Agent Engine is a separate step, so the two must be linked by source repository.
-3. **Managed Agents** (`projects.locations.agents`, v1beta1, pre-GA). Declarative: `system_instruction`, `tools` (built-ins and remote MCP servers), `base_agent` and environment. Readable through `get` and `list`; there is no export file. Worth an inventory poller once it reaches GA.
+3. **Managed Agents** (`projects.locations.agents`, v1beta1, pre-GA). Declarative: `system_instruction`, `tools` (built-ins and remote MCP servers), `base_agent` and environment. Readable through `get` and `list`; there is no export file. Worth a scheduled inventory export once it reaches GA.
 4. **Conversational Agents / CX Agent Studio** (Dialogflow CX lineage). Exports a JSON package (zip) designed for CI/CD. `environment.json` separates the environment-specific values, which maps directly onto the ledger's bindings. **Partial**.
 
 **Gaps.** The most common production path, Agent Engine, carries the least definition. Identity is a service account, declared at deploy time.

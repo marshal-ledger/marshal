@@ -24,7 +24,7 @@ A complete workflow is in [`examples/github-workflow.yml`](../examples/github-wo
 
 | Input | Required | Meaning |
 |---|---|---|
-| `event` | yes | `proposed` or `shipped` |
+| `event` | yes | `proposed`, `shipped`, or `observed` for a [scheduled export](../examples/scheduled/) of a live definition |
 | `artifacts` | yes | Path of the agent artifact, such as a bundle directory |
 | `url` | yes | Base URL of the ingest API |
 | `target` | no | Deployment target whose overrides to apply |

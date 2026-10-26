@@ -41,6 +41,8 @@ SOURCES = [
     ("cloudformation", "cloudformation/agentcore"),
     ("copilot-studio", "copilot-studio/all-the-things"),
     ("copilot-studio", "copilot-studio/mcp-agent"),
+    ("copilot-studio", "copilot-studio/solution-wellness"),
+    ("copilot-studio", "copilot-studio/solution-leave-management"),
     ("agentforce", "agentforce/agent-script"),
     ("adk-config", "adk-config/samples"),
     ("salesforce-metadata", "salesforce-metadata/coral-cloud"),

@@ -124,8 +124,10 @@ class CopilotStudioWriter(Writer):
                 notes["permissions.access[users the agent is shared with chat]"] = (
                     "Copilot Studio requires an access policy; the agent was limited to users it is shared with"
                 )
+                notes.setdefault("extensions.copilot-studio.settings", "the source sets no access policy; one was added")
         if "authenticationMode" not in settings:
             settings["authenticationMode"] = "Integrated"
+            notes.setdefault("extensions.copilot-studio.settings", "the source sets no authentication mode; integrated was added")
         header = f"# {MARSHAL_NAMESPACE}: {json.dumps(marshal)}\n" if marshal else ""
         files["settings.mcs.yml"] = header + yaml.safe_dump(settings, sort_keys=False, allow_unicode=True)
 
@@ -142,9 +144,13 @@ class CopilotStudioWriter(Writer):
             action = self._action(use, schema_name, connectors, notes)
             if action is None:
                 continue
-            extra = extras_by_name.get(_file_name(use.name or "")) or next(
+            extra = extras_by_name.get(_file_name(use.name or "")) or (ext.get("topic_calls") or {}).get(use.ref) or next(
                 (e for e in action_extras.values() if e.get("connector") and use.ref.endswith(str(e.get("connector")))), {}
             )
+            if use.ref in (ext.get("topic_calls") or {}):
+                notes[f"tools[{use.ref}].name"] = (
+                    "the source calls this from a topic; it is written as an action, named after the operation"
+                )
             if "connectionReference" in action:
                 mode = extra.get("connection_mode") or default_mode
                 action["connectionProperties"] = {"mode": mode}
@@ -191,6 +197,9 @@ class CopilotStudioWriter(Writer):
         for key in ("topics", "actions"):
             if key in ext:
                 notes[f"extensions.copilot-studio.{key}"] = f"{key} are recorded by name, not by content, and are not re-created"
+        if "topic_calls" in ext:
+            notes["extensions.copilot-studio.topic_calls"] = "topics are not re-created, so their calls are written as actions"
+            notes.setdefault("extensions.copilot-studio.actions", "the source's topic calls are written as actions")
         if not spec.model.requested.is_known:
             warnings.append("the source names no model; Copilot Studio will use its default")
         return Written(document=agent, notes=notes, files=files, warnings=warnings)
@@ -203,6 +212,13 @@ class CopilotStudioWriter(Writer):
                 notes[f"tools[{use.ref}]"] = "sub-agents and agents from other formats are separate records; convert them on their own"
                 return None
             return {"kind": "InvokeConnectedAgentTaskAction", "botSchemaName": target}
+        if identifier.startswith("powerplatform.ai_plugin."):
+            plugin = identifier.removeprefix("powerplatform.ai_plugin.")
+            return {
+                "kind": "InvokeAIPluginTaskAction",
+                "entityKey": f"aiplugin.name={plugin},operationid={plugin}",
+                "primaryConnectionReference": {"kind": "InvokerConnectionReference"},
+            }
         if identifier.startswith("powerplatform.flow."):
             return {"kind": "InvokeFlowTaskAction", "flowId": identifier.removeprefix("powerplatform.flow.")}
         if identifier.startswith("mcp.powerplatform."):
@@ -217,6 +233,7 @@ class CopilotStudioWriter(Writer):
         if identifier.startswith("powerplatform."):
             connector, _, operation = identifier.removeprefix("powerplatform.").partition(".")
             if not operation:
+                notes[f"tools[{use.ref}]"] = "the source names the connector but not the operation, which an action requires"
                 return None
             logical = f"{schema_name}.{connector}"
             connectors[logical] = connector

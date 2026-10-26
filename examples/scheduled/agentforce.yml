@@ -1,0 +1,65 @@
+# Record the live definition of Agentforce agents in Marshal, every night.
+#
+# Retrieves Agent Script bundles with the Salesforce CLI and pushes them as an `observed`
+# event. Marshal compares them with what was last shipped to the same environment; a
+# difference is drift, such as an edit made in Agentforce Builder.
+#
+# Setup (see README.md in this folder):
+# - A connected app that allows the JWT bearer flow, with a dedicated integration user
+#   pre-authorized for it. Salesforce requires a metadata permission to retrieve metadata.
+# - Repository secret SF_JWT_KEY: the connected app's private key, in PEM format.
+# - Repository variables: SF_CLIENT_ID, SF_USERNAME, SF_INSTANCE_URL (such as
+#   https://login.salesforce.com) and MARSHAL_URL.
+#
+# For agents built in the legacy Agent Builder, which have no Agent Script, retrieve the
+# metadata they are stored as instead:
+#   sf project retrieve start --metadata Bot --metadata GenAiPlannerBundle \
+#     --metadata GenAiPlugin --metadata GenAiFunction --target-org observed
+# Retrieve them into a separate project, so each push holds one kind of definition.
+name: observe-agentforce
+
+on:
+  schedule:
+    - cron: "41 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write   # OIDC token for Marshal
+
+jobs:
+  observe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install the Salesforce CLI
+        run: npm install --global @salesforce/cli
+
+      - name: Sign in with the connected app's JWT
+        env:
+          SF_JWT_KEY: ${{ secrets.SF_JWT_KEY }}
+          SF_CLIENT_ID: ${{ vars.SF_CLIENT_ID }}
+          SF_USERNAME: ${{ vars.SF_USERNAME }}
+          SF_INSTANCE_URL: ${{ vars.SF_INSTANCE_URL }}
+        run: |
+          key="$RUNNER_TEMP/sf-jwt.key"
+          (umask 077 && printf '%s\n' "$SF_JWT_KEY" > "$key")
+          sf org login jwt --client-id "$SF_CLIENT_ID" --jwt-key-file "$key" \
+            --username "$SF_USERNAME" --instance-url "$SF_INSTANCE_URL" --alias observed
+          rm -f "$key"
+
+      - name: Retrieve Agent Script bundles
+        run: |
+          sf project generate --name agents --output-dir "$RUNNER_TEMP"
+          cd "$RUNNER_TEMP/agents"
+          sf project retrieve start --metadata AiAuthoringBundle --target-org observed
+
+      - uses: marshal-ledger/marshal/collect@v1
+        with:
+          event: observed
+          artifacts: ${{ runner.temp }}/agents
+          environment: prod   # the environment name your deploy pipeline ships to
+          url: ${{ vars.MARSHAL_URL }}

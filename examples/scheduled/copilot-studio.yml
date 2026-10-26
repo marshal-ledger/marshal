@@ -1,0 +1,56 @@
+# Record the live definition of Copilot Studio agents in Marshal, every night.
+#
+# Exports each solution with the Power Platform CLI and pushes it as an `observed` event.
+# Marshal compares it with what was last shipped to the same environment; a difference is
+# drift, such as an edit made in the Copilot Studio web designer.
+#
+# Setup (see README.md in this folder):
+# - An Entra ID app registration with a federated credential for this repository, added to
+#   the Power Platform environment as an application user whose security role can export
+#   solutions. The workflow signs in with its GitHub OIDC token, so no secret is stored.
+# - Repository variables: POWERPLATFORM_TENANT_ID, POWERPLATFORM_CLIENT_ID,
+#   POWERPLATFORM_ENVIRONMENT_URL and MARSHAL_URL.
+# - The unmanaged solutions that hold your agents, in the matrix below. Power Platform
+#   can't export a managed solution.
+name: observe-copilot-studio
+
+on:
+  schedule:
+    - cron: "23 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write   # OIDC token: signs in to Power Platform and to Marshal
+
+jobs:
+  observe:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        solution: [ContosoHelpdesk]
+    steps:
+      - name: Install the Power Platform CLI
+        run: |
+          dotnet tool install --global Microsoft.PowerApps.CLI.Tool
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+      - name: Sign in with the workflow's federated identity
+        env:
+          TENANT_ID: ${{ vars.POWERPLATFORM_TENANT_ID }}
+          CLIENT_ID: ${{ vars.POWERPLATFORM_CLIENT_ID }}
+          ENVIRONMENT_URL: ${{ vars.POWERPLATFORM_ENVIRONMENT_URL }}
+        run: pac auth create --githubFederated --tenant "$TENANT_ID" --applicationId "$CLIENT_ID" --environment "$ENVIRONMENT_URL"
+
+      - name: Export the solution
+        env:
+          SOLUTION: ${{ matrix.solution }}
+        run: pac solution export --name "$SOLUTION" --path "$RUNNER_TEMP/$SOLUTION.zip" --overwrite
+
+      - uses: marshal-ledger/marshal/collect@v1
+        with:
+          event: observed
+          artifacts: ${{ runner.temp }}/${{ matrix.solution }}.zip
+          environment: prod   # the environment name your deploy pipeline ships to
+          url: ${{ vars.MARSHAL_URL }}
