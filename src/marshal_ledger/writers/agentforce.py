@@ -234,6 +234,8 @@ class AgentforceWriter(Writer):
                                      or (p.get("type") == "array" and "items" not in p)
                                      for p in schema["properties"].values()):
             notes[path] = "Agent Script parameters keep a type and a description; untyped parameters are written as string"
+        if notes is not None and any(not re.fullmatch(r"[A-Za-z_]\w*", n) for n in schema["properties"]):
+            notes[path] = "Agent Script parameter names must be identifiers; other names don't read back as written"
         required = set(schema.get("required") or [])
         lines = [f"{_INDENT * depth}{label}:"]
         for name, prop in schema["properties"].items():
