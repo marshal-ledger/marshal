@@ -29,6 +29,18 @@ $ docker build -t registry.example.com/marshal:0.1.0 .
 
 The Helm chart uses the release image by default, tagged with the chart's `appVersion`. Each release also attaches the packaged chart.
 
+### Verify and mirror
+
+Release images are built for `linux/amd64` and `linux/arm64`, carry an SPDX software bill of materials and SLSA build provenance, and are signed with Sigstore by the release workflow. To verify a signature before admitting an image:
+
+```console
+$ cosign verify ghcr.io/marshal-ledger/marshal:0.1.0 \
+    --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+    --certificate-identity-regexp '^https://github.com/marshal-ledger/marshal/\.github/workflows/release\.yml@refs/tags/v'
+```
+
+The same identity works in admission policies such as Kyverno or Sigstore's policy-controller. Clusters that can't reach `ghcr.io` can pull through a registry proxy (Artifactory, Harbor, Nexus, or ECR and ACR pull-through caches), or copy the image with its signature and attestations: `cosign copy ghcr.io/marshal-ledger/marshal:0.1.0 registry.example.com/marshal:0.1.0`. Then set `image.repository` in the chart.
+
 `/healthz` answers when the service is up. The image works with a read-only root filesystem when `/tmp` is writable.
 
 ## Kubernetes

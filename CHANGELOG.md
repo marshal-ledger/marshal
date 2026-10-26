@@ -30,5 +30,5 @@ The first release.
 - A read-only web view behind the organization's SSO proxy.
 - A GitHub Action that records events and comments on pull requests with risk-ranked changes.
 - Example scheduled workflows that export Copilot Studio and Agentforce agents and report drift.
-- A container image, published as `ghcr.io/marshal-ledger/marshal`, and a Helm chart.
+- A container image for amd64 and arm64, published as `ghcr.io/marshal-ledger/marshal` with an SBOM, build provenance and a Sigstore signature, and a Helm chart.
 - Licensed under the Apache License 2.0.
