@@ -77,3 +77,17 @@ The server never trusts values a client could forge. It recomputes every version
 ## Agent ownership
 
 An agent id is bound to the repository that first records it. An administrator can move an agent to another repository with the store API (`Store.transfer`). Because binding happens on first write, any allowed repository can claim an agent id that has never been recorded. Keep `repositories` as narrow as your organization allows.
+
+## Web view
+
+Enable the read-only web view in the server configuration:
+
+```yaml
+web:
+  enabled: true
+  user_header: X-Forwarded-Email   # set by your SSO proxy after sign-in
+```
+
+The view is served by the same process: the inventory at `/`, agent pages, "who depends on this?", and a read-only JSON API under `/v0/agents`, `/v0/agent` and `/v0/deps`. It relies on the organization's SSO proxy (for example oauth2-proxy, Identity-Aware Proxy or Azure App Proxy) for sign-in. Requests without the user header are refused, so expose the view only through that proxy. Pages use no external resources.
+
+For a local look at a store, `marshal web --db marshal.sqlite` serves the view on `127.0.0.1` without sign-in. Serving beyond the local machine requires `--user-header`.

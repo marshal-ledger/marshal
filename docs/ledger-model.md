@@ -137,6 +137,8 @@ Every change in a diff gets a severity, and reports list the highest first. An u
 |---|---|
 | HIGH | Identity changed; grant added with write or admin scope; tool added with write, admin or unknown scope, or known to be irreversible; tool scope widened; tool became irreversible; requested model changed; knowledge added with write scope |
 | MED | Principal changed; grant added with read or execute scope; access rule added; tool added with execute scope; tool reversibility became unknown; resolved model changed; knowledge removed, added with unknown scope, or widened |
-| LOW | Removals of tools, grants and access; read-only additions; instructions, metadata and extension changes |
+| LOW | Removals of tools, grants and access; read-only additions; instructions, metadata and other extension changes |
+
+Platform-specific fields that control identity or access rank by their key wherever they appear in an extension: connection and credential modes, authentication mode, access policy, agent user, user API scopes, authorizers and attached managed policies are HIGH; guardrails, security settings and permission blocks are MED.
 
 The rules are in [`src/marshal_ledger/risk.py`](../src/marshal_ledger/risk.py).

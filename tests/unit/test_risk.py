@@ -78,3 +78,11 @@ def test_rank_orders_highest_first_and_keeps_ties_stable():
     assert [r.severity for r in ranked] == sorted((r.severity for r in ranked), reverse=True)
     assert [r.change.path for r in ranked][:2] == ["tool tool/a", "tool tool/b"]
     assert ranked[0].line() == "HIGH  + tool tool/a (scope write, reversible unknown)"
+
+
+def test_security_relevant_extension_changes_rank_high():
+    a = AgentSpec(extensions={"copilot-studio": {"actions": {"Search": {"connection_mode": "Invoker"}}, "topics": {"x": 1}}})
+    b = AgentSpec(extensions={"copilot-studio": {"actions": {"Search": {"connection_mode": "Maker"}}, "topics": {"x": 2}}})
+    found = severities(a, b)
+    assert found["extensions.copilot-studio.actions.Search.connection_mode"] is Severity.HIGH
+    assert found["extensions.copilot-studio.topics.x"] is Severity.LOW

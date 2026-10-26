@@ -4,7 +4,7 @@ A vendor-neutral, open-source ledger for enterprise AI agents. Any format in, an
 
 Marshal reads the agent definitions teams already produce, such as Databricks bundles, Copilot Studio agents, Bedrock templates, Agentforce metadata and open standards. It builds a normalized, versioned record of every agent: what model it asks for, what tools and data it can reach, and who it acts as. Every field says where its value came from, and nothing is guessed.
 
-**Status:** pre-alpha. Implemented so far: the ledger model; readers for Databricks Asset Bundles, AWS CloudFormation (Bedrock Agents, AgentCore), Microsoft Copilot Studio, Salesforce Agentforce (Agent Script and legacy metadata), Google ADK Agent Config, Vertex AI Agent Engine (inventory), ADL, Open Agent Spec, OASF, and agent code (OpenAI Agents SDK, LangChain/LangGraph, Google ADK, CrewAI); writers for the open standards, Bedrock, Copilot Studio, Agentforce and ADK Agent Config, with measured fidelity; the version store; risk-ranked diffs; drift and freshness; portability scores from a capability matrix; the ingest API with OIDC authentication; and the GitHub Action.
+**Status:** pre-alpha. Implemented so far: the ledger model; readers for Databricks Asset Bundles, AWS CloudFormation (Bedrock Agents, AgentCore), Microsoft Copilot Studio, Salesforce Agentforce (Agent Script and legacy metadata), Google ADK Agent Config, Vertex AI Agent Engine (inventory), ADL, Open Agent Spec, OASF, and agent code (OpenAI Agents SDK, LangChain/LangGraph, Google ADK, CrewAI); writers for the open standards, Bedrock, Copilot Studio, Agentforce and ADK Agent Config, with measured fidelity; the version store; risk-ranked diffs; drift and freshness; portability scores from a capability matrix; dependency queries and a read-only web view; the ingest API with OIDC authentication; and the GitHub Action.
 
 ## Try it
 
@@ -21,6 +21,7 @@ $ marshal diff finance/invoice_agent                 # latest against last shipp
 $ marshal diff finance/invoice_agent@v3 finance/invoice_agent@v5
 $ marshal status finance/invoice_agent               # shipped vs live per environment, drift, freshness
 $ marshal log finance/invoice_agent                  # proposed, shipped and observed events
+$ marshal web                                        # browse the store in a read-only web view
 $ marshal convert agent.adl.yaml --to agent-spec     # translate, with a fidelity report
 $ marshal port finance/invoice_agent --to all        # portability to every platform
 ```
@@ -35,7 +36,7 @@ $ marshal port finance/invoice_agent --to all        # portability to every plat
 - [Conversion and fidelity](docs/conversion.md): how translation works and how fidelity is measured
 - [Portability](docs/portability.md): portability scores and the capability matrix
 - Formats: [Databricks](docs/formats/databricks.md), [ADL](docs/formats/adl.md), [Agent Spec](docs/formats/agent-spec.md), [OASF](docs/formats/oasf.md), [CloudFormation](docs/formats/cloudformation.md), [Copilot Studio](docs/formats/copilot-studio.md), [Agentforce](docs/formats/agentforce.md), [ADK Agent Config](docs/formats/adk-config.md), [Vertex AI Agent Engine](docs/formats/vertex-agent-engine.md), [Python agent code](docs/formats/python.md): mapping rules, declared losses, known gaps
-- [Ingest API](docs/ingest-server.md): running the server, OIDC issuers, shipped policy, agent ownership
+- [Ingest API](docs/ingest-server.md): running the server, OIDC issuers, shipped policy, agent ownership, the web view
 - [GitHub Action](docs/github-action.md): recording events and PR comments
 
 ## Development

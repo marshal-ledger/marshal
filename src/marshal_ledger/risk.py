@@ -49,8 +49,29 @@ def _rank(scope: Optional[str]) -> int:
     return _SCOPE_RANK.get(str(scope), _SCOPE_RANK["unknown"])
 
 
+# Platform-specific fields that control who the agent acts as or who may use it.
+SENSITIVE_EXTENSION_KEYS: dict[str, Severity] = {
+    "connection_mode": Severity.HIGH,
+    "credentials": Severity.HIGH,
+    "authenticationMode": Severity.HIGH,
+    "accessControlPolicy": Severity.HIGH,
+    "default_agent_user": Severity.HIGH,
+    "user_api_scopes": Severity.HIGH,
+    "authorizer": Severity.HIGH,
+    "managed_policies": Severity.HIGH,
+    "guardrail": Severity.MEDIUM,
+    "security": Severity.MEDIUM,
+    "permissions": Severity.MEDIUM,
+}
+
+
 def severity(change: Change) -> Severity:
     path, kind = change.path, change.kind
+
+    if change.category == "extensions":
+        parts = set(path.split("."))
+        found = [level for key, level in SENSITIVE_EXTENSION_KEYS.items() if key in parts]
+        return max(found) if found else Severity.LOW
 
     if change.category == "permissions":
         if path == "permissions.identity":

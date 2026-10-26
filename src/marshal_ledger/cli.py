@@ -242,6 +242,23 @@ def _port(args: argparse.Namespace) -> int:
     return 0
 
 
+def _web(args: argparse.Namespace) -> int:
+    try:
+        import uvicorn
+
+        from .web import WebSettings, create_web_app
+    except ImportError:
+        return _fail("the web view needs extra packages: pip install 'marshal-ledger[server]'")
+    loopback = args.host in ("127.0.0.1", "localhost", "::1")
+    if not loopback and not args.user_header:
+        return _fail("serving beyond this machine needs --user-header, set by your SSO proxy", 2)
+    settings = WebSettings(enabled=True, user_header=args.user_header or "X-Forwarded-Email",
+                           allow_unauthenticated=loopback and not args.user_header)
+    print(f"Marshal web view on http://{args.host}:{args.port}/", file=sys.stderr)
+    uvicorn.run(create_web_app(args.db, settings), host=args.host, port=args.port, log_level="warning")
+    return 0
+
+
 def _serve(args: argparse.Namespace) -> int:
     try:
         import uvicorn
@@ -512,6 +529,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     port.add_argument("--output", choices=["text", "json"], default="text")
     _add_db_arg(port)
     port.set_defaults(handler=_port)
+
+    web = commands.add_parser("web", help="browse a store in a read-only web view")
+    web.add_argument("--host", default="127.0.0.1")
+    web.add_argument("--port", type=int, default=8090)
+    web.add_argument("--user-header", help="require this header, set by an SSO proxy (needed beyond this machine)")
+    _add_db_arg(web)
+    web.set_defaults(handler=_web)
 
     serve = commands.add_parser("serve", help="run the ingest API")
     serve.add_argument("--config", required=True, help="server configuration file (YAML)")

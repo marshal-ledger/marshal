@@ -17,3 +17,6 @@ dist/
 
 # Golden fixtures are fetched, not committed
 tests/fixtures/.cache/
+
+# Local editor and assistant settings
+.claude/

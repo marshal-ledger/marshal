@@ -24,6 +24,7 @@ from .model import AgentVersion, Channel, DeploymentEvent, Entity
 from .oidc import Caller, IssuerConfig, KeyResolver, RepositoryNotAllowed, TokenError, Verifier
 from .service import ingest
 from .store import Actor, OwnershipError, Store
+from .web import WebSettings, create_web_app
 
 MAX_RECORDS = 500
 
@@ -58,6 +59,8 @@ class ServerConfig(BaseModel):
     policy: Policy = Field(default_factory=Policy)
     hash_only: bool = False
     """Store instruction hashes but never instruction text, whatever clients send."""
+    web: WebSettings = Field(default_factory=WebSettings)
+    """The read-only web view, served behind the organization's SSO proxy."""
 
     @classmethod
     def load(cls, path: str | Path) -> "ServerConfig":
@@ -141,4 +144,6 @@ def create_app(config: ServerConfig, key_resolver: KeyResolver | None = None) ->
                 raise HTTPException(403, f"agent ownership: {exc}") from exc
         return {"reports": [r.to_dict() for r in reports]}
 
+    if config.web.enabled:
+        app.mount("/", create_web_app(config.store, config.web))
     return app
