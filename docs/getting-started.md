@@ -8,10 +8,11 @@ $ python scripts/build_demo.py demo.sqlite
 $ marshal web --db demo.sqlite
 ```
 
-The demo records 27 public agents from Databricks, Bedrock, AgentCore, Copilot Studio, Agentforce, Google ADK and ADL, with a short history. Open the inventory, then:
+The demo records 28 public agents from Databricks, Bedrock, AgentCore, Copilot Studio, Agentforce, Google ADK and ADL, with a short history. Open the inventory, then:
 
 - **`agent_openai_agents_sdk/agent_openai_agents_sdk`:** a proposed change that adds a write tool, ranked HIGH.
 - **`eval_testAgent`:** a Copilot Studio agent that drifted after one of its tools was switched to the maker's credentials.
+- **`mpa_LeaveManagement`:** a Copilot Studio agent read from an exported solution. Its topics read Dataverse and Office 365 as the signed-in user, and it calls a Power Automate flow, so its identity is unknown rather than guessed.
 - **Dependencies:** search for `*CheckWeather` to see the Agentforce agents that share an Apex action.
 
 ## Read your own agents

@@ -195,11 +195,11 @@ def create_web_app(store_path: str, settings: WebSettings) -> FastAPI:
             parts.append(f'<h2>Instructions</h2><p class="muted">Stored as a hash only: <span class=mono>{_e(spec.instructions.hash[:23])}…</span></p>')
 
         parts.append("<h2>Tools</h2>" + _table(["Tool", "Scope", "Reversible", "Confirmation"], [[
-            f'<a href="deps?{urlencode({"q": t.ref})}" class=mono>{_e(t.name or t.ref)}</a><div class="muted mono">{_e(t.ref)}</div>',
+            f'<a href="deps?{urlencode({"q": t.ref})}" class=mono>{_e(t.name or t.ref)}</a>' + (f'<div class="muted mono">{_e(t.ref)}</div>' if t.name else ""),
             _value(t.scope), _value(t.reversible), _value(t.requires_confirmation),
         ] for t in spec.tools], "No tools."))
         parts.append("<h2>Knowledge</h2>" + _table(["Source", "Type", "Scope"], [[
-            f'<a href="deps?{urlencode({"q": k.ref})}" class=mono>{_e(k.name or k.ref)}</a><div class="muted mono">{_e(k.ref)}</div>',
+            f'<a href="deps?{urlencode({"q": k.ref})}" class=mono>{_e(k.name or k.ref)}</a>' + (f'<div class="muted mono">{_e(k.ref)}</div>' if k.name else ""),
             _e(k.type), _value(k.scope),
         ] for k in spec.knowledge], "No knowledge sources."))
         parts.append("<h2>Permissions</h2>" + _table(["Target", "Privilege", "Scope"], [[

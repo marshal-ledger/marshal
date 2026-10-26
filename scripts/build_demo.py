@@ -33,6 +33,7 @@ SOURCES = [
     ("cloudformation/agentcore", None),
     ("copilot-studio/all-the-things", None),
     ("copilot-studio/mcp-agent", None),
+    ("copilot-studio/solution-leave-management", None),
     ("agentforce/agent-script/order-service.agent", None),
     ("salesforce-metadata/coral-cloud", None),
     ("python/google-adk", None),

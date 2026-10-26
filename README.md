@@ -31,7 +31,7 @@ Marshal reads the agent definitions teams already produce: Databricks bundles, C
 
 ## Try it
 
-Build a demo from 27 public agents and browse it:
+Build a demo from 28 public agents and browse it:
 
 ```console
 $ pip install -e '.[server]'
