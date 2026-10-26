@@ -6,6 +6,9 @@ Marshal is licensed under the [Apache License 2.0](LICENSE). By contributing, yo
 
 ## Development
 
+Changes reach `main` through pull requests, and the CI checks must pass before merging.
+
+
 ```console
 $ pip install -e '.[dev]'
 $ python scripts/fetch_fixtures.py
@@ -47,8 +50,8 @@ The issue closes on the next run. To check locally, run `python scripts/check_up
 
 The package version is `__version__` in [`src/marshal_ledger/__init__.py`](src/marshal_ledger/__init__.py). Between releases it ends in `.dev0`, and [`CHANGELOG.md`](CHANGELOG.md) collects changes under the next version, marked `(unreleased)`.
 
-1. On `main`, set `__version__` and the chart's `appVersion` to the release, such as `0.2.0`, and bump the chart's own `version`. Replace `(unreleased)` with the date (`YYYY-MM-DD`) and update the version in the docs; `tests/unit/test_release.py` lists where.
-2. Tag the commit and push the tag: `git tag v0.2.0 && git push origin v0.2.0`.
+1. In a pull request, set `__version__` and the chart's `appVersion` to the release, such as `0.2.0`, and bump the chart's own `version`. Replace `(unreleased)` with the date (`YYYY-MM-DD`) and update the version in the docs; `tests/unit/test_release.py` lists where.
+2. Once it's merged, tag the merge commit on `main` and push the tag: `git tag v0.2.0 && git push origin v0.2.0`. Release tags can only be created by maintainers and can't be moved or deleted.
 3. The [release workflow](.github/workflows/release.yml) checks the versions and the changelog, runs the tests, builds the wheel, sdist and chart, publishes a GitHub release, and moves the major tag (`v0`) that the GitHub Action is used by. It publishes to PyPI and pushes a container image only where those are configured; the workflow's header explains how.
 4. Set `__version__` to the next `.dev0` version and start its changelog section.
 
