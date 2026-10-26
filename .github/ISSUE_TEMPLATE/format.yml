@@ -1,0 +1,22 @@
+name: Support a platform or format
+description: Read or write agents from a platform or format Marshal doesn't cover yet.
+labels: [enhancement, format]
+body:
+  - type: input
+    id: platform
+    attributes:
+      label: Platform or format
+    validations:
+      required: true
+  - type: textarea
+    id: export
+    attributes:
+      label: How its agents can be exported
+      description: The CLI, API or file format that holds an agent's definition, with links to its documentation.
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: Public example
+      description: A public, openly licensed example definition, pinned to a commit. Marshal's tests use real public definitions, never synthetic ones.

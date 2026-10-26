@@ -1,5 +1,6 @@
 """Example workflows and the GitHub Action stay well-formed."""
 
+import re
 from pathlib import Path
 
 import pytest
@@ -39,3 +40,16 @@ def test_scheduled_examples_are_documented():
     readme = (ROOT / "examples" / "scheduled" / "README.md").read_text()
     for path in SCHEDULED:
         assert f"]({path.name})" in readme
+
+
+@pytest.mark.parametrize("path", sorted((ROOT / ".github" / "workflows").glob("*.yml")) + [ROOT / "collect" / "action.yml"],
+                         ids=lambda p: p.relative_to(ROOT).as_posix())
+def test_third_party_actions_are_pinned_to_a_commit(path):
+    """A tag can be moved to other code; a commit SHA can't. Dependabot keeps the pins current."""
+    for step in steps(yaml.safe_load(path.read_text())):
+        uses = step.get("uses", "")
+        if uses and not uses.startswith("./"):
+            assert re.fullmatch(r"[\w.-]+/[\w./-]+@[0-9a-f]{40}", uses), f"{uses}: pin to a commit SHA"
+    for job in (yaml.safe_load(path.read_text()).get("jobs") or {}).values():
+        if "uses" in job:
+            assert job["uses"].startswith("./"), f"{job['uses']}: pin to a commit SHA"

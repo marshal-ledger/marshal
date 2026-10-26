@@ -1,0 +1,25 @@
+# Weekly, grouped updates for the Actions this repository and the collect Action use,
+# the Python dependencies and the container base image. Actions are pinned to commit
+# SHAs; Dependabot updates the SHA and the version comment together.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directories: ["/", "/collect"]
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+    groups:
+      python:
+        patterns: ["*"]
+
+  - package-ecosystem: docker
+    directory: "/"
+    schedule:
+      interval: weekly

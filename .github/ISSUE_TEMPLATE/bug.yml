@@ -1,0 +1,33 @@
+name: Bug
+description: Marshal reads, records or reports something incorrectly, or fails.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Agent definitions can contain internal names, endpoints and instructions. Don't paste your organization's definitions or ledger records here; reduce the problem to a minimal example you can share.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you ran, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: The command and a minimal artifact, or a public example (such as a link to a sample repository at a commit).
+      render: console
+  - type: input
+    id: version
+    attributes:
+      label: Marshal version
+      description: The output of `marshal --version`.
+    validations:
+      required: true
+  - type: input
+    id: format
+    attributes:
+      label: Format or platform
+      description: Such as Copilot Studio solution, Databricks bundle, or the web view.
