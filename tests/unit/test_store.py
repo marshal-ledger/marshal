@@ -138,3 +138,20 @@ def test_ownership(store):
     assert not store.has_agent("other/agent"), "a refused batch writes nothing"
     store.transfer("finance/invoice", "gh", "acme/other")
     store.record([record()], event=SHIPPED, environment="prod", actor=other)
+
+
+def test_dependents_and_entities(store):
+    from marshal_ledger.model import Entity, EntityKind
+
+    po = Entity(ref="tool/sap.update_po", kind=EntityKind.TOOL, platform="test", identifier="sap.update_po")
+    store.record([record(tools=["tool/sap.update_po"])], entities=[po], event=SHIPPED, environment="prod", at=T0)
+    store.record([record(tools=["tool/sap.read_po"])], event=PROPOSED, environment="prod", at=T0 + timedelta(1))
+    store.record([record(agent="hr/onboarding", tools=["tool/workday.read"])], event=SHIPPED, environment="prod", at=T0)
+
+    # The shipped version still uses the tool even though the latest proposal doesn't.
+    [dependent] = store.dependents("sap.update_po")
+    assert (dependent.agent, dependent.label, dependent.shipped, dependent.latest) == ("finance/invoice", "v1", ("prod",), False)
+    assert {d.ref for d in store.dependents("tool/sap.*")} == {"tool/sap.update_po", "tool/sap.read_po"}
+    assert store.dependents("tool/sap.read_po", shipped_only=True) == []
+    counts = {e.ref: n for e, n in store.entities()}
+    assert counts == {"tool/sap.update_po": 0}, "only stored entities are listed; counts follow latest versions"

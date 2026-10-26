@@ -138,6 +138,8 @@ class Module:
     """Module-level name → assigned value nodes, in source order."""
     functions: dict[str, Union[ast.FunctionDef, ast.AsyncFunctionDef]] = field(default_factory=dict)
     classes: dict[str, ast.ClassDef] = field(default_factory=dict)
+    project: str = ""
+    """Name of the directory module names are relative to; scopes tool refs to the project."""
 
     @property
     def package(self) -> str:
@@ -213,7 +215,7 @@ class Project:
                 if is_package:
                     parts = parts[:-1]
                 name = ".".join(parts)
-                module = Module(name, path, path.relative_to(root).as_posix(), tree, is_package)
+                module = Module(name, path, path.relative_to(root).as_posix(), tree, is_package, project=root.name)
                 _index_module(module)
                 self.modules.setdefault(name, module)
 

@@ -97,10 +97,15 @@ def _first_paragraph(doc: Optional[str]) -> Optional[str]:
     return doc.strip().split("\n\n", 1)[0].strip() or None
 
 
+def python_ref(project: str, module: str, function: str) -> str:
+    """``tool/python.<project>/<module>:<function>``: functions are only the same tool within one project."""
+    return f"tool/python.{project}/{module}:{function}" if project else f"tool/python.{module}:{function}"
+
+
 def function_tool(func: Func, name: Any = None, description: Any = None) -> ToolUse:
     tool_name = name if isinstance(name, str) else func.name
     use = ToolUse(
-        ref=f"tool/python.{func.qualname.rsplit('.', 1)[0]}:{func.name}",
+        ref=python_ref(func.module.project, func.qualname.rsplit(".", 1)[0], func.name),
         name=tool_name,
         description=description if isinstance(description, str) else _first_paragraph(func.docstring()),
         input_schema=function_schema(func),
@@ -757,7 +762,7 @@ class RawModelCallProfile:
             for spec in tools:
                 if isinstance(spec, dict) and isinstance(spec.get("name"), str):
                     schema = (spec.get("inputSchema") or {}).get("json")
-                    draft.tools.append(ToolDraft(ToolUse(ref=f"tool/python.{module}:{spec['name']}", name=spec["name"],
+                    draft.tools.append(ToolDraft(ToolUse(ref=python_ref(call.module.project, module, spec['name']), name=spec["name"],
                                                          description=string_value(spec.get("description")),
                                                          input_schema=schema if isinstance(schema, dict) else None)))
             return
@@ -775,7 +780,7 @@ class RawModelCallProfile:
                         if isinstance(declaration, Call) and isinstance(declaration.kwargs.get("name"), str):
                             name = declaration.kwargs["name"]
                             params = declaration.kwargs.get("parameters")
-                            draft.tools.append(ToolDraft(ToolUse(ref=f"tool/python.{module}:{name}", name=name,
+                            draft.tools.append(ToolDraft(ToolUse(ref=python_ref(call.module.project, module, name), name=name,
                                                                  description=string_value(declaration.kwargs.get("description")),
                                                                  input_schema=params if isinstance(params, dict) else None)))
             return
@@ -813,7 +818,7 @@ class RawModelCallProfile:
                                                      scope=Value[Scope].derived(scope, f"Anthropic tool {kind}"))))
             elif isinstance(spec.get("name"), str):
                 schema = spec.get("parameters", spec.get("input_schema"))
-                draft.tools.append(ToolDraft(ToolUse(ref=f"tool/python.{module}:{spec['name']}", name=spec["name"],
+                draft.tools.append(ToolDraft(ToolUse(ref=python_ref(call.module.project, module, spec['name']), name=spec["name"],
                                                      description=string_value(spec.get("description")),
                                                      input_schema=schema if isinstance(schema, dict) else None)))
         for server in kw.get("mcp_servers") or [] if isinstance(kw.get("mcp_servers"), list) else []:

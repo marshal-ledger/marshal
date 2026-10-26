@@ -196,6 +196,21 @@ class EnvironmentStatus:
 
 
 @dataclass(frozen=True)
+class Dependent:
+    """An agent version that references a matching entity."""
+
+    agent: str
+    platform: str
+    label: str
+    relation: str
+    """``tool``, ``knowledge`` or ``grant``."""
+    ref: str
+    latest: bool
+    shipped: tuple[str, ...]
+    """Environments where this version is the one last shipped."""
+
+
+@dataclass(frozen=True)
 class AgentSummary:
     id: str
     platform: str
@@ -495,6 +510,8 @@ class Store:
         platform: str | None = None,
         tool: str | None = None,
         knowledge: str | None = None,
+        provider: str | None = None,
+        identity: str | None = None,
         policy: FreshnessPolicy | None = None,
         now: datetime | None = None,
     ) -> list[AgentSummary]:
@@ -509,6 +526,11 @@ class Store:
             if tool and not self._uses(latest.record, "tool", tool):
                 continue
             if knowledge and not self._uses(latest.record, "knowledge", knowledge):
+                continue
+            spec = latest.record.spec
+            if provider and not fnmatch.fnmatchcase(str(spec.model.provider.value or "").lower(), provider.lower()):
+                continue
+            if identity and (not spec.permissions.identity.is_known or spec.permissions.identity.value.value != identity):
                 continue
             shipped = {
                 r["environment"]: r["seq"]
@@ -576,17 +598,68 @@ class Store:
         return statuses
 
     def _uses(self, record: AgentVersion, relation: str, pattern: str) -> bool:
-        rows = self._db.execute(
-            "SELECT r.ref, n.identifier FROM version_refs r LEFT JOIN entities n ON n.ref = r.ref "
-            "WHERE r.agent = ? AND r.version = ? AND r.relation = ?",
-            (record.agent, record.version, relation),
-        ).fetchall()
+        return bool(self._matching_refs(record.agent, record.version, pattern, relation))
+
+    def _matching_refs(self, agent: str, version: str, pattern: str, relation: str | None) -> list[tuple[str, str]]:
+        """(ref, relation) pairs of one version whose ref, its identifier, or the ref without its kind match ``pattern``."""
+        sql = ("SELECT r.ref, r.relation, n.identifier FROM version_refs r LEFT JOIN entities n ON n.ref = r.ref "
+               "WHERE r.agent = ? AND r.version = ?")
+        params: list[str] = [agent, version]
+        if relation:
+            sql += " AND r.relation = ?"
+            params.append(relation)
         pattern = pattern.lower()
-        for row in rows:
+        found = []
+        for row in self._db.execute(sql, params).fetchall():
             ref = row["ref"].lower()
             candidates = [ref, ref.split("/", 1)[-1]]
             if row["identifier"]:
                 candidates.append(row["identifier"].lower())
             if any(fnmatch.fnmatchcase(c, pattern) for c in candidates):
-                return True
-        return False
+                found.append((row["ref"], row["relation"]))
+        return found
+
+    def dependents(self, pattern: str, *, relation: str | None = None, shipped_only: bool = False) -> list[Dependent]:
+        """Agents whose latest or shipped versions reference an entity matching ``pattern`` (a glob)."""
+        out: list[Dependent] = []
+        for row in self._db.execute("SELECT id, platform FROM agents ORDER BY id").fetchall():
+            agent = row["id"]
+            latest = self._from_event(agent, None, None)
+            shipped: dict[str, list[str]] = {}
+            for env_row in self._db.execute(
+                "SELECT e.environment, e.version FROM events e WHERE e.agent = ? AND e.event = 'shipped' "
+                "AND e.id = (SELECT MAX(id) FROM events x WHERE x.agent = e.agent AND x.environment = e.environment "
+                "AND x.event = 'shipped')", (agent,)
+            ):
+                shipped.setdefault(env_row["version"], []).append(env_row["environment"])
+            versions = set(shipped) | ({latest.record.version} if not shipped_only else set())
+            for version in sorted(versions):
+                label = self._version_row(agent, "version = ?", (version,)).label
+                for ref, rel in self._matching_refs(agent, version, pattern, relation):
+                    out.append(Dependent(agent, row["platform"], label, rel, ref,
+                                         latest=version == latest.record.version,
+                                         shipped=tuple(sorted(shipped.get(version, [])))))
+        return out
+
+    def entities(self, kind: str | None = None) -> list[tuple[Entity, int]]:
+        """Every known entity, with the number of agents whose latest version references it."""
+        from .model import EntityKind
+
+        latest = {}
+        for row in self._db.execute("SELECT id FROM agents").fetchall():
+            latest[row["id"]] = self._from_event(row["id"], None, None).record.version
+        counts: dict[str, set[str]] = {}
+        for row in self._db.execute("SELECT agent, version, ref FROM version_refs").fetchall():
+            if latest.get(row["agent"]) == row["version"]:
+                counts.setdefault(row["ref"], set()).add(row["agent"])
+        sql = "SELECT ref, kind, platform, identifier, display_name FROM entities"
+        params: list[str] = []
+        if kind:
+            sql += " WHERE kind = ?"
+            params.append(kind)
+        result = []
+        for row in self._db.execute(sql + " ORDER BY ref", params).fetchall():
+            entity = Entity(ref=row["ref"], kind=EntityKind(row["kind"]), platform=row["platform"],
+                            identifier=row["identifier"], display_name=row["display_name"])
+            result.append((entity, len(counts.get(row["ref"], ()))))
+        return result

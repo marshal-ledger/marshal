@@ -260,7 +260,8 @@ def _policy(args: argparse.Namespace) -> FreshnessPolicy:
 
 def _ls(args: argparse.Namespace) -> int:
     with _open_store(args) as store:
-        agents = store.agents(platform=args.platform, tool=args.tool, knowledge=args.knowledge, policy=_policy(args))
+        agents = store.agents(platform=args.platform, tool=args.tool, knowledge=args.knowledge,
+                              provider=args.provider, identity=args.identity, policy=_policy(args))
     if args.output == "json":
         json.dump(
             [
@@ -354,6 +355,36 @@ def _diff(args: argparse.Namespace) -> int:
             print("  no changes")
         print()
         print(f"  Completeness {new.record.quality.completeness:.0%}")
+    return 0
+
+
+def _deps(args: argparse.Namespace) -> int:
+    with _open_store(args) as store:
+        found = store.dependents(args.pattern, relation=args.relation, shipped_only=args.shipped)
+    if args.output == "json":
+        json.dump([d.__dict__ for d in found], sys.stdout, indent=2, default=list)
+        sys.stdout.write("\n")
+        return 0
+    if not found:
+        print(f"no agents reference {args.pattern}")
+        return 0
+    rows = [("AGENT", "VERSION", "WHERE", "RELATION", "REF")]
+    for d in found:
+        where = ", ".join(d.shipped) + (" (latest)" if d.latest and d.shipped else "latest" if d.latest else "")
+        rows.append((d.agent, d.label, where or "-", d.relation, d.ref))
+    widths = [max(len(r[i]) for r in rows) for i in range(len(rows[0]))]
+    for row in rows:
+        print("  ".join(c.ljust(w) for c, w in zip(row, widths)).rstrip())
+    return 0
+
+
+def _entities(args: argparse.Namespace) -> int:
+    with _open_store(args) as store:
+        found = store.entities(args.kind)
+    rows = [("REF", "KIND", "AGENTS")] + [(e.ref, e.kind.value, str(n)) for e, n in found if n or args.all]
+    widths = [max(len(r[i]) for r in rows) for i in range(3)]
+    for row in rows:
+        print("  ".join(c.ljust(w) for c, w in zip(row, widths)).rstrip())
     return 0
 
 
@@ -492,6 +523,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     ls.add_argument("--platform")
     ls.add_argument("--tool", help="only agents whose latest version uses a matching tool (glob)")
     ls.add_argument("--knowledge", help="only agents whose latest version uses matching knowledge (glob)")
+    ls.add_argument("--provider", help="only agents whose model provider matches (glob), such as anthropic")
+    ls.add_argument("--identity", choices=["service_principal", "on_behalf_of_user", "shared_credential", "mixed"],
+                    help="only agents with this identity kind")
     ls.add_argument("--output", choices=["table", "json"], default="table")
     _add_freshness_args(ls)
     _add_db_arg(ls)
@@ -510,6 +544,25 @@ def main(argv: Sequence[str] | None = None) -> int:
     diff.add_argument("--output", choices=["text", "json"], default="text")
     _add_db_arg(diff)
     diff.set_defaults(handler=_diff)
+
+    deps = commands.add_parser(
+        "deps", help="find agents that use a tool, knowledge source or grant target",
+        description="Find agents whose latest or shipped versions reference an entity matching PATTERN, a glob "
+        "matched against the ref, its identifier, or the ref without its kind, such as 'sap.*' or "
+        "'knowledge/https://contoso.sharepoint.com/*'.",
+    )
+    deps.add_argument("pattern")
+    deps.add_argument("--relation", choices=["tool", "knowledge", "grant"])
+    deps.add_argument("--shipped", action="store_true", help="only versions that are shipped somewhere")
+    deps.add_argument("--output", choices=["table", "json"], default="table")
+    _add_db_arg(deps)
+    deps.set_defaults(handler=_deps)
+
+    entities = commands.add_parser("entities", help="list shared tools, knowledge sources and grant targets")
+    entities.add_argument("--kind", choices=["tool", "knowledge", "model", "agent", "store", "compute", "secret", "other"])
+    entities.add_argument("--all", action="store_true", help="include entities no latest version uses")
+    _add_db_arg(entities)
+    entities.set_defaults(handler=_entities)
 
     status = commands.add_parser("status", help="show what is shipped and live per environment, drift and freshness")
     status.add_argument("agent")

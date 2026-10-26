@@ -70,9 +70,12 @@ def marshal_comment(path: Path) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
 
-def function_ref(path: str) -> str:
+def function_ref(path: str, project: str) -> str:
+    """The ref the Python reader gives the same function when it reads the app from ``project``."""
     module, _, function = path.rpartition(".")
-    return f"tool/python.{module}:{function}" if module else f"tool/python.{function}"
+    if not module:
+        return f"tool/python.{project}/{function}"
+    return f"tool/python.{project}/{module}:{function}"
 
 
 def _load(path: Path) -> Any:
@@ -215,9 +218,9 @@ class AdkConfigReader(Reader):
                 if sub_id:
                     use = ToolUse(ref=f"agent/{sub_id}", name=name)
             elif name in ("LongRunningFunctionTool", "FunctionTool") and isinstance(args.get("func"), str):
-                use = ToolUse(ref=function_ref(args["func"]), name=args["func"].rsplit(".", 1)[-1])
+                use = ToolUse(ref=function_ref(args["func"], file.parent.parent.name), name=args["func"].rsplit(".", 1)[-1])
             elif "." in name:
-                use = ToolUse(ref=function_ref(name), name=name.rsplit(".", 1)[-1])
+                use = ToolUse(ref=function_ref(name, file.parent.parent.name), name=name.rsplit(".", 1)[-1])
             if use is None:
                 tool_extras.append(_sanitize(tool))
                 continue

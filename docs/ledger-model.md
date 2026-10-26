@@ -110,7 +110,9 @@ knowledge/databricks.uc.table.samples.nyctaxi.trips
 model/databricks.serving_endpoint.databricks-claude-sonnet-5-5
 ```
 
-An agent that another agent calls is referenced by its agent id: `agent/<agent id>`. In v0, two references are the same entity only when they match exactly. Resolving different connectors for one underlying API is a later milestone.
+An agent that another agent calls is referenced by its agent id: `agent/<agent id>`. Functions defined in code are scoped to their project (`tool/python.<project>/<module>:<function>`), so same-named functions in different projects are different entities.
+
+`marshal deps PATTERN` lists the agents whose latest or shipped versions reference a matching tool, knowledge source or grant target, and where those versions are shipped. `marshal entities` lists shared entities with the number of agents that use them. In v0, two references are the same entity only when they match exactly. Resolving different connectors for one underlying API is a later milestone.
 
 ## Completeness
 

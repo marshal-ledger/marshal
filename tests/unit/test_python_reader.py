@@ -59,7 +59,7 @@ def test_openai_agent_with_cross_module_prompt_and_tools(tmp_path):
     assert billing.model.provider.provenance is Provenance.DERIVED
     assert billing.model.parameters == {"temperature": 0.2}
     tools = {t.ref: t for t in billing.tools}
-    lookup = tools["tool/python.app.agent:lookup"]
+    lookup = tools[f"tool/python.{tmp_path.name}/app.agent:lookup"]
     assert (lookup.name, lookup.description) == ("lookup_invoice", "Look up an invoice.")
     assert lookup.input_schema == {
         "type": "object",
@@ -209,7 +209,7 @@ def test_model_calls_with_tools_are_inferred_agents(tmp_path):
     assert support.spec.instructions.text == "You are a billing support agent."
     assert support.spec.model.parameters == {"max_tokens": 1024}
     refs = {t.ref: t for t in support.spec.tools}
-    assert refs["tool/python.bot:lookup_invoice"].input_schema["properties"] == {"invoice_id": {"type": "string"}}
+    assert refs[f"tool/python.{tmp_path.name}/bot:lookup_invoice"].input_schema["properties"] == {"invoice_id": {"type": "string"}}
     assert refs["tool/anthropic.web_search"].scope.value is Scope.READ
     # A client assigned more than once is still recognized by its SDK, with the provider unknown.
     dynamic = agents["run-dynamic"]

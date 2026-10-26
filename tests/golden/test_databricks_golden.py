@@ -65,7 +65,9 @@ def test_agent_app_templates(fixture_id, agent, has_code):
         assert record.spec.model.requested.value == "databricks-claude-sonnet-5-5"
         assert record.spec.model.provider.value == "databricks"
         assert record.spec.model.requested.basis.startswith("agent_server/agent.py:")
-        assert "tool/python.agent_server.agent:get_current_time" in {t.ref for t in record.spec.tools}
+        # Tool refs are scoped to the project, so the two templates' same-named functions stay distinct.
+        project = fixture_id.rsplit("/", 1)[-1]
+        assert f"tool/python.{project}/agent_server.agent:get_current_time" in {t.ref for t in record.spec.tools}
         assert "code:" in record.source.detected_by
     else:
         assert record.spec.model.requested.provenance is Provenance.UNKNOWN

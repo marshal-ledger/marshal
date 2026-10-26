@@ -39,7 +39,7 @@ Code that calls a model API directly is also read. A model call that passes tool
 | LiteLLM | `litellm` | `completion`, `acompletion` |
 | Bedrock Runtime | `bedrock-runtime` | `converse`, `converse_stream` on a `bedrock-runtime` client |
 
-From the call the reader takes the model, the provider (from the client class), the system prompt (`system`, `instructions`, a `system` or `developer` message, `system_instruction`), generation parameters, and the tools declared there: function schemas, hosted tools, MCP servers. Tool refs are `tool/python.<module>:<tool name>`, the same as a function of that name in the module. `with_raw_response` wrappers are recognized. When the client can't be resolved statically, because it's chosen at run time, the agent is still recorded from the SDK the module imports, with the provider unknown. Turn inference off with `ReadOptions(infer_code_agents=False)`.
+From the call the reader takes the model, the provider (from the client class), the system prompt (`system`, `instructions`, a `system` or `developer` message, `system_instruction`), generation parameters, and the tools declared there: function schemas, hosted tools, MCP servers. Tool refs are `tool/python.<project>/<module>:<tool name>`, the same as a function of that name in the module. `with_raw_response` wrappers are recognized. When the client can't be resolved statically, because it's chosen at run time, the agent is still recorded from the SDK the module imports, with the provider unknown. Turn inference off with `ReadOptions(infer_code_agents=False)`.
 
 Parameters passed as `**kwargs` can't be seen statically, so such calls are not recorded. For code like that, commit an [ADL](adl.md) file next to it.
 
@@ -70,7 +70,7 @@ The agent id is `<directory name>/<agent name slug>`. The name comes from the co
 | `permissions.identity` | Unknown: set by the runtime the agent is deployed to | unknown |
 | `extensions.python` | Framework, constructor, module, and arguments with no ledger field | declared |
 
-Function tools get the ref `tool/python.<module>:<function>`, so agents in the same project that share a function share the tool entity.
+Function tools get the ref `tool/python.<project>/<module>:<function>`, where the project is the directory the module names are relative to. Agents in the same project that share a function share the tool entity, while same-named functions in different projects (for example two copies of a template) stay distinct.
 
 ## Linking to platform records
 

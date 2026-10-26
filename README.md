@@ -15,6 +15,8 @@ $ marshal collect path/to/bundle --target prod --event shipped
 $ marshal collect path/to/bundle --target prod --event proposed
 $ marshal ls                                         # every agent, latest version, where it is shipped
 $ marshal ls --tool "main.finance.*"                 # agents that use matching tools
+$ marshal deps "*CheckWeather" --shipped             # who depends on this, and where it is live
+$ marshal entities --kind tool                       # shared tools and how many agents use each
 $ marshal diff finance/invoice_agent                 # latest against last shipped
 $ marshal diff finance/invoice_agent@v3 finance/invoice_agent@v5
 $ marshal status finance/invoice_agent               # shipped vs live per environment, drift, freshness

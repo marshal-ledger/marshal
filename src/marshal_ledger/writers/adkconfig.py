@@ -76,6 +76,7 @@ class AdkConfigWriter(Writer):
                 tools.append({"name": _BUILTIN_REFS[use.ref]})
             elif use.ref.startswith("tool/python.") and ":" in use.ref:
                 module, function = use.ref.removeprefix("tool/python.").split(":", 1)
+                module = module.split("/", 1)[-1]  # drop the project scope; ADK imports are project-relative
                 path = f"{module}.{function}"
                 wrapped = next((t for t in extras.values() if (t.get("args") or {}).get("func") == path), None)
                 tools.append(wrapped if wrapped else {"name": path})
