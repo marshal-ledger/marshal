@@ -39,62 +39,186 @@ class WebSettings(BaseModel):
 
 
 _STYLE = """
-:root { --bg:#fff; --fg:#1b1f24; --muted:#5b6470; --line:#d9dee4; --soft:#f4f6f8; --accent:#2457c5;
-        --high:#b42318; --med:#a15c07; --low:#3d5a80; --ok:#1a7f37; }
-@media (prefers-color-scheme: dark) {
-  :root { --bg:#111418; --fg:#e6e9ed; --muted:#9aa4b0; --line:#2b323b; --soft:#1a1f25; --accent:#7aa2ff;
-          --high:#ff8a80; --med:#ffc46b; --low:#9fb8e0; --ok:#6fdc8c; } }
-* { box-sizing: border-box; }
-body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; }
-header { border-bottom:1px solid var(--line); padding:12px 24px; display:flex; gap:24px; align-items:center; flex-wrap:wrap; }
-header a.brand { font-weight:650; color:var(--fg); text-decoration:none; }
-header nav a { margin-right:16px; }
-main { padding:24px; max-width:1200px; margin:0 auto; }
-a { color:var(--accent); }
-h1 { font-size:22px; margin:0 0 4px; } h2 { font-size:17px; margin:28px 0 8px; }
-.muted { color:var(--muted); } .mono { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:13px; }
-.scroll { overflow-x:auto; border:1px solid var(--line); border-radius:8px; }
-table { border-collapse:collapse; width:100%; }
-th, td { text-align:left; padding:8px 12px; border-bottom:1px solid var(--line); vertical-align:top; }
-th { background:var(--soft); font-weight:600; font-size:13px; white-space:nowrap; }
-tr:last-child td { border-bottom:0; }
-.tag { display:inline-block; padding:1px 8px; border-radius:999px; font-size:12px; border:1px solid var(--line); background:var(--soft); white-space:nowrap; }
-.HIGH, .drift { color:var(--high); border-color:var(--high); } .MED, .stale { color:var(--med); border-color:var(--med); }
-.LOW { color:var(--low); } .current { color:var(--ok); border-color:var(--ok); }
-form.filters { display:flex; gap:8px; flex-wrap:wrap; margin:12px 0 16px; }
-input, select, button { font:inherit; padding:6px 10px; border:1px solid var(--line); border-radius:6px; background:var(--bg); color:var(--fg); }
-button { background:var(--accent); color:#fff; border-color:var(--accent); cursor:pointer; }
-pre { white-space:pre-wrap; background:var(--soft); border:1px solid var(--line); border-radius:8px; padding:12px; margin:0; }
-dl { display:grid; grid-template-columns:max-content 1fr; gap:4px 16px; margin:0; }
-dt { color:var(--muted); }
+:root {
+  color-scheme: light dark;
+  --page:#fbfbfa; --surface:#fff; --side:#f4f4f2; --hover:#f3f2f0; --line:#e8e7e4; --line-2:#d9d7d3;
+  --fg:#1d1c1b; --fg-2:#5e5c58; --fg-3:#8c8a85; --accent:#5b5bd6; --accent-fg:#fff; --ring:#5b5bd655;
+  --red:#b42318; --red-bg:#fdf0ed; --amber:#975a00; --amber-bg:#fdf5e4; --green:#1d7a3e; --green-bg:#ebf6ee;
+  --blue:#2f5fb3; --blue-bg:#edf2fb; --gray-bg:#f1f0ee;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark) { :root {
+  --page:#141413; --surface:#1a1a19; --side:#111110; --hover:#222220; --line:#292826; --line-2:#383734;
+  --fg:#ecebe8; --fg-2:#a6a49f; --fg-3:#76746f; --accent:#8d8ef6; --accent-fg:#141413; --ring:#8d8ef666;
+  --red:#ff9580; --red-bg:#ff6a4a1a; --amber:#f2b85b; --amber-bg:#f2a8331a; --green:#6fd08f; --green-bg:#4cc2731a;
+  --blue:#93b4f5; --blue-bg:#6f99f01a; --gray-bg:#ffffff0d;
+} }
+* { box-sizing:border-box; }
+html { -webkit-text-size-adjust:100%; }
+body { margin:0; background:var(--page); color:var(--fg);
+  font:14px/1.5 "Inter var",Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased; }
+a { color:inherit; text-decoration:none; }
+a:hover { color:var(--accent); }
+:focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
+.shell { display:grid; grid-template-columns:220px minmax(0,1fr); min-height:100vh; }
+.side { background:var(--side); border-right:1px solid var(--line); padding:14px 10px; display:flex; flex-direction:column; gap:18px;
+  position:sticky; top:0; height:100vh; }
+.brand { display:flex; align-items:center; gap:9px; padding:4px 8px; font-weight:600; letter-spacing:-.01em; }
+.mark { width:22px; height:22px; border-radius:6px; background:var(--fg); color:var(--page); display:grid; place-items:center;
+  font-size:12px; font-weight:700; }
+.side nav { display:flex; flex-direction:column; gap:1px; }
+.side nav a { display:flex; align-items:center; gap:9px; padding:6px 8px; border-radius:6px; color:var(--fg-2); font-size:13px; font-weight:500; }
+.side nav a:hover { background:var(--hover); color:var(--fg); }
+.side nav a.on { background:var(--surface); color:var(--fg); box-shadow:0 0 0 1px var(--line); }
+.side svg { width:15px; height:15px; flex:none; stroke:currentColor; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
+.side .who { margin-top:auto; padding:8px; font-size:12px; color:var(--fg-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+main { padding:28px 36px 64px; max-width:1240px; width:100%; }
+.crumbs { font-size:13px; color:var(--fg-2); margin-bottom:10px; } .crumbs a:hover { color:var(--fg); }
+.head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:20px; }
+h1 { font-size:22px; line-height:1.25; font-weight:600; letter-spacing:-.02em; margin:0; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.sub { color:var(--fg-2); margin:4px 0 0; font-size:13px; overflow-wrap:anywhere; }
+.lede { margin:12px 0 0; max-width:72ch; color:var(--fg); }
+h2 { font-size:13px; font-weight:600; margin:0; letter-spacing:-.005em; }
+.muted { color:var(--fg-2); } .mono { font-family:var(--mono); font-size:12px; }
+.id { font-family:var(--mono); font-size:11.5px; color:var(--fg-2); margin-top:1px; overflow-wrap:anywhere; }
+.num { text-align:right; font-variant-numeric:tabular-nums; }
+.stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:20px; }
+.stat { background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:12px 14px; }
+.stat .k { font-size:12px; color:var(--fg-2); } .stat .v { font-size:20px; font-weight:600; letter-spacing:-.02em; font-variant-numeric:tabular-nums; margin-top:2px; }
+.stat .v small { font-size:12px; font-weight:400; color:var(--fg-2); margin-left:4px; letter-spacing:0; }
+.card { background:var(--surface); border:1px solid var(--line); border-radius:10px; margin-bottom:16px; overflow:hidden; }
+.card > header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 16px; border-bottom:1px solid var(--line); }
+.card > header .muted { font-size:12px; }
+.card > p, .card > pre, .card > dl { margin:0; padding:14px 16px; }
+.grid2 { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; } .grid2 > .card { margin-bottom:16px; }
+.scroll { overflow-x:auto; }
+.card > .scroll + .scroll { border-top:1px solid var(--line); }
+table { border-collapse:collapse; width:100%; font-size:13px; }
+th, td { text-align:left; padding:9px 16px; vertical-align:top; }
+th { font-size:12px; font-weight:500; color:var(--fg-2); white-space:nowrap; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--surface); }
+td { border-bottom:1px solid var(--line); }
+tbody tr:last-child td { border-bottom:0; }
+tbody tr:hover td { background:var(--hover); }
+td a.name { font-weight:500; overflow-wrap:anywhere; }
+td:first-child { min-width:220px; }
+.badge { display:inline-flex; align-items:center; gap:6px; padding:1px 8px 1px 7px; border-radius:999px; font-size:12px; font-weight:500;
+  line-height:20px; white-space:nowrap; background:var(--gray-bg); color:var(--fg-2); }
+.badge::before { content:""; width:6px; height:6px; border-radius:50%; background:currentColor; }
+.badge.plain::before { display:none; }
+.badges { display:flex; gap:4px; flex-wrap:wrap; }
+.drift, .HIGH { background:var(--red-bg); color:var(--red); }
+.stale, .MED { background:var(--amber-bg); color:var(--amber); }
+.current { background:var(--green-bg); color:var(--green); }
+.LOW { background:var(--blue-bg); color:var(--blue); }
+.chip { display:inline-block; padding:0 7px; border:1px solid var(--line); border-radius:6px; font-size:12px; line-height:20px; color:var(--fg-2); white-space:nowrap; }
+.unknown { color:var(--fg-3); font-style:italic; }
+.derived { text-decoration:underline dotted var(--fg-3); text-underline-offset:3px; }
+.meter { display:inline-flex; align-items:center; gap:8px; font-variant-numeric:tabular-nums; }
+.meter i { display:block; width:44px; height:4px; border-radius:2px; background:var(--line); overflow:hidden; }
+.meter i b { display:block; height:100%; background:var(--accent); border-radius:2px; }
+.meter.big i { width:100%; height:5px; margin-top:8px; } .meter.big { display:block; }
+.toolbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
+.search { position:relative; flex:1 1 260px; max-width:360px; }
+.search svg { position:absolute; left:9px; top:50%; transform:translateY(-50%); width:14px; height:14px; stroke:var(--fg-3); fill:none; stroke-width:1.8; stroke-linecap:round; }
+.search input { width:100%; padding-left:30px; }
+input, select, button, .btn { font:inherit; font-size:13px; height:32px; padding:0 10px; border:1px solid var(--line-2); border-radius:7px;
+  background:var(--surface); color:var(--fg); }
+input::placeholder { color:var(--fg-3); }
+input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--ring); }
+input[type=checkbox] { height:auto; accent-color:var(--accent); }
+label.check { display:inline-flex; align-items:center; gap:6px; font-size:13px; color:var(--fg-2); }
+button { background:var(--fg); color:var(--page); border-color:var(--fg); font-weight:500; cursor:pointer; }
+button:hover { opacity:.88; }
+.btn { display:inline-flex; align-items:center; color:var(--fg-2); }
+pre { white-space:pre-wrap; font-family:inherit; font-size:13px; line-height:1.6; max-height:360px; overflow:auto; }
+dl { display:grid; grid-template-columns:max-content 1fr; gap:8px 20px; font-size:13px; }
+dt { color:var(--fg-2); } dd { margin:0; min-width:0; overflow-wrap:anywhere; }
+.empty { color:var(--fg-2); font-size:13px; }
+.trunc { display:inline-block; max-width:190px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:bottom; }
+.limits { font-size:12px; color:var(--fg-2); line-height:1.6; }
+.nowrap { white-space:nowrap; }
+@media (max-width: 900px) { .grid2 { grid-template-columns:1fr; } }
+@media (max-width: 760px) {
+  .shell { grid-template-columns:minmax(0,1fr); }
+  .side { position:static; height:auto; flex-direction:row; align-items:center; padding:8px 12px; gap:8px; border-right:0; border-bottom:1px solid var(--line); }
+  .side nav { flex-direction:row; } .side .who { display:none; }
+  main { padding:20px 16px 48px; }
+}
 """
+
+_ICONS = {
+    "agents": '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="4" width="11" height="9" rx="2.5"/><path d="M8 4V1.8"/>'
+              '<circle cx="6" cy="8.5" r=".6"/><circle cx="10" cy="8.5" r=".6"/></svg>',
+    "deps": '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="4" cy="3.5" r="1.6"/><circle cx="4" cy="12.5" r="1.6"/>'
+            '<circle cx="12" cy="8" r="1.6"/><path d="M4 5.1v5.8M5.4 4.3 10.6 7.2"/></svg>',
+    "search": '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg>',
+}
 
 
 def _e(value: Any) -> str:
     return html.escape("" if value is None else str(value))
 
 
-def _page(title: str, body: str, user: Optional[str]) -> HTMLResponse:
-    who = f'<span class="muted">{_e(user)}</span>' if user else ""
+def _page(title: str, body: str, user: Optional[str], active: str = "") -> HTMLResponse:
+    who = f'<div class="who" title="{_e(user)}">{_e(user)}</div>' if user else ""
+    nav = "".join(
+        f'<a href="{href}"{" class=on" if key == active else ""}>{_ICONS[key]}{label}</a>'
+        for key, href, label in (("agents", "./", "Agents"), ("deps", "deps", "Dependencies"))
+    )
     return HTMLResponse(
         "<!doctype html><html lang=en><head><meta charset=utf-8>"
         '<meta name=viewport content="width=device-width,initial-scale=1">'
-        f"<title>{_e(title)} · Marshal</title><style>{_STYLE}</style></head><body>"
-        '<header><a class=brand href="./">Marshal</a>'
-        '<nav><a href="./">Agents</a><a href="deps">Dependencies</a></nav>'
-        f'<span style="flex:1"></span>{who}</header><main>{body}</main></body></html>'
+        f"<title>{_e(title)} · Marshal</title><style>{_STYLE}</style></head><body><div class=shell>"
+        f'<aside class=side><a class=brand href="./"><span class=mark>M</span>Marshal</a><nav>{nav}</nav>{who}</aside>'
+        f"<main>{body}</main></div></body></html>"
     )
 
 
 def _agent_link(agent: str, label: Optional[str] = None) -> str:
-    return f'<a href="agent?{urlencode({"id": agent})}">{_e(label or agent)}</a>'
+    return f'<a class=name href="agent?{urlencode({"id": agent})}">{_e(label or agent)}</a>'
 
 
-def _value(v: Any) -> str:
+def _value(v: Any, extra: str = "") -> str:
     if not v.is_known:
-        return f'<span class="muted" title="{_e(v.basis)}">unknown</span>'
+        return f'<span class="unknown" title="{_e(v.basis)}">unknown</span>'
     value = getattr(v.value, "value", v.value)
-    return f'<span title="{_e(v.provenance.value)}: {_e(v.basis)}">{_e(value)}</span>'
+    if isinstance(value, bool):
+        value = "Yes" if value else "No"
+    css = " ".join(c for c in ("derived" if v.provenance.value == "derived" else "", extra) if c)
+    css = f' class="{css}"' if css else ""
+    title = f"{v.provenance.value}: {v.basis}"
+    if extra == "trunc":
+        title = f"{value}\n{title}"
+    return f'<span{css} title="{_e(title)}">{_e(value)}</span>'
+
+
+def _badge(css: str, text: str, title: str = "") -> str:
+    return f'<span class="badge {_e(css)}"' + (f' title="{_e(title)}"' if title else "") + f">{_e(text)}</span>"
+
+
+def _state(st: Any) -> str:
+    return "drift" if st.drift else "stale" if st.stale else "current"
+
+
+def _meter(fraction: float, big: bool = False, unit: str = "%") -> str:
+    pct = max(0, min(100, round(fraction * 100)))
+    if big:
+        return f'<span class="meter big">{pct}{unit}<i><b style="width:{pct}%"></b></i></span>'
+    return f'<span class="meter"><i><b style="width:{pct}%"></b></i>{pct}{unit}</span>'
+
+
+def _card(title: str, content: str, note: str = "") -> str:
+    aside = f'<span class="muted">{note}</span>' if note else ""
+    return f"<section class=card><header><h2>{_e(title)}</h2>{aside}</header>{content}</section>"
+
+
+def _count(n: int, noun: str) -> str:
+    return f"{n}<small>{noun}{'s' * (n != 1)}</small>"
+
+
+def _stat(label: str, value: str) -> str:
+    return f'<div class=stat><div class=k>{_e(label)}</div><div class=v>{value}</div></div>'
 
 
 _CREDENTIALS = {"end user": "signed-in user", "maker": "maker's connection"}
@@ -115,11 +239,15 @@ def _credentials(spec: Any) -> dict[str, str]:
     return found
 
 
-def _table(headers: list[str], rows: list[list[str]], empty: str = "None") -> str:
+def _table(headers: list[str], rows: list[list[str]], empty: str = "None", numeric: tuple[int, ...] = ()) -> str:
     if not rows:
-        return f'<p class="muted">{_e(empty)}</p>'
-    head = "".join(f"<th>{_e(h)}</th>" for h in headers)
-    body = "".join("<tr>" + "".join(f"<td>{c}</td>" for c in row) + "</tr>" for row in rows)
+        return f'<p class="empty">{_e(empty)}</p>'
+
+    def cell(tag: str, i: int, content: str) -> str:
+        return f"<{tag} class=num>{content}</{tag}>" if i in numeric else f"<{tag}>{content}</{tag}>"
+
+    head = "".join(cell("th", i, _e(h)) for i, h in enumerate(headers))
+    body = "".join("<tr>" + "".join(cell("td", i, c) for i, c in enumerate(row)) + "</tr>" for row in rows)
     return f'<div class="scroll"><table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table></div>'
 
 
@@ -145,30 +273,44 @@ def create_web_app(store_path: str, settings: WebSettings) -> FastAPI:
             agents = [a for a in agents if needle in a.id.lower() or needle in (a.display_name or "").lower()]
         rows = []
         for a in agents:
-            envs = " ".join(
-                f'<span class="tag {"drift" if st.drift else "stale" if st.stale else "current"}" '
-                f'title="confirmed by {_e(st.channel.value)}, {int(st.age_days)} days ago">'
-                f'{_e(st.environment)} v{_e(st.shipped or st.observed)}{" drift" if st.drift else " stale" if st.stale else ""}</span>'
+            envs = "".join(
+                _badge(_state(st), f"{st.environment} v{st.shipped or st.observed}" + ("" if _state(st) == "current" else f" {_state(st)}"),
+                       f"confirmed by {st.channel.value}, {int(st.age_days)} days ago")
                 for st in a.environments
-            ) or '<span class="muted">not shipped</span>'
+            )
             record = a.latest.record
             rows.append([
-                _agent_link(a.id, a.display_name or a.id) + f'<div class="muted mono">{_e(a.id)}</div>',
-                _e(a.platform), _value(record.spec.model.requested), _value(record.spec.permissions.identity),
-                str(len(record.spec.tools)), envs, f"{record.quality.completeness:.0%}",
+                _agent_link(a.id, a.display_name or a.id) + f'<div class="id">{_e(a.id)}</div>',
+                f'<span class="chip">{_e(a.platform)}</span>', _value(record.spec.model.requested, "trunc"),
+                _value(record.spec.permissions.identity), str(len(record.spec.tools)),
+                f'<div class="badges">{envs}</div>' if envs else '<span class="muted">Not shipped</span>',
+                _meter(record.quality.completeness),
             ])
+        statuses = [st for a in agents for st in a.environments]
+        stats = "<div class=stats>" + "".join((
+            _stat("Agents", str(len(agents))),
+            _stat("Drift", _count(sum(st.drift for st in statuses), "environment")),
+            _stat("Stale", _count(sum(st.stale and not st.drift for st in statuses), "environment")),
+            _stat("Not shipped", str(sum(not a.environments for a in agents))),
+        )) + "</div>"
+        filtered = any((q, tool, provider, platform))
         filters = (
-            '<form class="filters" method="get">'
-            f'<input name="q" placeholder="Search agents" value="{_e(q)}">'
-            f'<input name="tool" placeholder="Uses tool (glob)" value="{_e(tool)}">'
-            f'<input name="provider" placeholder="Model provider" value="{_e(provider)}">'
-            f'<input name="platform" placeholder="Platform" value="{_e(platform)}">'
-            "<button>Filter</button></form>"
+            '<form class="toolbar" method="get">'
+            f'<label class="search">{_ICONS["search"]}<input name="q" placeholder="Search agents" value="{_e(q)}" aria-label="Search agents"></label>'
+            f'<input name="tool" placeholder="Uses tool (glob)" value="{_e(tool)}" aria-label="Uses tool">'
+            f'<input name="provider" placeholder="Model provider" value="{_e(provider)}" aria-label="Model provider">'
+            f'<input name="platform" placeholder="Platform" value="{_e(platform)}" aria-label="Platform">'
+            "<button>Filter</button>" + ('<a class="btn" href="./">Clear</a>' if filtered else "") + "</form>"
         )
-        body = (f"<h1>Agents</h1><p class=muted>{len(agents)} agent{'s' * (len(agents) != 1)}</p>{filters}"
-                + _table(["Agent", "Platform", "Model", "Identity", "Tools", "Environments", "Complete"], rows,
-                         "No agents match."))
-        return _page("Agents", body, who)
+        body = (
+            '<div class="head"><div><h1>Agents</h1>'
+            "<p class=sub>Every agent definition Marshal has recorded, and where each one runs.</p></div></div>"
+            + stats + filters
+            + _card("Inventory", _table(["Agent", "Platform", "Model", "Identity", "Tools", "Environments", "Complete"], rows,
+                                        "No agents match.", numeric=(4,)),
+                    f"{len(agents)} agent{'s' * (len(agents) != 1)}" + (" match" + "es" * (len(agents) == 1) if filtered else ""))
+        )
+        return _page("Agents", body, who, "agents")
 
     @app.get("/agent", response_class=HTMLResponse)
     def agent(request: Request, id: str, v: str = "latest") -> HTMLResponse:
@@ -186,53 +328,61 @@ def create_web_app(store_path: str, settings: WebSettings) -> FastAPI:
                 raise HTTPException(404, str(exc)) from exc
         record: AgentVersion = version.record
         spec = record.spec
-        parts = [f"<h1>{_e(spec.display_name.value or id)}</h1>",
-                 f'<p class="muted mono">{_e(id)} · {_e(record.platform)} · {_e(version.label)} · {_e(record.version[:19])}…</p>']
-        if spec.description.is_known:
-            parts.append(f"<p>{_e(spec.description.value)}</p>")
-
-        parts.append("<h2>Environments</h2>")
-        parts.append(_table(["Environment", "Shipped", "Live (observed)", "Confirmed", "State"], [[
-            _e(st.environment), _e(f"v{st.shipped}" if st.shipped else "–"), _e(f"v{st.observed}" if st.observed else "–"),
-            f"{_e(st.last_confirmed.strftime('%Y-%m-%d'))} by {_e(st.channel.value)}",
-            f'<span class="tag {"drift" if st.drift else "stale" if st.stale else "current"}">'
-            f'{"drift: live differs from shipped" if st.drift else "stale" if st.stale else "current"}</span>',
-        ] for st in statuses], "Not shipped or observed yet."))
-
-        parts.append("<h2>Definition</h2><dl>")
-        parts += [f"<dt>{_e(label)}</dt><dd>{html_value}</dd>" for label, html_value in (
-            ("Model", _value(spec.model.requested)), ("Provider", _value(spec.model.provider)),
-            ("Identity", _value(spec.permissions.identity)), ("Principal", _value(spec.permissions.principal)),
-            ("Completeness", f"{record.quality.completeness:.0%}"),
-            ("Source", f'<span class="mono">{_e(record.source.artifact)}</span> <span class="muted">{_e(record.source.detected_by)}</span>'),
-        )]
-        parts.append("</dl>")
-        if spec.instructions.text:
-            parts.append(f"<h2>Instructions</h2><pre>{_e(spec.instructions.text)}</pre>")
-        elif spec.instructions.hash:
-            parts.append(f'<h2>Instructions</h2><p class="muted">Stored as a hash only: <span class=mono>{_e(spec.instructions.hash[:23])}…</span></p>')
-
-        credentials = _credentials(spec)
-        parts.append("<h2>Tools</h2>" + _table(["Tool", "Scope", "Reversible", "Confirmation"] + (["Credentials"] if credentials else []), [[
-            f'<a href="deps?{urlencode({"q": t.ref})}" class=mono>{_e(t.name or t.ref)}</a>' + (f'<div class="muted mono">{_e(t.ref)}</div>' if t.name else ""),
-            _value(t.scope), _value(t.reversible), _value(t.requires_confirmation),
-        ] + ([_e(credentials[t.ref]) if t.ref in credentials else '<span class="muted">–</span>'] if credentials else [])
-            for t in spec.tools], "No tools."))
-        parts.append("<h2>Knowledge</h2>" + _table(["Source", "Type", "Scope"], [[
-            f'<a href="deps?{urlencode({"q": k.ref})}" class=mono>{_e(k.name or k.ref)}</a>' + (f'<div class="muted mono">{_e(k.ref)}</div>' if k.name else ""),
-            _e(k.type), _value(k.scope),
-        ] for k in spec.knowledge], "No knowledge sources."))
-        parts.append("<h2>Permissions</h2>" + _table(["Target", "Privilege", "Scope"], [[
-            f'<span class=mono>{_e(g.target)}</span>', _e(g.privilege), _e(g.scope.value),
-        ] for g in spec.permissions.grants], "No grants recorded."))
-        if spec.permissions.access:
-            parts.append(_table(["Who may use the agent", "Level"], [[_e(a.principal), _e(a.level)] for a in spec.permissions.access]))
+        name = spec.display_name.value or id
+        badges = "".join(_badge(_state(st), f"{st.environment} {_state(st)}") for st in statuses)
+        parts = [
+            f'<div class="crumbs"><a href="./">Agents</a> / {_e(name)}</div>',
+            f'<div class="head"><div><h1>{_e(name)}{badges}</h1>'
+            f'<p class="sub mono">{_e(id)} · {_e(record.platform)} · {_e(version.label)} · {_e(record.version[:19])}…</p>'
+            + (f'<p class="lede">{_e(spec.description.value)}</p>' if spec.description.is_known else "")
+            + "</div></div>",
+            "<div class=stats>"
+            + _stat("Completeness", _meter(record.quality.completeness, big=True))
+            + _stat("Tools", str(len(spec.tools)))
+            + _stat("Knowledge sources", str(len(spec.knowledge)))
+            + _stat("Identity", f'<span style="font-size:15px">{_value(spec.permissions.identity)}</span>')
+            + "</div>",
+        ]
 
         if shipped is not None and shipped.record.version != record.version:
             changes = rank(diff_specs(shipped.record.spec, spec))
-            parts.append(f"<h2>Changes from shipped {_e(shipped.label)}</h2>" + _table(["Risk", "Change"], [[
-                f'<span class="tag {_e(c.severity.label)}">{_e(c.severity.label)}</span>',
-                f'<span class=mono>{_e(c.line()[6:])}</span>'] for c in changes], "No changes."))
+            parts.append(_card(f"Changes from shipped {shipped.label}", _table(["Risk", "Change"], [[
+                _badge(c.severity.label, c.severity.label), f'<span class=mono>{_e(c.line()[6:])}</span>',
+            ] for c in changes], "No changes."), f"{len(changes)} change{'s' * (len(changes) != 1)}"))
+
+        environments = _table(["Environment", "Shipped", "Live", "Confirmed", "State"], [[
+            _e(st.environment), _e(f"v{st.shipped}" if st.shipped else "–"), _e(f"v{st.observed}" if st.observed else "–"),
+            f'<span class=nowrap>{_e(st.last_confirmed.strftime("%Y-%m-%d"))}</span><div class="muted">by {_e(st.channel.value)}</div>',
+            _badge(_state(st), "live differs from shipped" if st.drift else _state(st)),
+        ] for st in statuses], "Not shipped or observed yet.")
+        definition = "<dl>" + "".join(f"<dt>{_e(label)}</dt><dd>{html_value}</dd>" for label, html_value in (
+            ("Model", _value(spec.model.requested)), ("Provider", _value(spec.model.provider)),
+            ("Identity", _value(spec.permissions.identity)), ("Principal", _value(spec.permissions.principal)),
+            ("Source", f'<span class="mono">{_e(record.source.artifact)}</span><div class="muted">{_e(record.source.detected_by)}</div>'),
+        )) + "</dl>"
+        parts.append(f'<div class="grid2">{_card("Environments", environments)}{_card("Definition", definition)}</div>')
+
+        if spec.instructions.text:
+            parts.append(_card("Instructions", f"<pre>{_e(spec.instructions.text)}</pre>"))
+        elif spec.instructions.hash:
+            parts.append(_card("Instructions", f'<p class="muted">Stored as a hash only: <span class=mono>{_e(spec.instructions.hash[:23])}…</span></p>'))
+
+        credentials = _credentials(spec)
+        parts.append(_card("Tools", _table(["Tool", "Scope", "Reversible", "Confirmation"] + (["Credentials"] if credentials else []), [[
+            f'<a href="deps?{urlencode({"q": t.ref})}" class="name">{_e(t.name or t.ref)}</a>' + (f'<div class="id">{_e(t.ref)}</div>' if t.name else ""),
+            _value(t.scope), _value(t.reversible), _value(t.requires_confirmation),
+        ] + ([_e(credentials[t.ref]) if t.ref in credentials else '<span class="muted">–</span>'] if credentials else [])
+            for t in spec.tools], "No tools."), "Dotted values are derived; hover for the basis" if spec.tools else ""))
+        parts.append(_card("Knowledge", _table(["Source", "Type", "Scope"], [[
+            f'<a href="deps?{urlencode({"q": k.ref})}" class="name">{_e(k.name or k.ref)}</a>' + (f'<div class="id">{_e(k.ref)}</div>' if k.name else ""),
+            _e(k.type), _value(k.scope),
+        ] for k in spec.knowledge], "No knowledge sources.")))
+        permissions = _table(["Target", "Privilege", "Scope"], [[
+            f'<span class=mono>{_e(g.target)}</span>', _e(g.privilege), _e(g.scope.value),
+        ] for g in spec.permissions.grants], "No grants recorded.")
+        if spec.permissions.access:
+            permissions += _table(["Who may use the agent", "Level"], [[_e(a.principal), _e(a.level)] for a in spec.permissions.access])
+        parts.append(_card("Permissions", permissions))
 
         portability = []
         from .portability import assess, load_matrix
@@ -243,19 +393,18 @@ def create_web_app(store_path: str, settings: WebSettings) -> FastAPI:
             except Exception:  # a broken matrix file shouldn't take the page down
                 continue
             if report.current:
-                portability.append([_e(load_matrix(target).display_name), '<span class="muted">–</span>',
-                                    '<span class="muted">Current platform</span>'])
+                portability.append([_e(load_matrix(target).display_name), '<span class="badge plain">Current platform</span>', ""])
                 continue
-            portability.append([_e(load_matrix(target).display_name), f"<strong>{report.score}</strong>",
-                                "<br>".join(_e(i.message) for i in report.limitations[:4])
-                                + (f'<br><span class=muted>and {len(report.limitations) - 4} more</span>' if len(report.limitations) > 4 else "")])
-        parts.append("<h2>Portability</h2>" + _table(["Platform", "Score", "Main limitations"], portability))
+            portability.append([_e(load_matrix(target).display_name), _meter(report.score / 100, unit=""),
+                                '<div class="limits">' + "<br>".join(_e(i.message) for i in report.limitations[:4])
+                                + (f"<br>and {len(report.limitations) - 4} more" if len(report.limitations) > 4 else "") + "</div>"])
+        parts.append(_card("Portability", _table(["Platform", "Score", "Main limitations"], portability), "Score out of 100"))
 
-        parts.append("<h2>History</h2>" + _table(["When", "Event", "Environment", "Version", "Channel", "By"], [[
-            _e(e.at.strftime("%Y-%m-%d %H:%M")), _e(e.event.value), _e(e.environment),
+        parts.append(_card("History", _table(["When", "Event", "Environment", "Version", "Channel", "By"], [[
+            _e(e.at.strftime("%Y-%m-%d %H:%M")), f'<span class="chip">{_e(e.event.value)}</span>', _e(e.environment),
             _agent_link_version(id, seq), _e(e.channel.value), _e(actor.repository if actor else ""),
-        ] for e, seq, actor in reversed(history)]))
-        return _page(spec.display_name.value or id, "".join(parts), who)
+        ] for e, seq, actor in reversed(history)])))
+        return _page(name, "".join(parts), who, "agents")
 
     @app.get("/deps", response_class=HTMLResponse)
     def deps(request: Request, q: str = "", shipped: bool = False) -> HTMLResponse:
@@ -265,14 +414,19 @@ def create_web_app(store_path: str, settings: WebSettings) -> FastAPI:
             with store() as s:
                 for d in s.dependents(q, shipped_only=shipped):
                     where = ", ".join(d.shipped) or ("latest" if d.latest else "–")
-                    rows.append([_agent_link(d.agent), _e(d.label), _e(where), _e(d.relation), f"<span class=mono>{_e(d.ref)}</span>"])
-        form = ('<form class="filters" method="get">'
-                f'<input name="q" size="50" placeholder="Tool, knowledge source or grant target (glob)" value="{_e(q)}">'
-                f'<label><input type="checkbox" name="shipped" value="true"{" checked" if shipped else ""}> shipped only</label>'
+                    rows.append([_agent_link(d.agent), _e(d.label), _e(where), f'<span class="chip">{_e(d.relation)}</span>',
+                                 f"<span class=mono>{_e(d.ref)}</span>"])
+        form = ('<form class="toolbar" method="get">'
+                f'<label class="search" style="max-width:520px">{_ICONS["search"]}<input name="q" '
+                f'placeholder="Tool, knowledge source or grant target (glob)" value="{_e(q)}" aria-label="Entity"></label>'
+                f'<label class="check"><input type="checkbox" name="shipped" value="true"{" checked" if shipped else ""}> Shipped only</label>'
                 "<button>Find</button></form>")
-        body = "<h1>Who depends on this?</h1>" + form + (_table(["Agent", "Version", "Where", "Relation", "Ref"], rows,
-                                                                  "No agents reference it.") if q else "")
-        return _page("Dependencies", body, who)
+        body = ('<div class="head"><div><h1>Who depends on this?</h1>'
+                "<p class=sub>Find every agent that uses a tool, reads a knowledge source or holds a grant. "
+                "Use <span class=mono>*</span> as a wildcard.</p></div></div>" + form
+                + (_card("Dependents", _table(["Agent", "Version", "Where", "Relation", "Ref"], rows, "No agents reference it."),
+                         f"{len(rows)} result{'s' * (len(rows) != 1)}") if q else ""))
+        return _page("Dependencies", body, who, "deps")
 
     @app.get("/v0/agents")
     def api_agents(request: Request) -> list[dict[str, Any]]:
