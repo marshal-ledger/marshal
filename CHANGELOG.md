@@ -5,6 +5,7 @@ Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](
 ## 0.5.0 (unreleased)
 
 - The CloudFormation writer sets `AutoPrepare` on the agent, as the AWS samples do, so a deployed agent is ready to test.
+- Every YAML writer writes multi-line instructions as a literal block, as the Copilot Studio and Marshal file writers already did.
 
 ## 0.4.0 (2026-10-27)
 

@@ -47,7 +47,21 @@ class Writer(ABC):
     def dump(self, document: dict[str, Any]) -> str:
         if self.suffix.endswith(".json"):
             return json.dumps(document, indent=2, ensure_ascii=False) + "\n"
-        return yaml.safe_dump(document, sort_keys=False, allow_unicode=True, width=100)
+        return yaml_text(document)
+
+
+class _Dumper(yaml.SafeDumper):
+    """Writes multi-line text, such as instructions, as a literal block that reads as written."""
+
+
+_Dumper.add_representer(
+    str, lambda dumper, value: dumper.represent_scalar("tag:yaml.org,2002:str", value, style="|" if "\n" in value else None)
+)
+
+
+def yaml_text(data: Any, width: int = 100) -> str:
+    """YAML for a written document: keys in order, Unicode as is, multi-line strings as blocks."""
+    return yaml.dump(data, Dumper=_Dumper, sort_keys=False, allow_unicode=True, width=width)
 
 
 def scope_value(value: Any) -> Any:

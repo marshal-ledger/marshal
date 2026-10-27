@@ -118,3 +118,12 @@ def test_function_parameter_names_are_made_valid():
 def test_written_agents_are_prepared_on_deploy():
     [record] = CloudFormationReader().read_data(load_template(TEMPLATE), "stack.yaml").records
     assert agent_properties(convert(record, "cloudformation"))["AutoPrepare"] is True
+
+
+def test_multi_line_instructions_are_written_as_a_block():
+    template = TEMPLATE.replace(
+        "Instruction: Reconcile vendor invoices against purchase orders and flag mismatches.",
+        "Instruction: |\n            Reconcile vendor invoices against purchase orders.\n            Flag every mismatch for review.",
+    )
+    [record] = CloudFormationReader().read_data(load_template(template), "stack.yaml").records
+    assert "Instruction: |\n        Reconcile vendor invoices" in convert(record, "cloudformation").text
