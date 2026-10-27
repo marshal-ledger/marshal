@@ -4,8 +4,9 @@
   with no loss.
 - Every fixture, in every format, must convert to every other format with each
   lost field explained by a declared loss or a writer note.
-- Written ADL and Agent Spec documents must validate against the published
-  schemas.
+- Written ADL, Agent Spec and ADK Agent Config documents must validate against
+  the published schemas, and written CloudFormation templates must pass
+  cfn-lint, AWS's template linter, apart from problems the writer warns about.
 """
 
 import json
@@ -97,9 +98,29 @@ def validate_copilot_studio(files):
         assert error is None, f"{path}: {list(error.absolute_path)}: {error.message[:300]}"
 
 
+# cfn-lint rules for values the source lacks, which the writer reports as warnings instead of inventing.
+WARNED_LINT = {"E3033": "Bedrock requires instructions of at least"}
+
+
+def validate_cloudformation(conversion):
+    try:
+        from cfnlint.api import ManualArgs, lint
+    except ImportError:
+        return  # not installed (the lowest-dependency job); the dev extra has it
+    problems = []
+    for match in lint(conversion.text, config=ManualArgs(regions=["us-east-1"])):
+        warned = WARNED_LINT.get(match.rule.id)
+        if warned and any(w.startswith(warned) for w in conversion.warnings):
+            continue
+        problems.append(f"{match.rule.id} line {match.linenumber}: {match.message[:200]}")
+    assert problems == [], "\n".join(problems)
+
+
 def validate(target, document):
     if target == "adl":
         validator = schema_validator("adl/schema", "0.3.0.json")
+    elif target == "adk-config":
+        validator = schema_validator("adk-config/schema", "AgentConfig.json")
     elif target == "agent-spec":
         # The published schema puts agentspec_version beside a closed Agent definition,
         # so a versioned document can't validate as a whole. Check the parts separately.
@@ -132,5 +153,7 @@ def test_every_loss_is_explained(fmt, fixture, target):
         assert conversion.read_back.platform == record.platform
         if conversion.files and target == "copilot-studio":
             validate_copilot_studio(conversion.files)
+        elif target == "cloudformation":
+            validate_cloudformation(conversion)
         else:
             validate(target, conversion.document)

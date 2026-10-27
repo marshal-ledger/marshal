@@ -15,7 +15,9 @@ Workflow agents (`SequentialAgent`, `ParallelAgent`, `LoopAgent`) are reported a
 
 ## Writing
 
-**Tested:** every loss in converting every fixture is explained, and the agent keeps its identity. The output hasn't yet been loaded by ADK.
+**Tested:** every loss in converting every fixture is explained, the agent keeps its identity, and every written config validates against Google's published Agent Config schema. An optional test loads each one with ADK itself (`pip install google-adk mcp`, then `pytest tests/golden/test_adk_load.py`); with google-adk 2.13.0, every config loads apart from the agent's own Python functions, which ADK imports from the agent's project, and stdio MCP servers, which that ADK release refuses in configs, its own sample included.
+
+ADK requires an instruction, so a source without one is written with an empty instruction and a warning. An MCP server is written only where the source says how to reach it: a URL, or an ADK config's own command. Environment values and headers for MCP servers aren't recorded, so they're left out, with a warning.
 
 The writer produces `root_agent.yaml`: name (made a valid identifier), model, description, instruction, built-in, function and MCP tools, and generation parameters. The agent's ledger identity is kept in a `# io.github.marshal-ledger:` comment. Sub-agents are separate files and are converted on their own.
 

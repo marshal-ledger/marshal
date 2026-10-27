@@ -66,3 +66,50 @@ def test_agent_mapping_and_round_trip():
         "permissions.principal", "permissions.grants[other/aws.* bedrock:InvokeModel]"
     }
     assert all(f.note for f in conversion.report.lossy)
+
+
+KB_TEMPLATE = textwrap.dedent("""
+    Resources:
+      Agent:
+        Type: AWS::Bedrock::Agent
+        Properties:
+          AgentName: kb-agent
+          Instruction: Answer questions from the knowledge base and cite every source you use.
+          AgentResourceRoleArn: arn:aws:iam::123456789012:role/kb-agent
+          KnowledgeBases:
+            - {KnowledgeBaseId: !ImportValue kb-stack-KnowledgeBaseId, Description: Product docs}
+          GuardrailConfiguration:
+            GuardrailIdentifier: !GetAtt Guardrail.GuardrailId
+            GuardrailVersion: !GetAtt Guardrail.Version
+""")
+
+
+def agent_properties(conversion):
+    [resource] = conversion.document["Resources"].values()
+    return resource["Properties"]
+
+
+def test_unresolved_references_are_written_as_cloudformation():
+    [record] = CloudFormationReader().read_data(load_template(KB_TEMPLATE), "stack.yaml").records
+    conversion = convert(record, "cloudformation")
+    props = agent_properties(conversion)
+    assert props["KnowledgeBases"][0]["KnowledgeBaseId"] == {"Fn::ImportValue": "kb-stack-KnowledgeBaseId"}
+    assert props["GuardrailConfiguration"] == {
+        "GuardrailIdentifier": {"Ref": "GuardrailGuardrailId"}, "GuardrailVersion": {"Ref": "GuardrailVersion"},
+    }
+    assert conversion.document["Parameters"]["GuardrailGuardrailId"]["Description"] == \
+        "Stands in for Guardrail.GuardrailId in the source template"
+    # The import reads back unchanged; the guardrail becomes parameters, which the report explains.
+    lossy = {f.path: f.note for f in conversion.report.lossy}
+    assert "extensions.bedrock.guardrail" in lossy
+    assert not any(path.startswith("knowledge[") for path in lossy)
+    assert all(lossy.values())
+
+
+def test_function_parameter_names_are_made_valid():
+    template = TEMPLATE.replace("invoice_id: {Type: string, Required: true}", "Input invoice_id: {Type: string, Required: true}")
+    [record] = CloudFormationReader().read_data(load_template(template), "stack.yaml").records
+    conversion = convert(record, "cloudformation")
+    [function] = agent_properties(conversion)["ActionGroups"][0]["FunctionSchema"]["Functions"]
+    assert list(function["Parameters"]) == ["Input-invoice_id"]
+    assert any("parameter names" in (f.note or "") for f in conversion.report.lossy)

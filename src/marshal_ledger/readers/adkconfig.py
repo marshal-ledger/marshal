@@ -85,7 +85,7 @@ def _load(path: Path) -> Any:
         return None
 
 
-def _mcp_server(args: dict[str, Any]) -> Optional[str]:
+def mcp_server(args: dict[str, Any]) -> Optional[str]:
     for key in ("streamable_http_connection_params", "sse_connection_params", "connection_params"):
         params = args.get(key)
         if isinstance(params, dict) and isinstance(params.get("url"), str):
@@ -207,7 +207,7 @@ class AdkConfigReader(Reader):
                 ref, scope = BUILTINS[name]
                 use = ToolUse(ref=ref, name=name, scope=Value[Scope].derived(scope, f"{name} built-in tool"))
             elif name == "McpToolset":
-                server = _mcp_server(args)
+                server = mcp_server(args)
                 if server:
                     use = ToolUse(ref=f"tool/mcp.{server}", name=name)
                 else:
