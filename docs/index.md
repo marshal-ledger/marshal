@@ -25,10 +25,19 @@ Marshal keeps one versioned record of every AI agent in an organization, whateve
 - **Dependencies:** "who uses this tool, this knowledge source, this permission?" Refs on other platforms that reach the same HTTP operation, MCP server, knowledge URL or API host are listed too, each with how it matched.
 - **Translation** between formats, with a fidelity report computed by reading the result back.
 - **Portability scores** for moving an agent to another platform, from a community-maintained capability matrix.
-- **No shared secrets:** pipelines push records authenticated by their CI provider's OIDC token. Marshal never connects to agent platforms.
 
 ![The Marshal web view: an inventory of 29 agents across Agentforce, Databricks, Bedrock, Copilot Studio and Google ADK, with one environment in drift](assets/web-inventory-light.png#only-light)
 ![The Marshal web view: an inventory of 29 agents across Agentforce, Databricks, Bedrock, Copilot Studio and Google ADK, with one environment in drift](assets/web-inventory-dark.png#only-dark)
+
+## Easy to approve
+
+Most tools that touch AI agents raise questions in a security review. Marshal is built so it doesn't:
+
+- **It runs inside your network.** You host it, on your own database. There is no Marshal cloud service, so the agent definitions, instructions and permissions it records never go to a vendor. The service's only outbound requests fetch your CI provider's public signing keys.
+- **It uses no AI.** Marshal reads definitions with ordinary parsers and fixed, documented rules. It never sends your agents' instructions, tools or permissions to a language model, so there is no AI system to evaluate before you approve it.
+- **It needs no platform credentials.** Your existing CI pipelines push definitions to Marshal, signed in with their own short-lived OIDC tokens. Marshal never connects to Copilot Studio, Bedrock or any other platform where your agents live, so it holds no keys to them.
+
+The [security review](security-review.md) covers what Marshal stores, what it connects to, and how releases are signed.
 
 ## How it runs
 

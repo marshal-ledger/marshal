@@ -130,6 +130,6 @@
 
   <!-- Network posture -->
   <rect class="note" x="40" y="462" width="1130" height="56" rx="10"/>
-  <text class="t" x="60" y="496">Marshal never connects to an agent platform.</text>
-  <text class="s" x="420" y="496">Definitions arrive as files or as pushes from pipelines you run. It holds no platform credentials.</text>
+  <!-- One text element, so the gap after the first sentence doesn't depend on the font's width. -->
+  <text x="60" y="496"><tspan class="t">Marshal never connects to an agent platform.</tspan><tspan class="s" dx="10">Definitions arrive as files or as pushes from pipelines you run. It holds no platform credentials.</tspan></text>
 </svg>

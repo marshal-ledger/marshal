@@ -2,6 +2,10 @@
 
 Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](https://semver.org). Before 1.0, a minor release may change the ledger model, the ingest API or the command line; each such change is listed here.
 
+## 0.7.0 (unreleased)
+
+- The README and documentation say why Marshal is easy to approve: it runs inside your network, uses no AI, and needs no platform credentials. The architecture diagram's footnote keeps even spacing in every font.
+
 ## 0.6.0 (2026-10-27)
 
 - Terraform: a new `terraform` reader reads `terraform show -json` of a saved plan or of state. It covers Bedrock agents defined with the AWS provider (`aws_bedrockagent_agent` and its action group, knowledge base, collaborator and alias resources) or the Cloud Control provider (`awscc_bedrock_agent`), and AgentCore runtimes. Values known only after apply are followed to their resources across module inputs and outputs; sensitive values are never copied. Agents are mapped by the CloudFormation reader's Bedrock mapping, so the same agent defined either way gets the same version.

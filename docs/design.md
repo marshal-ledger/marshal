@@ -22,6 +22,7 @@ Marshal never asks anyone to author in a new format or change how they deploy. I
 - **Read-only.** Marshal never writes to repos or platforms, which keeps the security review simple.
 - **Honest about fidelity.** Every record and every translation carries a completeness or fidelity score. The ledger never guesses: a value the source doesn't state is stored as `unknown`.
 - **Self-hosted.** It runs inside the organization's network, on its own database.
+- **No AI.** Definitions are read by parsers and ranked by fixed rules. Nothing is sent to a language model, so adopting Marshal adds no AI system to review.
 
 ## Architecture
 
