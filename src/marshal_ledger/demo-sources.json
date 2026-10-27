@@ -286,6 +286,15 @@
         "packages/adl-agent/examples/openclaw-passport/enterprise/agents/research-assistant.adl.yaml",
         "packages/adl-agent/examples/openclaw-passport/consumer/consumer-agent.adl.yaml"
       ]
+    },
+    {
+      "fixture": "terraform/acwwat-basic",
+      "repo": "marshal-ledger/marshal",
+      "commit": "f6ebe120716c83e0e280cbfa77aad308b5be4441",
+      "root": "tests/fixtures/terraform",
+      "files": [
+        "acwwat-basic.plan.json"
+      ]
     }
   ]
 }

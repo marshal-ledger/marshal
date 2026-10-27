@@ -15,7 +15,7 @@ Marshal keeps one versioned record of every AI agent in an organization, whateve
 [Get started](getting-started.md){ .md-button }
 [GitHub](https://github.com/marshal-ledger/marshal){ .md-button }
 
-![A walk through the Marshal web view: the inventory of 28 public agents, a Copilot Studio agent in drift whose tool was switched to the maker's credentials, a proposed change that adds a refund function, and the agents that share an Apex action](assets/web-tour.gif)
+![A walk through the Marshal web view: the inventory of 29 public agents, a Copilot Studio agent in drift whose tool was switched to the maker's credentials, a proposed change that adds a refund function, and the agents that share an Apex action](assets/web-tour.gif)
 
 ## What it does
 
@@ -27,8 +27,8 @@ Marshal keeps one versioned record of every AI agent in an organization, whateve
 - **Portability scores** for moving an agent to another platform, from a community-maintained capability matrix.
 - **No shared secrets:** pipelines push records authenticated by their CI provider's OIDC token. Marshal never connects to agent platforms.
 
-![The Marshal web view: an inventory of 28 agents across Agentforce, Databricks, Bedrock, Copilot Studio and Google ADK, with one environment in drift](assets/web-inventory-light.png#only-light)
-![The Marshal web view: an inventory of 28 agents across Agentforce, Databricks, Bedrock, Copilot Studio and Google ADK, with one environment in drift](assets/web-inventory-dark.png#only-dark)
+![The Marshal web view: an inventory of 29 agents across Agentforce, Databricks, Bedrock, Copilot Studio and Google ADK, with one environment in drift](assets/web-inventory-light.png#only-light)
+![The Marshal web view: an inventory of 29 agents across Agentforce, Databricks, Bedrock, Copilot Studio and Google ADK, with one environment in drift](assets/web-inventory-dark.png#only-dark)
 
 ## How it runs
 
@@ -43,7 +43,7 @@ $ uvx --from 'marshal-ledger[server]' marshal demo
 $ uvx --from 'marshal-ledger[server]' marshal web --db demo.sqlite
 ```
 
-Or install it with `pip install 'marshal-ledger[server]'`. `marshal demo` downloads 28 public agent definitions from GitHub, each pinned to a commit, and records them with a short history: two proposed changes, and a Copilot Studio agent that drifted after an edit in its web designer.
+Or install it with `pip install 'marshal-ledger[server]'`. `marshal demo` downloads 29 public agent definitions from GitHub, each pinned to a commit, and records them with a short history: two proposed changes, and a Copilot Studio agent that drifted after an edit in its web designer.
 
 ![An agent page in the web view: the Copilot Studio agent's live definition differs from what was shipped, and three HIGH changes show its tool switched to the maker's credentials](assets/web-drift-light.png#only-light)
 ![An agent page in the web view: the Copilot Studio agent's live definition differs from what was shipped, and three HIGH changes show its tool switched to the maker's credentials](assets/web-drift-dark.png#only-dark)

@@ -499,6 +499,15 @@
         "cc-service-app/main/default/genAiPlugins/Unverified_Customer_Support.genAiPlugin-meta.xml",
         "cc-service-app/main/default/genAiPlugins/Verified_Customer_Support.genAiPlugin-meta.xml"
       ]
+    },
+    {
+      "id": "terraform/acwwat-basic",
+      "repo": "marshal-ledger/marshal",
+      "commit": "f6ebe120716c83e0e280cbfa77aad308b5be4441",
+      "root": "tests/fixtures/terraform",
+      "files": [
+        "acwwat-basic.plan.json"
+      ]
     }
   ]
 }
