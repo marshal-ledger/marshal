@@ -20,7 +20,7 @@ Marshal keeps one versioned record of every AI agent in an organization, whateve
 ## What it does
 
 - **Inventory** of every agent across platforms, with versions, deployments, and each record's completeness.
-- **Risk-ranked review:** pull requests that change an agent get a comment that lists permission escalations, new write tools and model changes first.
+- **Risk-ranked review:** pull requests that change an agent get a comment that lists permission escalations, new write tools and removed guardrails first.
 - **Drift and freshness:** compares what is live with what was shipped, and shows how recently each record was confirmed and by which channel.
 - **Dependencies:** "who uses this tool, this knowledge source, this permission?" Entities match exactly, so this works within each platform today; matching the same API across platforms is the next milestone.
 - **Translation** between formats, with a fidelity report computed by reading the result back.

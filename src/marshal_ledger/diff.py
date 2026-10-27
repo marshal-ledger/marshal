@@ -9,6 +9,7 @@ that a value moving from unknown to known (or back) is reported.
 from __future__ import annotations
 
 import difflib
+import re
 from dataclasses import asdict, dataclass
 from typing import Any, Iterator, Optional
 
@@ -31,6 +32,8 @@ class Change:
     """For added or removed tools, knowledge and grants: the item's scope."""
     reversible: Optional[str] = None
     """For added or removed tools: whether the tool's effects are reversible."""
+    guardrails: Optional[str] = None
+    """For changed instructions: the guardrail words found in removed lines, such as ``never, approval``."""
 
     def to_dict(self) -> dict[str, Any]:
         return {k: v for k, v in asdict(self).items() if v is not None}
@@ -49,6 +52,25 @@ def _value(category: str, path: str, a: Value, b: Value) -> Iterator[Change]:
         yield Change(category, "changed", path, before, after)
 
 
+# Words that usually state a limit on what the agent may do. Removing a line with one of them
+# can widen the agent's behavior more than adding a tool does. "Only" is left out: it appears
+# in too many ordinary sentences.
+GUARDRAIL_WORDS = re.compile(
+    r"\b(never|must not|do not|don't|cannot|can't|not allowed|forbidden|prohibited|"
+    r"approv\w*|confirm\w*|limit\w*|maximum|at most|no more than|only if|unless)\b",
+    re.IGNORECASE,
+)
+
+
+def guardrail_words(lines: list[str]) -> list[str]:
+    """The distinct guardrail words in ``lines``, lowercased, in order of first appearance."""
+    found: dict[str, None] = {}
+    for line in lines:
+        for match in GUARDRAIL_WORDS.finditer(line):
+            found.setdefault(match.group(1).lower())
+    return list(found)
+
+
 def _instructions(a: Instructions, b: Instructions) -> Iterator[Change]:
     if a.hash == b.hash:
         return
@@ -61,16 +83,22 @@ def _instructions(a: Instructions, b: Instructions) -> Iterator[Change]:
             "unknown" if b.hash is None else b.hash,
         )
         return
-    detail = "content changed"
+    detail, guardrails = "content changed", None
     if a.text is not None and b.text is not None:
-        added = removed = 0
+        added, removed = [], []
         for line in difflib.ndiff(a.text.splitlines(), b.text.splitlines()):
             if line.startswith("+ "):
-                added += 1
+                added.append(line[2:])
             elif line.startswith("- "):
-                removed += 1
-        detail = f"+{added} -{removed} lines"
-    yield Change("instructions", "changed", "instructions", a.hash, b.hash, detail)
+                removed.append(line[2:])
+        detail = f"+{len(added)} -{len(removed)} lines"
+        # A guardrail reworded in place keeps its words in an added line; report only words no added line has.
+        kept = set(guardrail_words(added))
+        words = [w for w in guardrail_words(removed) if w not in kept]
+        if words:
+            guardrails = ", ".join(words)
+            detail += f"; removed a line with {', '.join(repr(w) for w in words)}"
+    yield Change("instructions", "changed", "instructions", a.hash, b.hash, detail, guardrails=guardrails)
 
 
 def _keyed(

@@ -1,5 +1,5 @@
 from marshal_ledger.diff import diff_specs
-from marshal_ledger.model import AgentSpec, Grant, IdentityKind, KnowledgeUse, Scope, ToolUse, Value
+from marshal_ledger.model import AgentSpec, Grant, IdentityKind, Instructions, KnowledgeUse, Scope, ToolUse, Value
 from marshal_ledger.risk import Severity, rank
 
 
@@ -63,7 +63,7 @@ def test_permissions_model_and_knowledge():
     assert found["permissions.identity"] is Severity.HIGH
     assert found["grant store/db WRITE"] is Severity.HIGH
     assert found["grant model/llm CAN_QUERY"] is Severity.MEDIUM
-    assert found["model.requested"] is Severity.HIGH
+    assert found["model.requested"] is Severity.MEDIUM
     assert found["knowledge knowledge/faq"] is Severity.MEDIUM
     assert found["description"] is Severity.LOW
 
@@ -86,3 +86,50 @@ def test_security_relevant_extension_changes_rank_high():
     found = severities(a, b)
     assert found["extensions.copilot-studio.actions.Search.connection_mode"] is Severity.HIGH
     assert found["extensions.copilot-studio.topics.x"] is Severity.LOW
+
+
+def test_a_new_model_provider_is_high_and_an_upgrade_within_one_is_medium():
+    def spec(model, provider):
+        return AgentSpec(model={"requested": Value[str].declared(model), "provider": Value[str].declared(provider)})
+
+    upgrade = severities(spec("claude-sonnet-5", "anthropic"), spec("claude-sonnet-5-5", "anthropic"))
+    assert upgrade == {"model.requested": Severity.MEDIUM}
+    switch = severities(spec("claude-sonnet-5-5", "anthropic"), spec("gpt-5", "openai"))
+    assert switch == {"model.requested": Severity.MEDIUM, "model.provider": Severity.HIGH}
+
+
+def instructions(text):
+    return AgentSpec(instructions=Instructions(hash="sha256:" + str(hash(text)), text=text))
+
+
+GUARDED = "Match invoices to purchase orders.\nNever approve payment without explicit AP approval.\nBe concise."
+
+
+def test_changed_instructions_are_medium():
+    found = severities(instructions(GUARDED), instructions(GUARDED.replace("Be concise.", "Be brief.")))
+    assert found == {"instructions": Severity.MEDIUM}
+
+
+def test_instructions_that_lose_a_guardrail_are_high():
+    [ranked] = rank(diff_specs(instructions(GUARDED), instructions("Match invoices to purchase orders.\nBe concise.")))
+    assert ranked.severity is Severity.HIGH
+    assert ranked.change.guardrails == "never, approve, approval"
+    assert ranked.line() == "HIGH  ~ instructions: +0 -1 lines; removed a line with 'never', 'approve', 'approval'"
+
+
+def test_a_guardrail_reworded_in_place_is_not_a_removal():
+    reworded = GUARDED.replace("Never approve payment without explicit AP approval.",
+                               "Never approve a payment without approval from AP.")
+    assert severities(instructions(GUARDED), instructions(reworded)) == {"instructions": Severity.MEDIUM}
+
+
+def test_hash_only_instructions_are_medium():
+    # Without the text, a removed guardrail can't be seen, so the change is reviewed but not escalated.
+    a = AgentSpec(instructions=Instructions(hash="sha256:aa"))
+    b = AgentSpec(instructions=Instructions(hash="sha256:bb"))
+    assert severities(a, b) == {"instructions": Severity.MEDIUM}
+
+
+def test_ranked_change_with_guardrails_survives_a_round_trip():
+    [ranked] = rank(diff_specs(instructions(GUARDED), instructions("Be concise.")))
+    assert type(ranked).from_dict(ranked.to_dict()) == ranked

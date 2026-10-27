@@ -22,7 +22,7 @@ HIGH  + grant other/aws.* dynamodb:UpdateItem (write)
 Completeness 73%
 ```
 
-Changes are ranked by what they let the agent do. Identity changes, new write or admin grants, new tools whose scope is write or unknown, and a change of model are HIGH. New read or execute grants, new execute tools, principal changes and guardrail settings are MED. Removals, read-only additions and wording such as instructions are LOW. The full rules are in [Risk ranking](../ledger-model.md#risk-ranking).
+Changes are ranked by what they let the agent do. Identity changes, new write or admin grants, new tools whose scope is write or unknown, a new model provider, and instructions that lose a line stating a limit (such as "never" or "approval") are HIGH. New read or execute grants, new execute tools, principal changes, other instruction changes, a new model from the same provider and guardrail settings are MED. Removals, read-only additions and descriptions are LOW. The full rules are in [Risk ranking](../ledger-model.md#risk-ranking).
 
 ## Set it up on GitHub
 
