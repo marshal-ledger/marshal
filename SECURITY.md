@@ -21,3 +21,7 @@ Marshal handles agent definitions, which can contain sensitive configuration. By
 - Marshal never connects to agent platforms. Pipelines push to it, authenticated with short-lived OIDC tokens.
 
 See [Security posture](docs/design.md#security-posture) and [Network posture](docs/design.md#network-posture).
+
+## Security review
+
+[docs/security-review.md](docs/security-review.md) is written for the security and data-classification reviewers who approve a deployment: what is stored and where, what is never stored, authentication, network posture, supply chain, retention and the audit trail, including what Marshal doesn't do.

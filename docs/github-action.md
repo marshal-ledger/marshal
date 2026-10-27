@@ -50,3 +50,15 @@ Completeness 82%
 ```
 
 Pull requests from forks don't receive OIDC tokens, so the action can't record events for them.
+
+## Runners without internet access
+
+The Action has three steps that reach beyond the runner, so a self-hosted runner without internet access needs each one served from inside your network:
+
+1. **Python.** The Action runs `actions/setup-python`, pinned to a commit, with `python-version` (default `3.12`). Without access to github.com, setup-python takes Python only from the runner's tool cache (`RUNNER_TOOL_CACHE/Python`). Populate it as GitHub describes in [Setting up the tool cache on self-hosted runners without internet access](https://docs.github.com/en/enterprise-server/admin/github-actions/managing-access-to-actions-from-githubcom/setting-up-the-tool-cache-on-self-hosted-runners-without-internet-access), with a version that matches `python-version`.
+2. **Marshal.** The Action installs Marshal from its own checkout with `pip install`, which builds it from source. pip reads its index from `PIP_INDEX_URL` or `pip.conf` on the runner (see [Locked-down installs](deployment.md#locked-down-installs)), and the build uses the same index. Besides `pydantic` and `pyyaml`, the index must serve the build backends `hatchling` and `hatch-fancy-pypi-readme`, and their dependencies. A pull-through proxy of PyPI serves them on demand; a curated mirror must list them. On a connected machine, `pip download hatchling hatch-fancy-pypi-readme pydantic pyyaml` fetches the whole set for that machine's Python and platform.
+3. **Other Actions.** On GitHub Enterprise Server without GitHub Connect, sync `marshal-ledger/marshal` and `actions/setup-python`, at the commit the Action pins, to the appliance with `actions-sync`.
+
+The runner also needs to reach the Marshal ingest URL and your GitHub host, which issues the OIDC token and, for the pull request comment, serves the API. The comment step runs the `gh` CLI, so a self-hosted runner needs it installed, or set `comment: "false"`.
+
+If your runners already have Python and an internal index, you can skip the Action and run the client directly: `pip install marshal-ledger`, then `marshal push <artifacts> --event proposed --target prod --url <ingest URL> --commit "$GITHUB_SHA"`, in a job with `id-token: write`. That installs the published wheel, which needs no build backends.

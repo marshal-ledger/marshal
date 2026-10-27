@@ -115,7 +115,9 @@ def create_app(config: ServerConfig, key_resolver: KeyResolver | None = None) ->
         if not config.store.startswith(("postgresql://", "postgres://")):
             raise ValueError("store_auth applies only to a postgresql:// store")
         password = password_provider(config.store_auth)
-    app = FastAPI(title="Marshal ingest API", version=__version__)
+    # No /docs, /redoc or /openapi.json: they would be unauthenticated, and the docs pages load
+    # their scripts from a CDN. The API is described in docs/ingest-server.md.
+    app = FastAPI(title="Marshal ingest API", version=__version__, docs_url=None, redoc_url=None, openapi_url=None)
     app.add_exception_handler(StoreUnavailable, store_unavailable)
 
     def caller(authorization: Optional[str] = Header(default=None)) -> Caller:
