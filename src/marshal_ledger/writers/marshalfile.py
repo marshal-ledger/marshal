@@ -10,29 +10,15 @@ from __future__ import annotations
 
 from typing import Any
 
-import yaml
-
 from ..model import AgentVersion, Value
 from ..readers.marshalfile import FORMAT, KIND, UNKNOWN, clean, scrub_block
-from .base import Writer, Written, scope_value
+from .base import Writer, Written, scope_value, yaml_text
 
 HEADER = (
     "# Marshal file: a hand-written agent definition (docs/formats/marshal-file.md).\n"
     "# Values here are recorded as attested by a person. Check each one against the\n"
     "# platform, set attested_by and attested_at, and write `unknown` for anything you can't confirm.\n"
 )
-
-
-class _Dumper(yaml.SafeDumper):
-    pass
-
-
-def _str(dumper: yaml.SafeDumper, data: str) -> yaml.Node:
-    style = "|" if "\n" in data else None
-    return dumper.represent_scalar("tag:yaml.org,2002:str", data, style=style)
-
-
-_Dumper.add_representer(str, _str)
 
 
 def _known(value: Value) -> Any:
@@ -116,7 +102,7 @@ class MarshalFileWriter(Writer):
         return Written(document=_compact(doc), notes=notes)
 
     def dump(self, document: dict[str, Any]) -> str:
-        return HEADER + yaml.dump(document, Dumper=_Dumper, sort_keys=False, allow_unicode=True, width=100)
+        return HEADER + yaml_text(document)
 
 
 TEMPLATE = """\

@@ -6,11 +6,9 @@ import json
 import re
 from typing import Any
 
-import yaml
-
 from ..model import MARSHAL_NAMESPACE, AgentVersion
 from ..readers.adkconfig import BUILTINS, FORMAT, ROOT_FILE, mcp_server
-from .base import Writer, Written
+from .base import Writer, Written, yaml_text
 
 _BUILTIN_REFS = {ref: name for name, (ref, _) in BUILTINS.items()}
 _PARAMETERS = {"temperature": "temperature", "top_p": "top_p", "max_tokens": "max_output_tokens"}
@@ -117,7 +115,7 @@ class AdkConfigWriter(Writer):
         marshal = {"agent": record.agent}
         if record.platform != "google-adk":
             marshal["platform"] = record.platform
-        text = f"# {MARSHAL_NAMESPACE}: {json.dumps(marshal)}\n" + yaml.safe_dump(doc, sort_keys=False, allow_unicode=True, width=100)
+        text = f"# {MARSHAL_NAMESPACE}: {json.dumps(marshal)}\n" + yaml_text(doc)
         return Written(document=doc, notes=notes, warnings=warnings, files={ROOT_FILE: text})
 
 

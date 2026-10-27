@@ -4,6 +4,9 @@ Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](
 
 ## 0.5.0 (unreleased)
 
+- The CloudFormation writer sets `AutoPrepare` on the agent, as the AWS samples do, so a deployed agent is ready to test.
+- Every YAML writer writes multi-line instructions as a literal block, as the Copilot Studio and Marshal file writers already did.
+
 ## 0.4.0 (2026-10-27)
 
 - Risk ranking: a changed model ranks MED, and HIGH only when its provider changes, so routine upgrades no longer drown out escalations. Changed instructions rank MED instead of LOW, and HIGH when a removed line holds a word that usually states a limit (such as "never", "must not" or "approval"); the diff names the words. Diff changes carry a new optional `guardrails` field.

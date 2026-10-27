@@ -17,7 +17,7 @@ import yaml
 
 from ..model import MARSHAL_NAMESPACE, AgentVersion, IdentityKind
 from ..readers.copilotstudio import FORMAT, PROVIDERS
-from .base import Writer, Written
+from .base import Writer, Written, yaml_text
 
 _POLICIES = {
     "anyone in the tenant": "Any",
@@ -33,26 +33,13 @@ def _file_name(text: str) -> str:
     return name[:60]
 
 
-class _Dumper(yaml.SafeDumper):
-    """Writes multi-line text, such as instructions, as a literal block that reads as written."""
-
-
-_Dumper.add_representer(
-    str, lambda dumper, value: dumper.represent_scalar("tag:yaml.org,2002:str", value, style="|" if "\n" in value else None)
-)
-
-
-def _dump(data: Any, **options: Any) -> str:
-    return yaml.dump(data, Dumper=_Dumper, sort_keys=False, allow_unicode=True, **options)
-
-
 def _yaml(data: dict[str, Any], name: str | None = None, description: str | None = None) -> str:
     header = ""
     if name:
         header += f"# Name: {name}\n"
     if description:
         header += f"# {description.splitlines()[0]}\n"
-    return header + _dump(data, width=100)
+    return header + yaml_text(data)
 
 
 class CopilotStudioWriter(Writer):
@@ -142,7 +129,7 @@ class CopilotStudioWriter(Writer):
             settings["authenticationMode"] = "Integrated"
             notes.setdefault("extensions.copilot-studio.settings", "the source sets no authentication mode; integrated was added")
         header = f"# {MARSHAL_NAMESPACE}: {json.dumps(marshal)}\n" if marshal else ""
-        files["settings.mcs.yml"] = header + _dump(settings)
+        files["settings.mcs.yml"] = header + yaml_text(settings, width=80)
 
         default_mode = "Invoker" if spec.permissions.identity.value is IdentityKind.ON_BEHALF_OF_USER else "Maker"
         action_extras = ext.get("actions") or {}
