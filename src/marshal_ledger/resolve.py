@@ -10,6 +10,8 @@ reaches, derived only from what the ref states:
   an MCP server, by URL or by the package an ``npx`` or ``uvx`` command runs;
 - ``openapi:<spec>#<operationId>``: an OpenAPI operation, from ADL annotations;
 - ``url:https://contoso.sharepoint.com/sites/hr``: a knowledge source at a URL;
+- ``lambda:arn:aws:lambda:...``, ``lambda:import:<export>`` or ``lambda:function:<name>``:
+  the Lambda function that runs a Bedrock action group, from the record's bindings;
 - ``host:api.acme.example``: the API host of any of the URLs above, and of network
   grants. Sharing a host says two agents reach the same system, not that they do the
   same thing, so host matches are weaker.
@@ -40,6 +42,7 @@ KINDS = {
     "mcp": "same MCP server",
     "openapi": "same OpenAPI operation",
     "url": "same knowledge source",
+    "lambda": "same Lambda function",
     "host": "same API host",
 }
 """How a match through each kind of target is described."""
@@ -65,6 +68,10 @@ def strength(target: str) -> int:
 
 
 def describe(target: str) -> str:
+    if target.startswith("lambda:import:"):
+        return "same Lambda export"
+    if target.startswith("lambda:function:"):
+        return "same Lambda function name"  # unique within an account and region, which the template doesn't state
     return KINDS.get(target.split(":", 1)[0], "same target")
 
 
@@ -156,6 +163,10 @@ def targets(record: AgentVersion) -> list[Target]:
         normalized = normalize_url(url) if "://" in url else None
         if normalized:
             out.append(Target(item.ref, "knowledge", f"url:{normalized}", "knowledge source URL"))
+    executors = record.bindings.get("executors")
+    for ref, found in (executors.items() if isinstance(executors, dict) else ()):
+        for executor in found if isinstance(found, list) else [found]:
+            out.append(Target(ref, "tool", f"lambda:{executor}", "Lambda function that runs the action group"))
     for grant in record.spec.permissions.grants:
         if grant.target.startswith("other/network."):
             host = grant.target.removeprefix("other/network.").lower()

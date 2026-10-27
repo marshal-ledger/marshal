@@ -4,6 +4,7 @@ Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](
 
 ## 0.5.0 (unreleased)
 
+- Bedrock action groups resolve to the Lambda function that runs them, so agents in different stacks that share a function match across platforms' dependency views: by function ARN, by the export a stack imports it from, or by its stated name. The function is recorded in the event's bindings (`executors`), so versions don't change.
 - Dependencies across platforms: `marshal deps`, the web view and `/v0/deps` also list refs on any platform that reach the same HTTP operation, MCP server, OpenAPI operation, knowledge URL or API host, each with how it matched (`match`, `via`). Matches come only from what the definitions state; nothing is fetched or matched on a name. `--exact` (or `resolve=false`) turns it off, and a pattern can name a target, such as `host:api.acme.example`.
 - `marshal demo` adds a proposed Copilot Studio topic that calls the API host the public ADL examples may reach, so the dependencies page shows a match across platforms.
 - The CloudFormation writer sets `AutoPrepare` on the agent, as the AWS samples do, so a deployed agent is ready to test.

@@ -466,6 +466,7 @@ class CloudFormationReader(DocumentReader):
                 continue
             base_ref = f"tool/bedrock.{agent_id.replace('/', '.')}.{name}"
             executor_scope = self._executor_scope(template, group.get("ActionGroupExecutor") or {})
+            executor = self._executor(template, group.get("ActionGroupExecutor") or {})
             schema = group.get("ApiSchema") or {}
             functions = (group.get("FunctionSchema") or {}).get("Functions")
             tools: list[ToolUse] = []
@@ -501,6 +502,9 @@ class CloudFormationReader(DocumentReader):
                 if executor_scope and not use.scope.is_known:
                     use.scope = executor_scope
                 use.ref = tool_refs.get(f"{name}.{use.name}" if use.ref != base_ref else name, use.ref)
+                if executor:
+                    # Environment-bound, like the function itself, so it stays out of the version hash.
+                    bindings.setdefault("executors", {})[use.ref] = executor
                 spec.tools.append(use)
                 entity(EntityKind.TOOL, use.ref, use.name)
 
@@ -559,6 +563,29 @@ class CloudFormationReader(DocumentReader):
                           detected_by=f"resource type {AGENT}", commit=options.commit, pipeline_run=options.pipeline_run),
             spec=spec, bindings=bindings,
         )
+
+    def _executor(self, template: _Template, executor: dict[str, Any]) -> Optional[str]:
+        """The Lambda function that runs an action group, as something another stack could name too.
+
+        A literal function ARN (without a version or alias), ``import:<export>`` for a function
+        imported from another stack, or ``function:<name>`` for one in this template whose name is
+        stated. A function whose name CloudFormation generates is local to this stack: None.
+        """
+        value = executor.get("Lambda")
+        if value is None:
+            return None
+        function = template.target(value)
+        if function is not None:
+            if template.resources[function].get("Type") != FUNCTION:
+                return None
+            name = template.string(template.props(function).get("FunctionName"))
+            return f"function:{name}" if name and "${" not in name else None
+        resolved = template.string(value) or ""
+        if match := re.fullmatch(r"\$\{import:([^}]+)\}", resolved):
+            return f"import:{match.group(1)}"
+        if match := re.fullmatch(r"(arn:[\w-]+:lambda:[\w-]+:\d{12}:function:[\w-]+)(:[\w$-]+)?", resolved):
+            return match.group(1)
+        return None
 
     def _executor_scope(self, template: _Template, executor: dict[str, Any]) -> Optional[Value[Scope]]:
         """The widest scope in the IAM role of an action group's executor Lambda, when it is in the template."""

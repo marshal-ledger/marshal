@@ -873,6 +873,19 @@ class Store:
                 stored = latest if version == latest.record.version else self._version_row(agent, "version = ?", (version,))
                 yield agent, row["platform"], stored, version == latest.record.version, tuple(sorted(shipped.get(version, [])))
 
+    def _with_event_bindings(self, agent: str, record: AgentVersion) -> AgentVersion:
+        """The record with the executors its events recorded, in every environment, as lists per ref.
+
+        Bindings belong to events, so a version shipped to two environments may run on two functions.
+        """
+        executors: dict[str, list[str]] = {}
+        for row in self._q("SELECT bindings FROM events WHERE agent = ? AND version = ?", (agent, record.version)):
+            found = json.loads(row["bindings"] or "{}").get("executors")
+            for ref, executor in (found.items() if isinstance(found, dict) else ()):
+                if executor not in executors.setdefault(ref, []):
+                    executors[ref].append(executor)
+        return record.model_copy(update={"bindings": {"executors": executors}}) if executors else record
+
     def dependents(self, pattern: str, *, relation: str | None = None, shipped_only: bool = False) -> list[Dependent]:
         """Agents whose latest or shipped versions reference an entity matching ``pattern`` (a glob)."""
         out: list[Dependent] = []
@@ -896,7 +909,7 @@ class Store:
         if exact is None:
             exact = self.dependents(pattern, relation=relation, shipped_only=shipped_only)
         seen = {(d.agent, d.label, d.ref) for d in exact}
-        versions = [(v, targets(v[2].record)) for v in self._dependency_versions(shipped_only)]
+        versions = [(v, targets(self._with_event_bindings(v[0], v[2].record))) for v in self._dependency_versions(shipped_only)]
         wanted: set[str] = set()
         direct = pattern.lower().split(":", 1)[0] in ("http", "mcp", "openapi", "url", "host")
         for (agent, _, stored, _, _), found in versions:

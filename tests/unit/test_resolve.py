@@ -1,6 +1,7 @@
 """Entity resolution: refs on different platforms that reach the same API, server or source."""
 
 import json
+import textwrap
 
 import pytest
 from fastapi.testclient import TestClient
@@ -127,3 +128,53 @@ def test_web_view_and_api_show_related_refs(db):
         ("refunds-spec", "exact"), ("refunds-copilot", "same HTTP operation"), ("ledger-adl", "same API host")]
     exact = client.get("/v0/deps", params={"q": "tool/http.POST.https://api.acme.example/refunds", "resolve": "false"}).json()
     assert [d["agent"] for d in exact] == ["refunds-spec"]
+
+
+def bedrock_stack(stack, executor, function_name=None):
+    """A template with one agent whose action group runs on ``executor``."""
+    from marshal_ledger.readers.cloudformation import CloudFormationReader, load_template
+
+    function = ""
+    if function_name is not None:  # "" for a function whose name CloudFormation generates
+        name = f"FunctionName: {function_name}, " if function_name else ""
+        function = f"""
+          Fn:
+            Type: AWS::Lambda::Function
+            Properties: {{{name}Runtime: python3.12, Handler: app.handler, Role: arn:aws:iam::123456789012:role/fn}}"""
+    template = f"""
+        Resources:{function}
+          Agent:
+            Type: AWS::Bedrock::Agent
+            Properties:
+              AgentName: {stack}
+              Instruction: Look up refunds and issue them within the policy limit.
+              ActionGroups:
+                - ActionGroupName: refunds
+                  ActionGroupExecutor: {{Lambda: {executor}}}
+                  FunctionSchema: {{Functions: [{{Name: issue_refund}}]}}
+    """
+    [record] = CloudFormationReader().read_data(load_template(textwrap.dedent(template)), f"{stack}.yaml").records
+    return record
+
+
+@pytest.mark.parametrize("executor, function_name, target", [
+    ("!ImportValue refunds-stack-FunctionArn", None, "lambda:import:refunds-stack-FunctionArn"),
+    ("arn:aws:lambda:us-east-1:123456789012:function:refunds:live", None,
+     "lambda:arn:aws:lambda:us-east-1:123456789012:function:refunds"),
+    ("!GetAtt Fn.Arn", "refunds-handler", "lambda:function:refunds-handler"),
+    ("!GetAtt Fn.Arn", "!Sub '${AWS::StackName}-refunds'", None),   # a name only this stack knows
+    ("!GetAtt Fn.Arn", "", None),
+])
+def test_bedrock_executors_resolve_to_their_lambda(executor, function_name, target):
+    record = bedrock_stack("refunds", executor, function_name)
+    found = [t.target for t in targets(record) if t.kind == "lambda"]
+    assert found == ([target] if target else [])
+    assert not record.spec.extensions["bedrock"].get("executors"), "kept out of the hashed spec"
+
+
+def test_agents_in_different_stacks_sharing_an_exported_lambda(ledger_location):
+    with Store(ledger_location) as store:
+        store.record([bedrock_stack("support", "!ImportValue refunds-stack-FunctionArn"),
+                      bedrock_stack("billing", "!ImportValue refunds-stack-FunctionArn")], event=SHIPPED, environment="prod")
+        [other] = store.related("tool/bedrock.support.*")
+    assert (other.agent, other.match, other.via) == ("billing/Agent", "same Lambda export", "lambda:import:refunds-stack-FunctionArn")
