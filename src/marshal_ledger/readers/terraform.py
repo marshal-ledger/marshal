@@ -79,6 +79,22 @@ _IDENTIFIERS = ("arn", "id", "name", "agent_id", "agent_arn", "agent_alias_arn",
 # in the plan when the value is already known, as in state JSON.
 _LINKED = {"agent_resource_role_arn", "role", "role_arn", "role_name", "lambda", "knowledge_base_id", "alias_arn",
            "agent_id", "agent_runtime_id", "policy_arn"}
+# What is left out when an attribute's value comes through a local, by attribute.
+_LOCAL_CONSEQUENCES = {
+    "role": "so this policy's permissions aren't linked to a role",
+    "role_name": "so this policy's permissions aren't linked to a role",
+    "agent_resource_role_arn": "so the agent's role, and its permissions, aren't linked",
+    "role_arn": "so the role, and its permissions, aren't linked",
+    "alias_arn": "so this collaborator isn't linked to its agent",
+    "agent_id": "so this isn't linked to its agent",
+    "agent_runtime_id": "so this isn't linked to its runtime",
+    "lambda": "so the Lambda function that runs this action group isn't linked",
+    "knowledge_base_id": "so this knowledge base isn't linked",
+    "action_groups": "so if the agent has action groups, they aren't read",
+    "knowledge_bases": "so if the agent has knowledge bases, they aren't read",
+    "agent_collaborators": "so if the agent has collaborators, they aren't read",
+}
+
 # Where a CloudFormation property's Terraform attribute isn't its snake_case name.
 _ATTRIBUTE_NAMES = {("aws_iam_role", "RoleName"): "name", ("aws_bedrockagent_agent", "IdleSessionTTLInSeconds"): "idle_session_ttl_in_seconds",
                     ("awscc_bedrock_agent", "IdleSessionTTLInSeconds"): "idle_session_ttl_in_seconds"}
@@ -153,11 +169,13 @@ class _Plan:
     def of_type(self, *types: str) -> list[_Instance]:
         return [i for i in self.instances.values() if i.type in types]
 
-    def resolve(self, module: tuple[str, ...], references: list[str], depth: int = 0) -> Optional[tuple[_Instance, str]]:
+    def resolve(self, module: tuple[str, ...], references: list[str], depth: int = 0,
+                locals_seen: Optional[list[str]] = None) -> Optional[tuple[_Instance, str]]:
         """The resource instance, and attribute, that the first resolvable reference names.
 
         Module inputs (``var.x``) are followed to the calling module's argument, and module
-        outputs (``module.m.x``) into the called module's output expression.
+        outputs (``module.m.x``) into the called module's output expression. Locals a reference
+        passes through, which a plan doesn't record, are added to ``locals_seen``.
         """
         if depth > 20:
             return None
@@ -167,7 +185,7 @@ class _Plan:
                     continue
                 call = ((self.modules.get(module[:-1]) or {}).get("module_calls") or {}).get(module[-1]) or {}
                 argument = (call.get("expressions") or {}).get(reference.split(".")[1])
-                found = self.resolve(module[:-1], (argument or {}).get("references") or [], depth + 1) \
+                found = self.resolve(module[:-1], (argument or {}).get("references") or [], depth + 1, locals_seen) \
                     if isinstance(argument, dict) else None
             elif reference.startswith("module."):
                 parts = reference.split(".")
@@ -175,8 +193,12 @@ class _Plan:
                     continue
                 child = module + (re.sub(r"\[.*\]$", "", parts[1]),)
                 output = (((self.modules.get(child) or {}).get("outputs") or {}).get(parts[2]) or {}).get("expression") or {}
-                found = self.resolve(child, output.get("references") or [], depth + 1)
+                found = self.resolve(child, output.get("references") or [], depth + 1, locals_seen)
             elif reference.split(".", 1)[0] in ("data", "local", "path", "each", "count", "self", "terraform"):
+                if reference.startswith("local.") and locals_seen is not None:
+                    name = "local." + reference.split(".")[1].split("[")[0]
+                    if name not in locals_seen:
+                        locals_seen.append(name)
                 continue
             else:
                 found = self._instance(module, reference)
@@ -208,6 +230,7 @@ class _TerraformTemplate(_Template):
         self.types: dict[str, str] = {}
         self._translated: dict[str, dict[str, Any]] = {}
         self._known: dict[str, str] = {}
+        self.warnings: list[str] = []
         for instance in plan.instances.values():
             for attribute in _IDENTIFIERS:
                 value = instance.values.get(attribute)
@@ -246,9 +269,12 @@ class _TerraformTemplate(_Template):
                 # One expression covers the whole object, so which reference fills this field is unknown.
                 return UNKNOWN
             references = expression.get("references") if isinstance(expression, dict) else None
-            found = self.plan.resolve(instance.module, references) if references else None
+            locals_seen: list[str] = []
+            found = self.plan.resolve(instance.module, references, locals_seen=locals_seen) if references else None
             if found:
                 return {"Fn::GetAtt": [found[0].address, pascal(found[1])]}
+            if locals_seen:
+                self._warn_local(instance, name, locals_seen)
             return UNKNOWN if expression is None and name in _LINKED else None
         if isinstance(value, dict):
             # A plan leaves out keys known only after apply, and lists them in after_unknown.
@@ -268,6 +294,15 @@ class _TerraformTemplate(_Template):
             # A literal ARN or id of another resource in the plan, as state JSON gives it: link to it.
             return {"Fn::GetAtt": [self._known[value], "Arn"]}
         return value
+
+    def _warn_local(self, instance: _Instance, name: str, locals_seen: list[str]) -> None:
+        """Say when a value isn't followed because it comes through a local, and what that leaves out,
+        so a missing link isn't read as a missing permission or tool."""
+        consequence = _LOCAL_CONSEQUENCES.get(name, "so if it is set, it is recorded as unknown")
+        message = (f"{instance.address}: {name} comes from {', '.join(locals_seen)}, which a Terraform plan "
+                   f"doesn't record, {consequence}")
+        if message not in self.warnings:
+            self.warnings.append(message)
 
     def _props(self, instance: _Instance, attributes: list[str]) -> dict[str, Any]:
         props: dict[str, Any] = {}
@@ -458,7 +493,9 @@ class TerraformReader(DocumentReader):
     def read_data(self, data: Any, artifact: str, options: ReadOptions | None = None) -> ReadResult:
         folder = str(PurePosixPath(artifact).parent)
         template = _TerraformTemplate(_Plan(data), artifact, "" if folder == "." else folder)
-        return CloudFormationReader().read_template(template, options)
+        result = CloudFormationReader().read_template(template, options)
+        result.warnings += [f"{artifact}: {w}" for w in template.warnings]
+        return result
 
 
 __all__ = ["FORMAT", "TerraformReader", "pascal"]

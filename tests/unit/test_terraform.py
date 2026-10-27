@@ -199,3 +199,18 @@ def test_only_plans_and_states_with_agents_match():
     assert TerraformReader.matches(refunds_plan())
     assert not TerraformReader.matches({"terraform_version": "1.13.4", "planned_values": {"root_module": {}}})
     assert not TerraformReader.matches({"Resources": {}})
+
+
+def test_a_link_lost_through_a_local_is_reported():
+    data = refunds_plan()
+    policy = next(c for c in data["resource_changes"] if c["address"] == "aws_iam_role_policy.agent")
+    policy["change"]["after_unknown"]["role"] = True
+    next(r for r in data["planned_values"]["root_module"]["resources"] if r["address"] == "aws_iam_role_policy.agent")["values"]["role"] = None
+    data["configuration"]["root_module"]["resources"].append(
+        {"address": "aws_iam_role_policy.agent", "type": "aws_iam_role_policy", "name": "agent",
+         "expressions": {"role": {"references": ["local.role_name"]}}})
+    result = read(data)
+    [record] = result.records
+    assert record.spec.permissions.grants == []
+    assert result.warnings == ["refunds.plan.json: aws_iam_role_policy.agent: role comes from local.role_name, which a "
+                               "Terraform plan doesn't record, so this policy's permissions aren't linked to a role"]
