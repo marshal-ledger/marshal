@@ -1,0 +1,9 @@
+# Power Platform connectors whose documented server or API isn't in their refs. See README.md.
+entries:
+  - ref: tool/mcp.powerplatform.shared_microsoftlearndocsmcpserver
+    target: mcp:https://learn.microsoft.com/api/mcp
+    sources:
+      # "Adds Microsoft Learn content as context through the Microsoft Learn Docs MCP Server"
+      - https://learn.microsoft.com/en-us/connectors/microsoftlearndocsmcpserver/
+      # The Microsoft Learn MCP Server's endpoint: https://learn.microsoft.com/api/mcp
+      - https://learn.microsoft.com/en-us/training/support/mcp

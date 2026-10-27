@@ -299,6 +299,8 @@ class Dependent:
     such as ``same HTTP operation`` (see :mod:`marshal_ledger.resolve`)."""
     via: Optional[str] = None
     """For a resolved match, the target the two refs share."""
+    basis: Optional[str] = None
+    """For a resolved match, how this ref's target was derived, with any sources that document it."""
 
 
 @dataclass(frozen=True)
@@ -904,18 +906,19 @@ class Store:
         ``pattern`` may also name targets directly, such as ``host:api.acme.example``. Refs that
         ``dependents`` already returns (pass them as ``exact``) aren't repeated.
         """
-        from .resolve import describe, strength, targets
+        from .resolve import label, strength, targets
 
         if exact is None:
             exact = self.dependents(pattern, relation=relation, shipped_only=shipped_only)
         seen = {(d.agent, d.label, d.ref) for d in exact}
         versions = [(v, targets(self._with_event_bindings(v[0], v[2].record))) for v in self._dependency_versions(shipped_only)]
-        wanted: set[str] = set()
-        direct = pattern.lower().split(":", 1)[0] in ("http", "mcp", "openapi", "url", "host")
+        # Target → whether every way the matched refs reach it is only documented, not stated.
+        wanted: dict[str, bool] = {}
+        direct = pattern.lower().split(":", 1)[0] in ("http", "mcp", "openapi", "url", "host", "lambda")
         for (agent, _, stored, _, _), found in versions:
             for t in found:
                 if (agent, stored.label, t.ref) in seen or (direct and fnmatch.fnmatchcase(t.target.lower(), pattern.lower())):
-                    wanted.add(t.target)
+                    wanted[t.target] = wanted.get(t.target, True) and bool(t.sources)
         best: dict[tuple[str, str, str], Dependent] = {}
         for (agent, platform, stored, latest, shipped), found in versions:
             for t in found:
@@ -923,8 +926,10 @@ class Store:
                 if t.target not in wanted or key in seen or (relation and t.relation != relation):
                     continue
                 if key not in best or strength(t.target) > strength(best[key].via or ""):
+                    basis = t.basis + (": " + ", ".join(t.sources) if t.sources else "")
+                    match = label(t) if t.sources or not wanted[t.target] else label(t) + " (documented)"
                     best[key] = Dependent(agent, platform, stored.label, t.relation, t.ref, latest=latest, shipped=shipped,
-                                          match=describe(t.target), via=t.target)
+                                          match=match, via=t.target, basis=basis)
         return sorted(best.values(), key=lambda d: (-strength(d.via or ""), d.agent, d.label, d.ref))
 
     def entities(self, kind: str | None = None) -> list[tuple[Entity, int]]:
