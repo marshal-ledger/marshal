@@ -16,7 +16,7 @@ spec:
       annotations:
         checksum/config: {{ toYaml .Values.config | sha256sum }}
     spec:
-      securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      securityContext: {{- include "marshal.securityContext" .Values.podSecurityContext | nindent 8 }}
       containers:
         - name: marshal
           image: "{{ required "image.repository is required" .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
@@ -36,7 +36,7 @@ spec:
           livenessProbe:
             httpGet: {path: /healthz, port: http}
             periodSeconds: 20
-          securityContext: {{- toYaml .Values.securityContext | nindent 12 }}
+          securityContext: {{- include "marshal.securityContext" .Values.securityContext | nindent 12 }}
           resources: {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
             - name: config

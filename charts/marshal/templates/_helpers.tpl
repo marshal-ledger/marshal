@@ -18,3 +18,17 @@ helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version }}
 app.kubernetes.io/name: {{ .Chart.Name }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
+
+{{/*
+A security context without its empty values, so `runAsUser: ""` or `fsGroup: null` leaves the
+field out and OpenShift's restricted SCC assigns it from the namespace's range.
+*/}}
+{{- define "marshal.securityContext" -}}
+{{- $context := dict -}}
+{{- range $key, $value := . -}}
+{{- if not (or (kindIs "invalid" $value) (and (kindIs "string" $value) (eq $value ""))) -}}
+{{- $_ := set $context $key $value -}}
+{{- end -}}
+{{- end -}}
+{{- toYaml $context -}}
+{{- end -}}
