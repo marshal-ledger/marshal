@@ -91,4 +91,6 @@ Merge requests from forks run in the fork's project, so their tokens name the fo
 
 ## Testing
 
-The template is checked against GitLab's published `.gitlab-ci.yml` schema, pinned to a commit, and its script is run in its image with a stand-in for Marshal to check the arguments it passes. Comment posting is tested against a stand-in for GitLab's notes API. The template hasn't yet run on a GitLab instance.
+The template is checked against GitLab's published `.gitlab-ci.yml` schema, pinned to a commit, and its script is run in its image with a stand-in for Marshal to check the arguments it passes. Comment posting is tested against a stand-in for GitLab's notes API.
+
+**Tested on GitLab.com:** on 2026-10-27, a private GitLab.com project included the template from `v0`, with its jobs on a GitLab runner reaching a Marshal server configured for GitLab.com. A push to the protected `main` branch recorded `shipped`, with the commit, pipeline id and project taken from the GitLab ID token. A merge request recorded `proposed` and got one comment ranking the change, and later pushes updated that comment instead of adding more. That test found that `PRIVATE-TOKEN` refuses OAuth tokens, fixed in 0.7.1 by sending tokens as `Authorization: Bearer`.
