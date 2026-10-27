@@ -2,7 +2,8 @@
 
 The GitLab CI template (``collect/gitlab-ci.yml``) runs ``marshal comment`` in merge
 request pipelines. GitLab's job token can't write merge request notes, so this uses a
-project access token the project provides in a CI/CD variable. The comment starts with a
+token the project provides in a CI/CD variable: a project access token, or on GitLab.com
+Free a bot account's personal access token. The comment starts with a
 marker, so a later pipeline updates it instead of adding another.
 
 The request goes to the GitLab instance running the pipeline, named by GitLab's own

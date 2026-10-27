@@ -116,3 +116,9 @@ def test_template_records_what_the_github_action_records():
         assert flag in script
     assert job["id_tokens"]["MARSHAL_ID_TOKEN"]["aud"] == "marshal"
     assert job["artifacts"]["paths"] == ["marshal-report.md"]
+
+
+def test_template_can_install_marshal_from_elsewhere():
+    job = template()[".marshal-collect"]
+    assert job["variables"]["MARSHAL_PACKAGE"] == ""
+    assert '"${MARSHAL_PACKAGE:-marshal-ledger==${MARSHAL_VERSION}}"' in job["script"][0]

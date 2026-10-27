@@ -14,13 +14,14 @@
 #       - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 #
 # The pipeline signs in to Marshal with a GitLab ID token; no secret is stored for Marshal.
-# Merge request comments need a project access token in MARSHAL_GITLAB_TOKEN; without it,
+# Merge request comments need a GitLab token in MARSHAL_GITLAB_TOKEN; without it,
 # the report is in the job log and the job's artifacts. See docs/gitlab-ci.md.
 
 .marshal-collect:
   image: ${MARSHAL_PYTHON_IMAGE}
   variables:
     MARSHAL_VERSION: "0.7.0"            # the Marshal release this template comes from
+    MARSHAL_PACKAGE: ""                 # what pip installs instead of that release, such as a mirror's URL
     MARSHAL_PYTHON_IMAGE: "python:3.12-slim"
     MARSHAL_EVENT: proposed             # proposed, shipped or observed
     MARSHAL_ARTIFACTS: "."              # path of the agent artifact, such as a bundle directory or a Terraform plan's JSON
@@ -33,7 +34,7 @@
     MARSHAL_ID_TOKEN:
       aud: marshal                      # the audience the Marshal server expects; override id_tokens to change it
   script:
-    - python -m pip install --quiet --disable-pip-version-check "marshal-ledger==${MARSHAL_VERSION}"
+    - python -m pip install --quiet --disable-pip-version-check "${MARSHAL_PACKAGE:-marshal-ledger==${MARSHAL_VERSION}}"
     - |
       set -eu
       set -- push "$MARSHAL_ARTIFACTS" --event "$MARSHAL_EVENT" --url "$MARSHAL_URL" \
