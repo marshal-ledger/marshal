@@ -116,6 +116,7 @@ class CloudFormationWriter(Writer):
         groups: list[dict[str, Any]] = []
         functions: list[dict[str, Any]] = []
         used: set[str] = set()
+        unconfirmed: list[str] = []
         for use in spec.tools:
             base = f"tools[{use.ref}]"
             if use.ref == "tool/bedrock.user_input":
@@ -140,8 +141,14 @@ class CloudFormationWriter(Writer):
                 function["Parameters"] = parameters_
             if use.requires_confirmation.is_known:
                 function["RequireConfirmation"] = "ENABLED" if use.requires_confirmation.value else "DISABLED"
+            else:
+                unconfirmed.append(function_name)
             functions.append(function)
             tool_refs[f"tools.{function_name}"] = use.ref
+        if unconfirmed:
+            # Seen on a real deploy: Bedrock stores a function without RequireConfirmation as DISABLED.
+            warnings.append(f"the source doesn't say whether {', '.join(unconfirmed)} need{'s' * (len(unconfirmed) == 1)} "
+                            "confirmation; Bedrock treats a function without RequireConfirmation as not needing it")
         if functions:
             groups.append({
                 "ActionGroupName": "tools",

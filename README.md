@@ -38,7 +38,7 @@ Pipelines you already run record each agent: a pull request records the proposed
 | Source | Read | Write | Writer tested by |
 |---|---|---|---|
 | Databricks Asset Bundles (Genie spaces, agent apps) | ✓ | |  |
-| AWS CloudFormation and CDK (Bedrock Agents, AgentCore) | ✓ | Bedrock Agents | cfn-lint |
+| AWS CloudFormation and CDK (Bedrock Agents, AgentCore) | ✓ | Bedrock Agents | cfn-lint; deployed to Bedrock |
 | Terraform plan and state (Bedrock Agents, AgentCore; AWS and Cloud Control providers) | ✓ | | |
 | Microsoft Copilot Studio (agent workspaces, solutions) | ✓ | ✓ | published schema, partly |
 | Salesforce Agentforce (Agent Script, legacy metadata) | ✓ | Agent Script | round trip |
@@ -48,7 +48,7 @@ Pipelines you already run record each agent: a pull request records the proposed
 | ADL, Open Agent Spec, AGNTCY OASF | ✓ | ✓ | round trip; published schema for ADL and Agent Spec |
 | Marshal file: a hand-written definition for agents no reader covers, recorded as attested | ✓ | ✓ | round trip |
 
-Readers are tested against real, public definitions, pinned to a commit. No writer's output has yet been imported into a hosted platform; see [how each format is verified](docs/design.md#formats-and-how-each-is-verified).
+Readers are tested against real, public definitions, pinned to a commit. Only the Bedrock writer's output has been deployed to its platform so far; see [how each format is verified](docs/design.md#formats-and-how-each-is-verified).
 
 ## Try it
 

@@ -53,7 +53,7 @@ Or install it with `pip install 'marshal-ledger[server]'`. `marshal demo` downlo
 | Source | Read | Write | Writer tested by |
 |---|---|---|---|
 | [Databricks Asset Bundles](formats/databricks.md) (Genie spaces, agent apps) | ✓ | |  |
-| [AWS CloudFormation and CDK](formats/cloudformation.md) (Bedrock Agents, AgentCore) | ✓ | Bedrock Agents | cfn-lint |
+| [AWS CloudFormation and CDK](formats/cloudformation.md) (Bedrock Agents, AgentCore) | ✓ | Bedrock Agents | cfn-lint; deployed to Bedrock |
 | [Terraform](formats/terraform.md) plan and state (Bedrock Agents, AgentCore; AWS and Cloud Control providers) | ✓ | | |
 | [Microsoft Copilot Studio](formats/copilot-studio.md) (agent workspaces, solutions) | ✓ | ✓ | published schema, partly |
 | [Salesforce Agentforce](formats/agentforce.md) (Agent Script, legacy metadata) | ✓ | Agent Script | round trip |
@@ -63,7 +63,7 @@ Or install it with `pip install 'marshal-ledger[server]'`. `marshal demo` downlo
 | [ADL](formats/adl.md), [Open Agent Spec](formats/agent-spec.md), [AGNTCY OASF](formats/oasf.md) | ✓ | ✓ | round trip; published schema for ADL and Agent Spec |
 | [Marshal file](formats/marshal-file.md): a hand-written definition for agents no reader covers | ✓ | ✓ | round trip |
 
-Readers are tested against real, public definitions, pinned to a commit. No writer's output has yet been imported into a hosted platform; see [how each format is verified](design.md#formats-and-how-each-is-verified).
+Readers are tested against real, public definitions, pinned to a commit. Only the Bedrock writer's output has been deployed to its platform so far; see [how each format is verified](design.md#formats-and-how-each-is-verified).
 
 ## Where to next
 

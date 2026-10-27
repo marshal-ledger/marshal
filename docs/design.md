@@ -63,10 +63,10 @@ The formats table on the [home page](index.md#formats) lists what Marshal reads 
 | Round trip and published schema | The output validates against the format's published schema, and reading it back gives the same record and version hash (ADL, Agent Spec) |
 | Round trip | Reading the output back gives the same record and version hash (OASF, Agentforce Agent Script, Marshal file) |
 | Published schema | Every loss is explained, and the output validates against Google's published ADK Agent Config schema. Written configs also load in ADK itself (an optional test, run with google-adk 2.13) apart from the agent's own Python functions, which ADK imports from the agent's project (ADK Agent Config) |
-| Platform linter | Every loss is explained, and the template passes cfn-lint, AWS's CloudFormation linter, apart from values the source lacks, which the writer warns about (CloudFormation for Bedrock Agents) |
+| Platform linter and a deploy | Every loss is explained, and the template passes cfn-lint, AWS's CloudFormation linter, apart from values the source lacks, which the writer warns about. A written template has also been deployed unchanged to Amazon Bedrock (CloudFormation for Bedrock Agents) |
 | Published schema, partly | Each written file that has a published schema validates against it; every loss is explained (Copilot Studio, whose settings and connection reference files have no published schema) |
 
-No writer's output has yet been imported into a hosted platform: an agent written for Copilot Studio, Agentforce or Bedrock is a well-formed starting point to review, not a tested deployment.
+One writer's output has been deployed to its platform: a Bedrock agent template, on 2026-10-27 (see [CloudFormation](formats/cloudformation.md#writing)). Agents written for Copilot Studio or Agentforce haven't been imported into a hosted platform yet, so treat them as a well-formed starting point to review, not a tested deployment.
 
 ## Data model
 
@@ -244,7 +244,7 @@ It runs as a CLI with a local SQLite store, or as a service (ingest API and read
 
 - **More documented equivalents,** where vendors document what a connector or action calls
 - **Policy checks:** rules such as "write-scope or irreversible tools need approval" or "models must be on an approved list," the same on every platform
-- **Import-tested writers,** starting with Copilot Studio
+- **Import tests for more writers,** such as Copilot Studio and Agentforce
 - **Forking with lineage:** copy another team's agent into your platform's format and track the upstream
 - **Agent bill of materials:** everything a version depended on
 - **Resolved-model enrichment** where an AI gateway records which model served a request

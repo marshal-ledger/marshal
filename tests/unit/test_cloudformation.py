@@ -127,3 +127,11 @@ def test_multi_line_instructions_are_written_as_a_block():
     )
     [record] = CloudFormationReader().read_data(load_template(template), "stack.yaml").records
     assert "Instruction: |\n        Reconcile vendor invoices" in convert(record, "cloudformation").text
+
+
+def test_functions_without_a_stated_confirmation_are_warned_about():
+    template = "\n".join(line for line in TEMPLATE.splitlines() if "RequireConfirmation" not in line)
+    [record] = CloudFormationReader().read_data(load_template(template), "stack.yaml").records
+    conversion = convert(record, "cloudformation")
+    assert "RequireConfirmation" not in conversion.text
+    assert any("whether approve_payment needs confirmation" in w for w in conversion.warnings)
