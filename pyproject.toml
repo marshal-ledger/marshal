@@ -92,5 +92,9 @@ replacement = '](https://github.com/marshal-ledger/marshal/blob/main/\1)'
 [tool.hatch.build.targets.wheel]
 packages = ["src/marshal_ledger"]
 
+# The source archive carries what building and testing need; the site's images stay in the repository.
+[tool.hatch.build.targets.sdist]
+exclude = ["docs/assets/*.png", "docs/assets/*.gif", "site/"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

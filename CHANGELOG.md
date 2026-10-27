@@ -6,7 +6,9 @@ Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](
 
 - `marshal web --export DIR` writes the web view as static files, for sharing a ledger without running a server.
 - `marshal demo` reads its proposed change from a folder with the agent's own name, so the agent's Python tool keeps its ref and the diff no longer shows it removed and re-added. The proposal now ranks MED: a refund function and the grant to run it.
-- Documentation site at [marshal-ledger.github.io/marshal](https://marshal-ledger.github.io/marshal/), with a live demo, a terminal recording and web view screenshots in the README.
+- Documentation site at [marshal-ledger.github.io/marshal](https://marshal-ledger.github.io/marshal/), with a live demo, a web view walkthrough, an architecture diagram and screenshots in the README.
+- Guides for inventorying Copilot Studio agents, reviewing agent changes in pull requests, tracking agents in code, detecting drift, converting an ADK agent to Agent Spec and preparing audit evidence, and a page on how Marshal compares with related tools.
+- The source archive leaves out the site's images.
 
 ## 0.2.0 (2026-10-26)
 

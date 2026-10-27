@@ -13,7 +13,7 @@ A vendor-neutral, open-source ledger for enterprise AI agents. Any format in, an
 
 Marshal reads the agent definitions teams already produce: Databricks bundles, Copilot Studio agents, Bedrock templates, Agentforce metadata, agent code and the open standards. It builds a normalized, versioned record of every agent: what model it asks for, what tools and data it can reach, and who it acts as. Every field says where its value came from, and nothing is guessed.
 
-<img src="docs/assets/demo.gif" alt="A terminal session: marshal demo builds a ledger of 28 public agents, marshal status shows a Copilot Studio agent whose live definition drifted from what was shipped, and marshal diff ranks the switch to the maker's credentials HIGH">
+<img src="docs/assets/web-tour.gif" alt="A walk through the Marshal web view: the inventory of 28 public agents, a Copilot Studio agent in drift whose tool was switched to the maker's credentials, a proposed change that adds a refund function, and the agents that share an Apex action">
 
 **Status:** alpha. Before 1.0 a minor release may change the ledger model, the ingest API or the command line; the [changelog](CHANGELOG.md) lists each such change.
 
@@ -27,10 +27,11 @@ Marshal reads the agent definitions teams already produce: Databricks bundles, C
 - **Portability scores** for moving an agent to another platform, from a community-maintained capability matrix.
 - **No shared secrets:** pipelines push records authenticated by their CI provider's OIDC token. Marshal never connects to agent platforms.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/web-drift-dark.png">
-  <img src="docs/assets/web-drift-light.png" alt="An agent page in the Marshal web view: a Copilot Studio agent's live definition differs from what was shipped, and three HIGH changes show its tool switched to the maker's credentials">
-</picture>
+## How it runs
+
+<img src="docs/assets/architecture.svg" alt="How Marshal runs: agent definitions in repositories and web designers reach your CI pipelines, which push proposed, shipped and observed events to Marshal's ingest API with their OIDC token. Marshal records them in the ledger, and teams see risk-ranked pull request comments, the web view and the CLI. Marshal never connects to an agent platform.">
+
+Pipelines you already run record each agent: a pull request records the proposed definition and gets a comment ranking its changes, a deploy records what was shipped, and an optional scheduled export records what is live in a web designer. See the [GitHub Action](docs/github-action.md), [Jenkins and Azure DevOps](docs/other-ci.md) and [Deployment](docs/deployment.md).
 
 ## Formats
 
@@ -78,6 +79,8 @@ $ marshal web                                        # browse the store
 The documentation is published at [marshal-ledger.github.io/marshal](https://marshal-ledger.github.io/marshal/).
 
 - [Getting started](docs/getting-started.md)
+- Guides: [Copilot Studio inventory](docs/guides/copilot-studio-inventory.md), [pull request review](docs/guides/pull-request-review.md), [agents in code](docs/guides/agents-in-code.md), [drift](docs/guides/drift-detection.md), [ADK to Agent Spec](docs/guides/convert-adk-to-agent-spec.md), [audit evidence](docs/guides/audit-evidence.md)
+- [How Marshal compares](docs/comparison.md) with platform admin tools, observability, AI gateways, registries and governance platforms
 - [Design](docs/design.md): the problem, architecture, security and network posture, roadmap
 - [Ledger model v0](docs/ledger-model.md): records, provenance, version hashing, the version store, risk ranking, freshness
 - [Conversion and fidelity](docs/conversion.md) and [Portability](docs/portability.md)
