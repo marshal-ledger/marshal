@@ -1,4 +1,8 @@
-# Inventory every Copilot Studio agent
+---
+title: "Copilot Studio agent inventory and change history"
+---
+
+# Copilot Studio agent inventory and change history
 
 Copilot Studio agents are usually built in a web designer, not in a repository, so there is no pull request to review and no file to diff. Marshal reads the solutions you export from Power Platform and keeps a versioned record of each agent: its model, instructions, tools, knowledge sources, and above all whose credentials each tool uses.
 

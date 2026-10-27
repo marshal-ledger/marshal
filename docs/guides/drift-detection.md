@@ -1,4 +1,8 @@
-# Detect drift between shipped and live agents
+---
+title: "Detect drift between shipped and live AI agents"
+---
+
+# Detect drift between shipped and live AI agents
 
 Agents built in Copilot Studio or Agentforce can be edited in the platform's web designer after they ship. The change never passes through a pull request, so nobody reviews it. Marshal compares what is live with what your pipeline last shipped, and reports any difference with the same risk ranking as a proposed change.
 

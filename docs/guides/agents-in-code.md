@@ -1,3 +1,7 @@
+---
+title: "AI agent inventory for LangGraph, CrewAI and OpenAI Agents SDK code"
+---
+
 # Track LangGraph, CrewAI and OpenAI Agents SDK agents from code
 
 Agents written in code don't appear in any admin console. Their model, tools and prompts are spread across Python modules, and they change with every commit. Marshal reads the code statically, the same way a linter does, and records each agent it finds.

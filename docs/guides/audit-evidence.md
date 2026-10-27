@@ -1,3 +1,7 @@
+---
+title: "AI agent inventory for risk and audit reviews"
+---
+
 # An AI agent inventory for risk and audit reviews
 
 Model risk, internal audit, security and AI governance reviews ask the same questions about every agent: what it is, what model it uses, what it can read and change, whose authority it acts with, who changed it and when, and whether what is running is what was approved. Marshal answers them from the agents' own definitions, across platforms, with a record of where each answer came from.
