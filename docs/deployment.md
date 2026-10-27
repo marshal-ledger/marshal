@@ -9,7 +9,7 @@ Marshal runs as one service: the ingest API that pipelines push to, and the read
 
 The server configuration names the store with `store:`, as a file path, a `postgresql://` URL, or `env:VARIABLE` to read either from the environment. Use the `env:` form to keep database credentials out of the configuration file.
 
-For what Marshal stores, how it authenticates callers and what it connects to, see the [security review](security-review.md).
+For what Marshal stores, how it authenticates callers and what it connects to, see the [security review](security-review.md). For Azure Database for PostgreSQL, AKS with workload identity, Container Apps and Entra ID sign-in, see [Running Marshal on Azure](azure.md).
 
 ## Container
 
@@ -124,7 +124,7 @@ $ pip install marshal-ledger
 index-url = https://pypi.internal.example/simple
 ```
 
-The client needs `marshal-ledger` with `pydantic` and `pyyaml` and their dependencies. The server also needs the `server` and `postgres` extras (`fastapi`, `uvicorn`, `pyjwt[crypto]`, `psycopg[binary]`), but the image already contains them. Installing the published wheel needs no build tools. The [GitHub Action](github-action.md#runners-without-internet-access) is different: it builds Marshal from its own source, so the index must also serve the build backends `hatchling` and `hatch-fancy-pypi-readme`.
+The client needs `marshal-ledger` with `pydantic` and `pyyaml` and their dependencies. The server also needs the `server` and `postgres` extras (`fastapi`, `uvicorn`, `pyjwt[crypto]`, `psycopg[binary]`), and the `azure` extra (`azure-identity`) for Entra ID sign-in to the store, but the image already contains them. Installing the published wheel needs no build tools. The [GitHub Action](github-action.md#runners-without-internet-access) is different: it builds Marshal from its own source, so the index must also serve the build backends `hatchling` and `hatch-fancy-pypi-readme`.
 
 ## Network
 
@@ -133,6 +133,6 @@ Marshal never starts a connection to an agent platform (see [Network posture](de
 - **Inbound from CI runners:** `POST /v0/events`. For hosted runners, expose only this path through your ingress.
 - **Inbound from users:** the web view at `/` and the read-only JSON API under `/v0/`, only through your SSO proxy. The proxy sets the configured user header (default `X-Forwarded-Email`), and requests without it are refused. The proxy must replace any user header the client sent, and must be the only route to the web view: anything else that reaches the pod can set the header itself.
 - **Outbound to the OIDC issuers:** to fetch their signing keys, for example `token.actions.githubusercontent.com`. Without `jwks_uri`, the server reads `<issuer>/.well-known/openid-configuration` and then the key set it names. Set `jwks_uri` per issuer to fetch the keys from a mirror instead.
-- **Outbound to the store.**
+- **Outbound to the store.** With `store_auth: azure`, also to Microsoft Entra ID or the managed identity endpoint for database tokens.
 
 The server speaks plain HTTP on port 8080. Terminate TLS at the ingress, Route or proxy. For TLS to Postgres, add `sslmode=verify-full` (and `sslrootcert` if needed) to the store URL.

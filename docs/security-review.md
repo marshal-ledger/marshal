@@ -36,7 +36,9 @@ The service listens on plain HTTP, port 8080. TLS terminates at the ingress, Ope
 
 ## What is stored, and where
 
-Everything is in the store you configure: a SQLite file or a Postgres database ([`store.py`](../src/marshal_ledger/store.py)). Its location comes from the server configuration, usually through an environment variable from a Kubernetes Secret, so the database password isn't in the configuration file. Marshal doesn't encrypt the store itself; use your database's or volume's encryption at rest. For TLS to Postgres, add `sslmode=verify-full` to the store URL.
+Everything is in the store you configure: a SQLite file or a Postgres database ([`store.py`](../src/marshal_ledger/store.py)). Its location comes from the server configuration, usually through an environment variable from a Kubernetes Secret, so the database password isn't in the configuration file. Marshal doesn't encrypt the store itself; use your database's or volume's encryption at rest. For TLS to Postgres, add `sslmode=verify-full` to the store URL. On Azure Database for PostgreSQL, the server can sign in with a Microsoft Entra ID token for its managed identity instead of a password (`store_auth: azure`, [Running Marshal on Azure](azure.md)), so the store URL holds no password.
+
+Each request opens its own database connection. If the database can't be reached, the ingest API and the web view answer `503` without naming the database host. A write that loses its connection is rolled back by the database and never retried, except that a connection lost while committing leaves the outcome unknown; reads are retried once on a new connection.
 
 | Table | Contents |
 |---|---|
@@ -71,7 +73,7 @@ Environment-bound values (`bindings`) such as warehouse IDs, endpoint URLs and e
 
 **Instruction text, if you choose.** With `hash_only: true` in the server configuration, the server drops instruction text and keeps only its hash, whatever clients send. Diffs then report that instructions changed without showing them. The hash is unsalted SHA-256, so someone who can guess the exact text can confirm the guess.
 
-**Tokens.** The client reads the CI token from the environment at run time and never prints or writes it ([`client.py`](../src/marshal_ledger/client.py)). The server keeps only the token's identity claims (issuer, repository, ref, workflow, commit, run), never the token.
+**Tokens.** The client reads the CI token from the environment at run time and never prints or writes it ([`client.py`](../src/marshal_ledger/client.py)). The server keeps only the token's identity claims (issuer, repository, ref, workflow, commit, run), never the token. With `store_auth: azure`, the database access token is held in memory, reused until five minutes before it expires, and never logged or stored ([`dbauth.py`](../src/marshal_ledger/dbauth.py)).
 
 **Limits of these controls.**
 
@@ -139,6 +141,7 @@ Marshal never starts a connection to an agent platform ([design](design.md#netwo
 | Inbound | SSO proxy | Web view and `/v0/` JSON |
 | Outbound | Each configured OIDC issuer | `<issuer>/.well-known/openid-configuration`, then its key set, cached for an hour. Set `jwks_uri` to fetch the keys from a mirror and skip discovery |
 | Outbound | The store | SQLite on a volume, or Postgres |
+| Outbound | Microsoft Entra ID, only with `store_auth: azure` | A database access token from the managed identity endpoint or Entra ID's token endpoint, when the store connects and the cached token is near expiry |
 
 That is all the server connects to. The web view's pages load no external fonts, scripts or images (a test checks this). FastAPI includes the OpenTelemetry API, which does nothing unless an OpenTelemetry SDK and exporter are installed and configured; the image contains neither. The pipeline side connects to the ingest URL, the CI provider's token endpoint and, for pull request comments, the GitHub API.
 
@@ -165,7 +168,7 @@ The image ([`Dockerfile`](../Dockerfile)) is based on `python:3.12-slim` and run
 - Workflows get a read-only `GITHUB_TOKEN` unless a job asks for more.
 - `main` changes only through pull requests that pass the required checks (tests on Python 3.10 to 3.13, chart, image, Action); force pushes and deletion are blocked. Required approvals are zero, since the project has one maintainer. Release tags (`v*.*.*`) can be created, moved or deleted only by repository administrators.
 
-**Dependencies.** The client needs `pydantic` and `pyyaml`. The server adds `fastapi`, `uvicorn` and `pyjwt[crypto]`, and `psycopg[binary]` for Postgres. The image's SBOM lists every package with its version.
+**Dependencies.** The client needs `pydantic` and `pyyaml`. The server adds `fastapi`, `uvicorn` and `pyjwt[crypto]`, `psycopg[binary]` for Postgres, and `azure-identity` for Entra ID sign-in to Azure Database for PostgreSQL; the image includes all of them. The image's SBOM lists every package with its version.
 
 ## Retention and deletion
 
@@ -197,6 +200,6 @@ What it doesn't record:
 - Require a protected branch or a deployment environment with reviewers in `policy.shipped`.
 - Put the web view behind the SSO proxy only; expose only `POST /v0/events` to runners; enable the chart's NetworkPolicy. Turn the web view off if there is no proxy.
 - Turn on `hash_only` if agent instructions are more sensitive than the rest of the definition.
-- Use Postgres with TLS and encryption at rest; keep its credentials in a Secret.
+- Use Postgres with TLS and encryption at rest; keep its credentials in a Secret, or on Azure sign in with a managed identity instead of a password.
 - Verify the image signature at admission, or pin the digest you verified.
 - Classify the store at the level of the source repositories, and plan backup retention, since Marshal deletes nothing.

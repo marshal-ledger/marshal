@@ -12,10 +12,17 @@ spec:
     matchLabels: {{- include "marshal.selector" . | nindent 6 }}
   template:
     metadata:
-      labels: {{- include "marshal.selector" . | nindent 8 }}
+      labels:
+        {{- include "marshal.selector" . | nindent 8 }}
+        {{- with omit .Values.podLabels "app.kubernetes.io/name" "app.kubernetes.io/instance" }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
       annotations:
         checksum/config: {{ toYaml .Values.config | sha256sum }}
     spec:
+      {{- with include "marshal.serviceAccountName" . }}
+      serviceAccountName: {{ . }}
+      {{- end }}
       securityContext: {{- include "marshal.securityContext" .Values.podSecurityContext | nindent 8 }}
       containers:
         - name: marshal

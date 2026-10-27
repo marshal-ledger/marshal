@@ -2,7 +2,7 @@
 
 This guide covers a shared Marshal deployment on Azure: the store on Azure Database for PostgreSQL flexible server, the ingest API and web view on AKS or Azure Container Apps, sign-in to the web view with Microsoft Entra ID, and secrets in Key Vault. Read [Deployment](deployment.md) and [Ingest API](ingest-server.md) first; this page adds only what is specific to Azure.
 
-Signing in to the database with Microsoft Entra ID (`store_auth: azure`) needs Marshal 0.2.0 or later.
+Signing in to the database with Microsoft Entra ID (`store_auth: azure`), and the chart's `serviceAccount` and `podLabels` values, need Marshal 0.2.0 or later.
 
 ## The store: Azure Database for PostgreSQL
 
@@ -30,7 +30,7 @@ Put the URL, password included, in a secret (see [Secrets in Key Vault](#secrets
 
 With `store_auth: azure`, Marshal signs in with a Microsoft Entra ID access token instead of a password. It gets the token from azure-identity's `DefaultAzureCredential`, which uses the AKS workload identity or the managed identity the app runs as, and requests the scope `https://ossrdbms-aad.database.windows.net/.default`. A token is fetched when the store connects and reused for later connections until five minutes before it expires. Postgres checks the token only at sign-in, so open connections are unaffected when it expires. Marshal never logs or stores the token.
 
-1. Install the extra: `pip install 'marshal-ledger[server,postgres,azure]'`. The release image doesn't include it; see [The image](#the-image).
+1. The container image includes azure-identity. Outside the image, install the extra: `pip install 'marshal-ledger[server,postgres,azure]'`.
 2. On the server, enable Microsoft Entra authentication and add a Microsoft Entra administrator (the server's **Authentication** page in the portal).
 3. Create a user-assigned managed identity for the ingest API, and one for the web view if you run it separately (see [Container Apps](#azure-container-apps)).
 4. Connected as the Entra administrator, create a database role for each identity. The role name must be the identity's display name:
@@ -73,20 +73,7 @@ Import the release image into your registry, so clusters pull from Azure Contain
 $ az acr import --name myregistry --source ghcr.io/marshal-ledger/marshal:<version> --image marshal:<version>
 ```
 
-To check the image's signature and provenance before importing it, see [Deployment](deployment.md).
-
-For Entra ID sign-in, build an image that adds the `azure` extra's dependency on top of the release:
-
-```dockerfile
-FROM ghcr.io/marshal-ledger/marshal:<version>
-USER 0
-RUN pip install --no-cache-dir 'azure-identity>=1.13'
-USER 10001
-```
-
-```console
-$ az acr build --registry myregistry --image marshal-azure:<version> .
-```
+To check the image's signature and provenance before importing it, see [Deployment](deployment.md#verify-and-mirror).
 
 ## AKS with the Helm chart
 
@@ -94,20 +81,28 @@ The chart in [`charts/marshal`](../charts/marshal) works on AKS as on any cluste
 
 For password sign-in, nothing else is Azure-specific.
 
-For Entra ID sign-in with [workload identity](https://learn.microsoft.com/azure/aks/workload-identity-overview), the pod needs:
+For Entra ID sign-in with [workload identity](https://learn.microsoft.com/azure/aks/workload-identity-overview), enable workload identity and the OIDC issuer on the cluster, and add a federated identity credential on the managed identity for the chart's service account, `system:serviceaccount:<namespace>:<name>`. The name is `serviceAccount.name` if set, otherwise the release's full name (`marshal` for a release named `marshal`). Then:
 
-- the image with the `azure` extra;
-- a service account annotated with `azure.workload.identity/client-id: <identity client ID>`, with a federated identity credential on the managed identity for that service account;
-- the pod label `azure.workload.identity/use: "true"`;
-- `config.store_auth: azure` in the chart values, and a store URL without a password.
+```yaml
+# my-values.yaml
+serviceAccount:
+  create: true
+  annotations:
+    azure.workload.identity/client-id: <managed identity client ID>
+podLabels:
+  azure.workload.identity/use: "true"
+config:
+  store_auth: azure
+  # issuers, policy, web ...
+```
 
-The chart has no values for the service account or pod labels, so add them with a Helm post-renderer such as Kustomize, or deploy with your own manifests.
+The Secret named by `store.existingSecret` holds the URL with the identity's role name as the user and no password. The workload identity webhook gives the pod the identity's client ID and a federated token, which `DefaultAzureCredential` uses.
 
 ### Web view sign-in on AKS
 
 The web view trusts the user header from anyone who reaches it, so the SSO proxy must be the only route to the web paths. One way is [oauth2-proxy](https://oauth2-proxy.github.io/oauth2-proxy/) with its Microsoft Entra ID provider (`--provider=entra-id`), run as a reverse proxy with the Marshal service as its upstream. oauth2-proxy passes `X-Forwarded-Email` to the upstream by default (`--pass-user-headers`), which is the web view's default `user_header`.
 
-The ingest API and the web view are served by the same process. Route only `POST /v0/events` and `GET /healthz` from the ingress to Marshal directly, with exact path matches, and send every other path through oauth2-proxy. Keep the service `ClusterIP`, and add a NetworkPolicy so that only the ingress controller and the proxy reach the pods.
+The ingest API and the web view are served by the same process. Route only `POST /v0/events` and `GET /healthz` from the ingress to Marshal directly, with exact path matches, and send every other path through oauth2-proxy. Keep the service `ClusterIP`, and enable the chart's NetworkPolicy so that only the ingress controller and the proxy reach the pods ([Deployment](deployment.md#network-policy)).
 
 ## Azure Container Apps
 
@@ -131,7 +126,7 @@ properties:
   template:
     containers:
       - name: marshal
-        image: myregistry.azurecr.io/marshal-azure:<version>
+        image: myregistry.azurecr.io/marshal:<version>
         env:
           - {name: MARSHAL_STORE_URL, secretRef: store-url}
           - {name: AZURE_CLIENT_ID, value: <identity client ID>}
@@ -149,7 +144,7 @@ properties:
 ```yaml
     containers:
       - name: marshal-web
-        image: myregistry.azurecr.io/marshal-azure:<version>
+        image: myregistry.azurecr.io/marshal:<version>
         args: ["web", "--host", "0.0.0.0", "--port", "8080", "--user-header", "X-MS-CLIENT-PRINCIPAL-NAME"]
         env:
           - {name: MARSHAL_DB, secretRef: store-url-web}   # postgresql://marshal-web@...
