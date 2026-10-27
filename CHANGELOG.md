@@ -2,12 +2,12 @@
 
 Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](https://semver.org). Before 1.0, a minor release may change the ledger model, the ingest API or the command line; each such change is listed here.
 
-## 0.5.0 (unreleased)
+## 0.5.0 (2026-10-27)
 
-- Marshal files gain `links`: a person states that a ref reaches a target (`http:POST https://…`, `mcp:…`, `host:…`) or is the same entity as another ref, for tools whose definitions don't show it, such as a Python function that calls an API. Dependency matches through a link are labelled attested, with who attested it.
-- Documented equivalents: a table of links vendors document but definitions don't state, each citing its sources (`equivalents/*.yaml`). It starts with Copilot Studio's Microsoft Learn Docs MCP connector and the server it calls, so that connector matches agents that name the server's URL. Such matches are reported as documented, and `/v0/deps` gains `basis`.
-- Bedrock action groups resolve to the Lambda function that runs them, so agents in different stacks that share a function match across platforms' dependency views: by function ARN, by the export a stack imports it from, or by its stated name. The function is recorded in the event's bindings (`executors`), so versions don't change.
 - Dependencies across platforms: `marshal deps`, the web view and `/v0/deps` also list refs on any platform that reach the same HTTP operation, MCP server, OpenAPI operation, knowledge URL or API host, each with how it matched (`match`, `via`). Matches come only from what the definitions state; nothing is fetched or matched on a name. `--exact` (or `resolve=false`) turns it off, and a pattern can name a target, such as `host:api.acme.example`.
+- Bedrock action groups resolve to the Lambda function that runs them, so agents in different stacks that share a function match: by function ARN, by the export a stack imports it from, or by its stated name. The function is recorded in the event's bindings (`executors`), so versions don't change.
+- Documented equivalents: a table of links vendors document but definitions don't state, each citing its sources (`equivalents/*.yaml`). It starts with Copilot Studio's Microsoft Learn Docs MCP connector and the server it calls, so that connector matches agents that name the server's URL. Such matches are reported as documented, and `/v0/deps` gains `basis`.
+- Marshal files gain `links`: a person states that a ref reaches a target (`http:POST https://…`, `mcp:…`, `host:…`) or is the same entity as another ref, for tools whose definitions don't show it, such as a Python function that calls an API. Dependency matches through a link are labelled attested, with who attested it.
 - `marshal demo` adds a proposed Copilot Studio topic that calls the API host the public ADL examples may reach, so the dependencies page shows a match across platforms.
 - The CloudFormation writer sets `AutoPrepare` on the agent, as the AWS samples do, so a deployed agent is ready to test.
 - Every YAML writer writes multi-line instructions as a literal block, as the Copilot Studio and Marshal file writers already did.
