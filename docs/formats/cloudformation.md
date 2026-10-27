@@ -1,3 +1,9 @@
+---
+title: "Bedrock agent inventory from AWS CloudFormation and CDK"
+description: >-
+  How Marshal reads Bedrock Agents and AgentCore from CloudFormation and CDK templates, and writes deployable CloudFormation for Bedrock.
+---
+
 # AWS CloudFormation: Bedrock Agents and AgentCore
 
 Format id: `cloudformation`. Reads CloudFormation templates (YAML with short-form tags, or JSON) and CDK output (`cdk.out/*.template.json`). Writes a template containing one `AWS::Bedrock::Agent`.

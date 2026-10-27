@@ -1,3 +1,9 @@
+---
+title: "Google ADK Agent Config: read and write YAML agents"
+description: >-
+  How Marshal reads and writes Google ADK Agent Config (root_agent.yaml), validated against Google's published schema.
+---
+
 # Google ADK Agent Config
 
 Format id: `adk-config`. Reads and writes ADK Agent Config, the declarative YAML form of an ADK agent (`root_agent.yaml`). The reader starts from each `root_agent.yaml` and follows `config_path` references to sub-agents in other files.

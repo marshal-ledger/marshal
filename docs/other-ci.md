@@ -1,3 +1,7 @@
+---
+title: "Jenkins and Azure DevOps: record AI agents from pipelines"
+---
+
 # Jenkins and Azure DevOps
 
 Pipelines on Jenkins and Azure DevOps authenticate to the [ingest API](ingest-server.md) the same way GitHub and GitLab pipelines do: with a short-lived OIDC token signed by the CI system. The pipeline puts the token in an environment variable and runs `marshal push --token-env`. No secret is stored for Marshal.

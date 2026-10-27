@@ -1,3 +1,9 @@
+---
+title: "Agentforce agent inventory from Agent Script"
+description: >-
+  How Marshal reads and writes Salesforce Agentforce Agent Script files and legacy Agent Builder metadata.
+---
+
 # Salesforce Agentforce (Agent Script)
 
 Format id: `agentforce`. Reads and writes Agent Script `.agent` files, the source format of the Agentforce Builder (`aiAuthoringBundles/<Name>/<Name>.agent`, retrieved with `sf project retrieve start --metadata AiAuthoringBundle:<Name>`).

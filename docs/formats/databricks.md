@@ -1,3 +1,9 @@
+---
+title: "Databricks agent inventory from Asset Bundles"
+description: >-
+  How Marshal reads Databricks Asset Bundles into an AI agent inventory: Databricks Apps and Genie agents, their models, tools, resource grants and identity.
+---
+
 # Databricks Asset Bundle reader
 
 Format id: `databricks-asset-bundle`. Reads a `databricks.yml` (or `databricks.yaml`, `bundle.yml`, `bundle.yaml`) and every file matched by its `include` globs.

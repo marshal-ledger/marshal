@@ -1,3 +1,7 @@
+---
+title: "GitHub Action: record AI agents and review changes in pull requests"
+---
+
 # GitHub Action
 
 `marshal-ledger/marshal/collect` reads agent definitions from the checked-out repository, sends them to the Marshal ingest API, and on pull requests posts the risk-ranked changes as a comment. Later runs on the same pull request update the comment in place.

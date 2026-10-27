@@ -5,6 +5,8 @@ Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](
 ## 0.8.0 (unreleased)
 
 - The GitLab CI template has been tested on GitLab.com: shipped and proposed events, and one merge request comment updated on later pushes.
+- Web view: page titles name the agent and its platform, and each page has a description. `marshal web --export DIR --site-url URL` also writes a `sitemap.xml` listing the inventory, the dependencies page and each agent's latest version.
+- Documentation: page titles and descriptions say what each page covers, such as "Bedrock agent inventory from Terraform plans and state". The comparison page covers the cloud agent registries: AWS Agent Registry, Microsoft Agent 365, Google Cloud Agent Registry and MuleSoft Agent Fabric.
 
 ## 0.7.1 (2026-10-27)
 
