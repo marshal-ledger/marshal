@@ -2,7 +2,7 @@
 
 ``marshal demo`` downloads a fixed set of agent definitions from public GitHub
 repositories, each pinned to a commit, and records them with a short history:
-agents shipped to prod, a proposed change that adds a write tool, and a Copilot
+agents shipped to prod, a proposed change that adds a refund function, and a Copilot
 Studio agent that drifted after an edit in its web designer.
 
 The definitions are listed in ``demo-sources.json``, a subset of the golden test
@@ -115,8 +115,9 @@ def build(target: Path, cache: Optional[Path] = None, log: Callable[[str], None]
             log(f"{source.path}: {len(result.records)} agent{'s' * (len(result.records) != 1)}")
 
         with tempfile.TemporaryDirectory() as work:
-            # A proposed change that gives an agent a new write tool.
-            agent = Path(work) / "agent"
+            # A proposed change that lets an agent run a refund function. The copy keeps the folder
+            # name, which scopes the refs of the agent's Python tools.
+            agent = Path(work) / Path(PROPOSED).name
             shutil.copytree(cache / PROPOSED, agent)
             bundle = agent / "databricks.yml"
             bundle.write_text(bundle.read_text().replace(

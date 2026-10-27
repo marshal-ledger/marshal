@@ -10,13 +10,17 @@ requires-python = ">=3.10"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 authors = [{ name = "Marshal contributors" }]
-keywords = ["ai-agents", "agent-registry", "governance", "audit", "copilot-studio", "agentforce", "bedrock", "databricks"]
+keywords = [
+    "ai-agents", "agent-inventory", "agent-registry", "ai-governance", "governance", "audit", "drift-detection",
+    "copilot-studio", "agentforce", "bedrock", "bedrock-agents", "databricks", "google-adk", "vertex-ai",
+    "langgraph", "langchain", "crewai", "openai-agents", "agent-spec", "oasf",
+]
 dependencies = [
     "pydantic>=2.6",
     "pyyaml>=6.0",
 ]
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Intended Audience :: System Administrators",
     "Operating System :: OS Independent",
@@ -57,7 +61,8 @@ marshal = "marshal_ledger.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/marshal-ledger/marshal"
-Documentation = "https://github.com/marshal-ledger/marshal/tree/main/docs"
+Documentation = "https://marshal-ledger.github.io/marshal/"
+"Live demo" = "https://marshal-ledger.github.io/marshal/demo/"
 Changelog = "https://github.com/marshal-ledger/marshal/blob/main/CHANGELOG.md"
 Issues = "https://github.com/marshal-ledger/marshal/issues"
 
@@ -75,6 +80,10 @@ path = "README.md"
 [[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
 pattern = 'src="(?!https?://)([^"]+)"'
 replacement = 'src="https://raw.githubusercontent.com/marshal-ledger/marshal/main/\1"'
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
+pattern = 'srcset="(?!https?://)([^"]+)"'
+replacement = 'srcset="https://raw.githubusercontent.com/marshal-ledger/marshal/main/\1"'
 
 [[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
 pattern = '\]\((?!https?://|#)([^)]+)\)'

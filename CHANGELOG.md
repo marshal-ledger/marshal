@@ -4,6 +4,10 @@ Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](
 
 ## 0.3.0 (unreleased)
 
+- `marshal web --export DIR` writes the web view as static files, for sharing a ledger without running a server.
+- `marshal demo` reads its proposed change from a folder with the agent's own name, so the agent's Python tool keeps its ref and the diff no longer shows it removed and re-added. The proposal now ranks MED: a refund function and the grant to run it.
+- Documentation site at [marshal-ledger.github.io/marshal](https://marshal-ledger.github.io/marshal/), with a live demo, a terminal recording and web view screenshots in the README.
+
 ## 0.2.0 (2026-10-26)
 
 - Postgres stores replace a lost connection and retry the read that found it; a write is never replayed, and the ingest API and web view answer `503` while the database is unreachable. A new `store_auth` setting (`--db-auth` on the command line) obtains the password at each connection, including Microsoft Entra ID tokens for Azure Database for PostgreSQL with the `azure` extra, which the image now includes. The chart can create a service account and add pod labels, for AKS workload identity. See [Running Marshal on Azure](docs/azure.md).
