@@ -19,6 +19,8 @@ Subagent blocks, with their routing, procedural instructions and action wiring, 
 
 ## Writing
 
+**Tested:** a native Agent Script agent reads back from the written file with the same record and version hash, and every loss in converting from other formats is explained. The output hasn't yet been checked by Salesforce's tools or deployed to an org.
+
 A native agent's blocks are written back as read. For agents converted from other formats, the writer:
 
 - generates one entry subagent;

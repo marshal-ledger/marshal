@@ -60,6 +60,8 @@ A `Maker` connection uses the credentials the agent's author configured, for eve
 
 ## Writing
 
+**Tested:** the golden tests validate each written file that has a `kind` against Microsoft's published Copilot Studio authoring schema, and check that every loss is explained. Settings and connection reference files have no published schema. The output hasn't yet been applied to a Copilot Studio environment.
+
 The writer produces `agent.mcs.yml`, `settings.mcs.yml`, an action file per tool it can express, `connectionreferences.mcs.yml` for the connectors those actions use, and a knowledge file per website, SharePoint site and uploaded file.
 
 - **Connection modes:** each action keeps its source connection mode. Without one, an agent that acts on behalf of users gets `Invoker`; otherwise it gets `Maker`.

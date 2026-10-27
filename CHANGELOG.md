@@ -4,6 +4,11 @@ Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](
 
 ## 0.4.0 (unreleased)
 
+- A conversion's fidelity report lists defaulted fields in the same order on every run.
+- Example outputs in the documentation are generated from the demo and the public fixtures by `scripts/doc_examples.py`, and a test fails when one is out of date. The design page now describes Marshal as it is, with real output in place of illustrative examples.
+- The formats tables say how each writer is tested, and that no writer's output has yet been imported into its platform.
+- The documentation says plainly that dependency queries match entities within a platform; matching across platforms is the next milestone.
+
 ## 0.3.0 (2026-10-27)
 
 - `marshal web --export DIR` writes the web view as static files, for sharing a ledger without running a server.

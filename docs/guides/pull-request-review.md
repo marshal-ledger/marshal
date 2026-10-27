@@ -14,6 +14,7 @@ Take the public Bedrock HR assistant template and add one action to its agent's 
 
 The pull request gets this comment:
 
+<!-- example: pr-comment-dynamodb -->
 ```
 **cfn/hr-resources/HRAgent** (bedrock) · v1 → v2 · 1 change, 1 high risk
 

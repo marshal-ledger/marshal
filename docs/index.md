@@ -22,7 +22,7 @@ Marshal keeps one versioned record of every AI agent in an organization, whateve
 - **Inventory** of every agent across platforms, with versions, deployments, and each record's completeness.
 - **Risk-ranked review:** pull requests that change an agent get a comment that lists permission escalations, new write tools and model changes first.
 - **Drift and freshness:** compares what is live with what was shipped, and shows how recently each record was confirmed and by which channel.
-- **Dependencies:** "who uses this tool, this knowledge source, this permission?" across every platform.
+- **Dependencies:** "who uses this tool, this knowledge source, this permission?" Entities match exactly, so this works within each platform today; matching the same API across platforms is the next milestone.
 - **Translation** between formats, with a fidelity report computed by reading the result back.
 - **Portability scores** for moving an agent to another platform, from a community-maintained capability matrix.
 - **No shared secrets:** pipelines push records authenticated by their CI provider's OIDC token. Marshal never connects to agent platforms.
@@ -50,17 +50,19 @@ Or install it with `pip install 'marshal-ledger[server]'`. `marshal demo` downlo
 
 ## Formats
 
-| Source | Read | Write |
-|---|---|---|
-| [Databricks Asset Bundles](formats/databricks.md) (Genie spaces, agent apps) | ✓ | |
-| [AWS CloudFormation and CDK](formats/cloudformation.md) (Bedrock Agents, AgentCore) | ✓ | Bedrock Agents |
-| [Microsoft Copilot Studio](formats/copilot-studio.md) (agent workspaces, solutions) | ✓ | ✓ |
-| [Salesforce Agentforce](formats/agentforce.md) (Agent Script, legacy metadata) | ✓ | Agent Script |
-| [Google ADK Agent Config](formats/adk-config.md) | ✓ | ✓ |
-| [Vertex AI Agent Engine](formats/vertex-agent-engine.md) (saved API responses) | inventory | |
-| [Python agent code](formats/python.md) (OpenAI Agents SDK, LangChain/LangGraph, Google ADK, CrewAI, direct model API calls) | ✓ | |
-| [ADL](formats/adl.md), [Open Agent Spec](formats/agent-spec.md), [AGNTCY OASF](formats/oasf.md) | ✓ | ✓ |
-| [Marshal file](formats/marshal-file.md): a hand-written definition for agents no reader covers | ✓ | ✓ |
+| Source | Read | Write | Writer tested by |
+|---|---|---|---|
+| [Databricks Asset Bundles](formats/databricks.md) (Genie spaces, agent apps) | ✓ | |  |
+| [AWS CloudFormation and CDK](formats/cloudformation.md) (Bedrock Agents, AgentCore) | ✓ | Bedrock Agents | losses explained |
+| [Microsoft Copilot Studio](formats/copilot-studio.md) (agent workspaces, solutions) | ✓ | ✓ | published schema, partly |
+| [Salesforce Agentforce](formats/agentforce.md) (Agent Script, legacy metadata) | ✓ | Agent Script | round trip |
+| [Google ADK Agent Config](formats/adk-config.md) | ✓ | ✓ | losses explained |
+| [Vertex AI Agent Engine](formats/vertex-agent-engine.md) (saved API responses) | inventory | |  |
+| [Python agent code](formats/python.md) (OpenAI Agents SDK, LangChain/LangGraph, Google ADK, CrewAI, direct model API calls) | ✓ | |  |
+| [ADL](formats/adl.md), [Open Agent Spec](formats/agent-spec.md), [AGNTCY OASF](formats/oasf.md) | ✓ | ✓ | round trip; published schema for ADL and Agent Spec |
+| [Marshal file](formats/marshal-file.md): a hand-written definition for agents no reader covers | ✓ | ✓ | round trip |
+
+Readers are tested against real, public definitions, pinned to a commit. No writer has yet been tested by importing its output into the platform itself; see [how each format is verified](design.md#formats-and-how-each-is-verified).
 
 ## Where to next
 

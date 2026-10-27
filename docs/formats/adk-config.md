@@ -15,6 +15,8 @@ Workflow agents (`SequentialAgent`, `ParallelAgent`, `LoopAgent`) are reported a
 
 ## Writing
 
+**Tested:** every loss in converting every fixture is explained, and the agent keeps its identity. The output hasn't yet been loaded by ADK.
+
 The writer produces `root_agent.yaml`: name (made a valid identifier), model, description, instruction, built-in, function and MCP tools, and generation parameters. The agent's ledger identity is kept in a `# io.github.marshal-ledger:` comment. Sub-agents are separate files and are converted on their own.
 
 The conversion warns when the model isn't a Gemini model, since ADK Agent Config currently supports only Gemini. Function tool descriptions and schemas, scopes, knowledge sources and permissions are declared losses: in ADK they live in code, or don't exist.

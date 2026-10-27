@@ -13,7 +13,7 @@ Several kinds of tools touch AI agents, and most organizations run more than one
 
 ## A platform's own admin tools
 
-Copilot Studio, Agentforce, Bedrock and Databricks each list their own agents, and some show who built them and what they connect to. Each shows one platform, as it is now. Marshal keeps one normalized record across all of them, with every version, a risk-ranked diff between any two, drift between what was shipped and what is live, and "who depends on this tool?" across platforms. It reads exports and repositories, so it needs no access to the platforms' admin APIs.
+Copilot Studio, Agentforce, Bedrock and Databricks each list their own agents, and some show who built them and what they connect to. Each shows one platform, as it is now. Marshal keeps one normalized record across all of them, with every version, a risk-ranked diff between any two, drift between what was shipped and what is live, and "who depends on this tool?" within each platform (across platforms once entity resolution lands). It reads exports and repositories, so it needs no access to the platforms' admin APIs.
 
 ## Observability and tracing
 

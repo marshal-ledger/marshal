@@ -6,7 +6,7 @@ The ledger model is the hub every reader maps into and every writer maps out of.
 
 | Kind | Meaning |
 |---|---|
-| `Agent` | The logical identity, such as `finance/invoice_agent` |
+| `Agent` | The logical identity, such as `cfn/hr-resources/HRAgent` |
 | `AgentVersion` | One content-addressed version of an agent, read from one source artifact |
 | `Deployment` | A version placed in an environment, as a `proposed` or `shipped` event |
 | `Entity` | A shared tool, knowledge source, model, store or other dependency that many agents can reference |
@@ -18,8 +18,8 @@ Every scored field is a `Value`:
 ```yaml
 scope:
   value: write
-  provenance: declared        # declared | attested | annotation | derived | unknown
-  basis: resources.apps.invoice_agent.resources[2]
+  provenance: derived         # declared | attested | annotation | derived | unknown
+  basis: 'widest action in the IAM role HRAgentActionGroupLambdaRole of executor Lambda BedrockHRFunction: s3:PutObject'
 ```
 
 - `declared`: stated in the source artifact.
@@ -99,21 +99,21 @@ An `observed` event records what is live on the platform. When it differs from t
 
 `marshal ls` shows freshness per environment, and `marshal status AGENT` shows the shipped and observed versions. `marshal status --check` exits 1 on drift or staleness, for scheduled checks. Freshness is reported beside risk, not folded into it: how risky a change is and how far to trust the record are separate questions.
 
-The store also indexes the tools, knowledge and grant targets of each version, which backs `marshal ls --tool` and `--knowledge` and, later, dependency queries.
+The store also indexes the tools, knowledge and grant targets of each version, which backs `marshal ls --tool` and `--knowledge` and dependency queries.
 
 ## Entity references
 
 References use the form `<kind>/<platform>.<type>.<identifier>`, for example:
 
 ```text
-tool/databricks.uc.function.main.support.lookup_order
+tool/powerplatform.shared_office365users.Manager_V2
 knowledge/databricks.uc.table.samples.nyctaxi.trips
 model/databricks.serving_endpoint.databricks-claude-sonnet-5-5
 ```
 
 An agent that another agent calls is referenced by its agent id: `agent/<agent id>`. Functions defined in code are scoped to their project (`tool/python.<project>/<module>:<function>`), so same-named functions in different projects are different entities.
 
-`marshal deps PATTERN` lists the agents whose latest or shipped versions reference a matching tool, knowledge source or grant target, and where those versions are shipped. `marshal entities` lists shared entities with the number of agents that use them. In v0, two references are the same entity only when they match exactly. Resolving different connectors for one underlying API is a later milestone.
+`marshal deps PATTERN` lists the agents whose latest or shipped versions reference a matching tool, knowledge source or grant target, and where those versions are shipped. `marshal entities` lists shared entities with the number of agents that use them. In v0, two references are the same entity only when they match exactly. A ref includes its platform, so dependency queries find the agents that share an entity within a platform. Recognizing that refs on different platforms, or different connectors, call the same underlying API (entity resolution) is the next major milestone.
 
 ## Completeness
 

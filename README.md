@@ -22,7 +22,7 @@ Marshal reads the agent definitions teams already produce: Databricks bundles, C
 - **Inventory** of every agent across platforms, with versions, deployments, and each record's completeness.
 - **Risk-ranked review:** pull requests that change an agent get a comment that lists permission escalations, new write tools and model changes first.
 - **Drift and freshness:** compares what is live with what was shipped, and shows how recently each record was confirmed and by which channel.
-- **Dependencies:** "who uses this tool, this knowledge source, this permission?" across every platform.
+- **Dependencies:** "who uses this tool, this knowledge source, this permission?" Entities match exactly, so this works within each platform today; matching the same API across platforms is the next milestone.
 - **Translation** between formats, with a fidelity report computed by reading the result back.
 - **Portability scores** for moving an agent to another platform, from a community-maintained capability matrix.
 - **No shared secrets:** pipelines push records authenticated by their CI provider's OIDC token. Marshal never connects to agent platforms.
@@ -35,17 +35,19 @@ Pipelines you already run record each agent: a pull request records the proposed
 
 ## Formats
 
-| Source | Read | Write |
-|---|---|---|
-| Databricks Asset Bundles (Genie spaces, agent apps) | ✓ | |
-| AWS CloudFormation and CDK (Bedrock Agents, AgentCore) | ✓ | Bedrock Agents |
-| Microsoft Copilot Studio (agent workspaces, solutions) | ✓ | ✓ |
-| Salesforce Agentforce (Agent Script, legacy metadata) | ✓ | Agent Script |
-| Google ADK Agent Config | ✓ | ✓ |
-| Vertex AI Agent Engine (saved API responses) | inventory | |
-| Python agent code (OpenAI Agents SDK, LangChain/LangGraph, Google ADK, CrewAI, direct model API calls) | ✓ | |
-| ADL, Open Agent Spec, AGNTCY OASF | ✓ | ✓ |
-| Marshal file: a hand-written definition for agents no reader covers, recorded as attested | ✓ | ✓ |
+| Source | Read | Write | Writer tested by |
+|---|---|---|---|
+| Databricks Asset Bundles (Genie spaces, agent apps) | ✓ | |  |
+| AWS CloudFormation and CDK (Bedrock Agents, AgentCore) | ✓ | Bedrock Agents | losses explained |
+| Microsoft Copilot Studio (agent workspaces, solutions) | ✓ | ✓ | published schema, partly |
+| Salesforce Agentforce (Agent Script, legacy metadata) | ✓ | Agent Script | round trip |
+| Google ADK Agent Config | ✓ | ✓ | losses explained |
+| Vertex AI Agent Engine (saved API responses) | inventory | |  |
+| Python agent code (OpenAI Agents SDK, LangChain/LangGraph, Google ADK, CrewAI, direct model API calls) | ✓ | |  |
+| ADL, Open Agent Spec, AGNTCY OASF | ✓ | ✓ | round trip; published schema for ADL and Agent Spec |
+| Marshal file: a hand-written definition for agents no reader covers, recorded as attested | ✓ | ✓ | round trip |
+
+Readers are tested against real, public definitions, pinned to a commit. No writer has yet been tested by importing its output into the platform itself; see [how each format is verified](docs/design.md#formats-and-how-each-is-verified).
 
 ## Try it
 
@@ -64,11 +66,11 @@ Then on your own agents. See [Getting started](docs/getting-started.md):
 $ marshal read path/to/bundle                        # print ledger records
 $ marshal collect path/to/bundle --target prod --event shipped
 $ marshal ls                                         # every agent, latest version, where it is shipped
-$ marshal diff finance/invoice_agent                 # proposed against shipped, ranked by risk
-$ marshal status finance/invoice_agent               # shipped vs live per environment, drift, freshness
-$ marshal deps "*CheckWeather" --shipped             # who depends on this, and where it is live
+$ marshal diff my-team/my_agent                      # proposed against shipped, ranked by risk
+$ marshal status my-team/my_agent                    # shipped vs live per environment, drift, freshness
+$ marshal deps "*my_tool" --shipped                  # who depends on this, and where it is live
 $ marshal convert agent.adl.yaml --to agent-spec     # translate, with a fidelity report
-$ marshal port finance/invoice_agent --to all        # portability to every platform
+$ marshal port my-team/my_agent --to all             # portability to every platform
 $ marshal web                                        # browse the store
 ```
 

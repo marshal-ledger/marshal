@@ -43,3 +43,15 @@ def test_ignored_mechanics_are_not_reported():
     written = record(extensions={"fmt": {"format_version": "1"}})
     report = compare(source, written, "fmt", {}, ignore=("extensions.fmt.format_version",))
     assert report.lossy == []
+
+
+def test_defaulted_fields_keep_read_back_order():
+    # A set difference would order them by string hash, which changes from run to run.
+    written = record(
+        display_name=Value[str].declared("filled in"),
+        tools=[ToolUse(ref=f"tool/{name}", requires_confirmation=Value[bool].declared(False)) for name in "zyxwvu"],
+    )
+    report = compare(record(), written, "fmt", {})
+    defaulted = [f.path for f in report.fields if f.outcome is Outcome.DEFAULTED]
+    assert defaulted == [p for p in field_values(written) if p in defaulted]
+    assert len(defaulted) > 6
