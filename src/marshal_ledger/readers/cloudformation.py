@@ -264,6 +264,17 @@ class _Template:
         return grants, managed
 
 
+# Values Bedrock stores when an agent doesn't set them, seen on real deploys. A value equal to
+# its default is recorded as absent, so an agent records the same whether its source states
+# the default or not, and a Terraform plan (which leaves unset values out) agrees with the
+# state after apply (which has them filled in).
+BEDROCK_DEFAULTS = {"IdleSessionTTLInSeconds": 600, "AgentCollaboration": "DISABLED", "OrchestrationType": "DEFAULT"}
+
+
+def _is_default(key: str, value: Any) -> bool:
+    return key in BEDROCK_DEFAULTS and str(value) == str(BEDROCK_DEFAULTS[key])
+
+
 def _provider(model: str) -> Optional[str]:
     match = _MODEL_VENDORS.search(model)
     return match.group(1) if match else None
@@ -538,7 +549,7 @@ class CloudFormationReader(DocumentReader):
                 entity(EntityKind.AGENT, ref, name)
             else:
                 extension.setdefault("external_collaborators", []).append(name)
-        if props.get("AgentCollaboration"):
+        if props.get("AgentCollaboration") and not _is_default("AgentCollaboration", template.resolve(props["AgentCollaboration"])):
             extension["collaboration"] = template.resolve(props["AgentCollaboration"])
 
         for kb in template.items(props.get("KnowledgeBases"), "KnowledgeBases", conditions):
@@ -564,7 +575,7 @@ class CloudFormationReader(DocumentReader):
         for key, label in (("GuardrailConfiguration", "guardrail"), ("MemoryConfiguration", "memory"),
                            ("IdleSessionTTLInSeconds", "idle_session_ttl"), ("OrchestrationType", "orchestration"),
                            ("CustomOrchestration", "custom_orchestration")):
-            if props.get(key) is not None:
+            if props.get(key) is not None and not _is_default(key, template.resolve(props[key])):
                 extension[label] = template.resolve(props[key])
         if conditions:
             extension["conditional"] = conditions

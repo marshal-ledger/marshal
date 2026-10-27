@@ -214,3 +214,18 @@ def test_a_link_lost_through_a_local_is_reported():
     assert record.spec.permissions.grants == []
     assert result.warnings == ["refunds.plan.json: aws_iam_role_policy.agent: role comes from local.role_name, which a "
                                "Terraform plan doesn't record, so this policy's permissions aren't linked to a role"]
+
+
+def test_a_plan_and_the_state_after_apply_give_the_same_version():
+    """A plan leaves out values the agent doesn't set; the state after apply has Bedrock's defaults
+    filled in. Both must record the same version, or every apply would look like a change."""
+    data = refunds_plan()
+    agent = next(r for r in data["planned_values"]["root_module"]["resources"] if r["type"] == "aws_bedrockagent_agent")
+    del agent["values"]["idle_session_ttl_in_seconds"]
+    [planned] = read(data).records
+    applied = copy.deepcopy(data)
+    values = next(r for r in applied["planned_values"]["root_module"]["resources"] if r["type"] == "aws_bedrockagent_agent")["values"]
+    values.update({"idle_session_ttl_in_seconds": 600, "agent_collaboration": "DISABLED"})
+    [after] = read(applied).records
+    assert after.version == planned.version
+    assert "idle_session_ttl" not in after.spec.extensions["bedrock"]

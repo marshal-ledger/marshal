@@ -1,3 +1,4 @@
+import re
 import textwrap
 
 from marshal_ledger.convert import convert
@@ -135,3 +136,15 @@ def test_functions_without_a_stated_confirmation_are_warned_about():
     conversion = convert(record, "cloudformation")
     assert "RequireConfirmation" not in conversion.text
     assert any("whether approve_payment needs confirmation" in w for w in conversion.warnings)
+
+
+def test_values_equal_to_bedrock_defaults_are_recorded_as_absent():
+    template = re.sub(r"( +)AgentName: invoice-agent\n",
+                      r"\g<0>\1IdleSessionTTLInSeconds: 600\n\1AgentCollaboration: DISABLED\n", TEMPLATE)
+    [stated] = CloudFormationReader().read_data(load_template(template), "stack.yaml").records
+    [default] = CloudFormationReader().read_data(load_template(TEMPLATE), "stack.yaml").records
+    assert "IdleSessionTTLInSeconds: 600" in template
+    assert stated.version == default.version
+    longer = template.replace("IdleSessionTTLInSeconds: 600", "IdleSessionTTLInSeconds: 1800")
+    [changed] = CloudFormationReader().read_data(load_template(longer), "stack.yaml").records
+    assert changed.spec.extensions["bedrock"]["idle_session_ttl"] == 1800
