@@ -21,6 +21,10 @@ connector whose server the vendor documents. ``equivalents/*.yaml`` lists those 
 each with the vendor pages that state it; matches through them are reported as
 documented.
 
+A person can state a link no definition or document shows, such as a Python function
+that wraps an HTTP API, in a Marshal file's ``links``. Matches through those are
+reported as attested, with who attested them.
+
 Nothing is fetched and nothing is matched on a name alone. A URL whose host is a
 placeholder, an unresolved ``${...}`` token or a loopback address has no target:
 two agents calling ``127.0.0.1`` aren't calling the same system.
@@ -52,6 +56,7 @@ KINDS = {
     "openapi": "same OpenAPI operation",
     "url": "same knowledge source",
     "lambda": "same Lambda function",
+    "ref": "same entity",
     "host": "same API host",
 }
 """How a match through each kind of target is described."""
@@ -67,6 +72,13 @@ class Target:
     """The rule that derived the target, for display beside a match."""
     sources: tuple[str, ...] = ()
     """For a documented equivalent: the vendor pages that state it."""
+    attested: Optional[str] = None
+    """For a link a person stated: who, when and where."""
+
+    @property
+    def qualifier(self) -> str:
+        """``documented``, ``attested``, or empty for a target the definition itself states."""
+        return "documented" if self.sources else "attested" if self.attested else ""
 
     @property
     def kind(self) -> str:
@@ -86,9 +98,56 @@ def describe(target: str) -> str:
     return KINDS.get(target.split(":", 1)[0], "same target")
 
 
-def label(target: Target) -> str:
+def label(target: Target, qualifier: Optional[str] = None) -> str:
     """How a match through ``target`` is described, such as ``same MCP server (documented)``."""
-    return describe(target.target) + (" (documented)" if target.sources else "")
+    qualifier = target.qualifier or qualifier or ""
+    return describe(target.target) + (f" ({qualifier})" if qualifier else "")
+
+
+TARGET_KINDS = ("http", "mcp", "openapi", "url", "host", "lambda")
+
+
+def normalize_target(text: str) -> Optional[str]:
+    """A target as a person writes it, in the form resolution compares; None if it isn't one."""
+    kind, _, rest = text.strip().partition(":")
+    kind = kind.lower()
+    if kind not in TARGET_KINDS or not rest:
+        return None
+    if kind == "http":
+        method, _, url = rest.strip().partition(" ")
+        normalized = normalize_url(url) if method.upper() in _METHODS else None
+        return f"http:{method.upper()} {normalized}" if normalized else None
+    if kind == "mcp":
+        return mcp_target(rest) if "://" in rest or " " in rest else (f"mcp:{rest}" if rest.startswith(("npm:", "pypi:")) else None)
+    if kind == "url":
+        normalized = normalize_url(rest)
+        return f"url:{normalized}" if normalized else None
+    if kind == "host":
+        host = rest.strip().lower()
+        return f"host:{host}" if host and not _PLACEHOLDER.search(host) and "*" not in host and "/" not in host else None
+    return f"{kind}:{rest.strip()}"
+
+
+def links(record: AgentVersion) -> list[tuple[str, str]]:
+    """(ref, target) pairs a Marshal file attests. A link to another ref is the target ``ref:<that ref>``,
+    which both refs then share."""
+    found = ((record.spec.extensions.get("marshal-file") or {}).get("links")) if record.source.format == "marshal-file" else None
+    out: list[tuple[str, str]] = []
+    for link in found if isinstance(found, list) else []:
+        ref, same_as = link.get("ref"), link.get("same_as")
+        if not (isinstance(ref, str) and isinstance(same_as, str)):
+            continue
+        if "/" in same_as and ":" not in same_as.split("/", 1)[0]:
+            out += [(ref, f"ref:{same_as}"), (same_as, f"ref:{same_as}")]
+        else:
+            out.append((ref, same_as))
+    return out
+
+
+def attestation(record: AgentVersion) -> str:
+    """Who attested a Marshal file's links, when and in which file, from the record's source."""
+    detail = (record.source.detected_by or "").partition(", ")[2]
+    return f"attested in {record.source.artifact}" + (f", {detail}" if detail else "") + f" (agent {record.agent})"
 
 
 @lru_cache(maxsize=1)
@@ -189,13 +248,21 @@ def _documented(ref: str, relation: str) -> Iterator[Target]:
             yield Target(ref, relation, _host(url), "host of the documented equivalent", sources)
 
 
-def targets(record: AgentVersion) -> list[Target]:
-    """Every target the refs of one version reach."""
+def targets(record: AgentVersion, attested: Optional[dict[str, list[tuple[str, str]]]] = None) -> list[Target]:
+    """Every target the refs of one version reach.
+
+    ``attested`` maps refs to (target, attestation) pairs from Marshal files' links; any
+    version that uses a linked ref gets the link's target.
+    """
     out: list[Target] = []
+    attested = attested or {}
     for use in record.spec.tools:
         out += _documented(use.ref, "tool")
+        out += [Target(use.ref, "tool", target, "link stated by a person", attested=who) for target, who in attested.get(use.ref, [])]
     for item in record.spec.knowledge:
         out += _documented(item.ref, "knowledge")
+        out += [Target(item.ref, "knowledge", target, "link stated by a person", attested=who)
+                for target, who in attested.get(item.ref, [])]
     for use in record.spec.tools:
         out += [Target(use.ref, "tool", t, basis) for t, basis in _tool_targets(use.ref, use.name)]
     for item in record.spec.knowledge:
@@ -208,6 +275,8 @@ def targets(record: AgentVersion) -> list[Target]:
         for executor in found if isinstance(found, list) else [found]:
             out.append(Target(ref, "tool", f"lambda:{executor}", "Lambda function that runs the action group"))
     for grant in record.spec.permissions.grants:
+        out += [Target(grant.target, "grant", target, "link stated by a person", attested=who)
+                for target, who in attested.get(grant.target, [])]
         if grant.target.startswith("other/network."):
             host = grant.target.removeprefix("other/network.").lower()
             if host and not _PLACEHOLDER.search(host) and "*" not in host:
@@ -215,4 +284,5 @@ def targets(record: AgentVersion) -> list[Target]:
     return list(dict.fromkeys(out))
 
 
-__all__ = ["KINDS", "Target", "describe", "documented_equivalents", "label", "mcp_target", "normalize_url", "strength", "targets"]
+__all__ = ["KINDS", "TARGET_KINDS", "Target", "attestation", "describe", "documented_equivalents", "label", "links",
+           "mcp_target", "normalize_target", "normalize_url", "strength", "targets"]

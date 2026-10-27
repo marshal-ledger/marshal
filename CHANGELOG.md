@@ -4,6 +4,7 @@ Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](
 
 ## 0.5.0 (unreleased)
 
+- Marshal files gain `links`: a person states that a ref reaches a target (`http:POST https://…`, `mcp:…`, `host:…`) or is the same entity as another ref, for tools whose definitions don't show it, such as a Python function that calls an API. Dependency matches through a link are labelled attested, with who attested it.
 - Documented equivalents: a table of links vendors document but definitions don't state, each citing its sources (`equivalents/*.yaml`). It starts with Copilot Studio's Microsoft Learn Docs MCP connector and the server it calls, so that connector matches agents that name the server's URL. Such matches are reported as documented, and `/v0/deps` gains `basis`.
 - Bedrock action groups resolve to the Lambda function that runs them, so agents in different stacks that share a function match across platforms' dependency views: by function ARN, by the export a stack imports it from, or by its stated name. The function is recorded in the event's bindings (`executors`), so versions don't change.
 - Dependencies across platforms: `marshal deps`, the web view and `/v0/deps` also list refs on any platform that reach the same HTTP operation, MCP server, OpenAPI operation, knowledge URL or API host, each with how it matched (`match`, `via`). Matches come only from what the definitions state; nothing is fetched or matched on a name. `--exact` (or `resolve=false`) turns it off, and a pattern can name a target, such as `host:api.acme.example`.

@@ -147,6 +147,8 @@ A Lambda function is environment-bound, so it is recorded in each event's bindin
 
 Some refs reach something their definition doesn't name, but the vendor documents it: Copilot Studio's Microsoft Learn Docs MCP connector is recorded as `tool/mcp.powerplatform.shared_microsoftlearndocsmcpserver`, with no URL, and Microsoft documents that it calls the server at `https://learn.microsoft.com/api/mcp`. A table of these [documented equivalents](../src/marshal_ledger/equivalents/README.md), each entry citing the vendor's pages, lets such a ref match agents that name the server. The match is reported as documented (for example `same MCP server (documented)`), and the JSON API's `basis` lists the sources. Entries are added only where vendor documentation states the link.
 
+A person can also state a link no definition or document shows, in a [Marshal file's `links`](formats/marshal-file.md#links). Matches through it are labelled attested (`same HTTP operation (attested)`), and `basis` names the file, who attested it and when.
+
 Tools whose definitions name only a platform object, such as a Power Platform connector operation, an Apex class or a Unity Catalog function, match exactly within their platform and aren't resolved further unless the table documents them.
 
 ## Completeness

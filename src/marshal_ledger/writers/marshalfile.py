@@ -95,9 +95,14 @@ class MarshalFileWriter(Writer):
             "grants": [{"target": g.target, "privilege": g.privilege, "scope": g.scope.value} for g in permissions.grants],
             "access": [{"principal": a.principal, "principal_type": a.principal_type, "level": a.level} for a in permissions.access],
         })
+        extensions = dict(spec.extensions)
+        own = dict(extensions.pop(FORMAT, None) or {})
+        doc["links"] = own.pop("links", None)  # a top-level key in the file, not an extension
+        if own:
+            extensions[FORMAT] = own
         doc["bindings"] = record.bindings or None
         doc["extensions"] = {
-            platform: block(values, f"extensions.{platform}.*") for platform, values in spec.extensions.items()
+            platform: block(values, f"extensions.{platform}.*") for platform, values in extensions.items()
         } or None
         return Written(document=_compact(doc), notes=notes)
 
@@ -159,6 +164,12 @@ permissions:
   #  - principal: support-agents
   #    principal_type: group      # user | group | service_principal | unknown
   #    level: use
+
+# What a tool reaches when no definition says so, such as a function that calls an
+# HTTP API. A target (http:, mcp:, url:, host:) or another ref. Attested, like the rest.
+links: []
+#  - ref: tool/{platform}.refund
+#    same_as: http:POST https://api.example.com/refunds
 
 # Environment-bound values (endpoints, environment variable names): recorded,
 # not part of the version hash. Never put a credential here.

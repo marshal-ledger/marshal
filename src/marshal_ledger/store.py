@@ -906,19 +906,28 @@ class Store:
         ``pattern`` may also name targets directly, such as ``host:api.acme.example``. Refs that
         ``dependents`` already returns (pass them as ``exact``) aren't repeated.
         """
-        from .resolve import label, strength, targets
+        from .resolve import attestation, label, links, strength, targets
 
         if exact is None:
             exact = self.dependents(pattern, relation=relation, shipped_only=shipped_only)
         seen = {(d.agent, d.label, d.ref) for d in exact}
-        versions = [(v, targets(self._with_event_bindings(v[0], v[2].record))) for v in self._dependency_versions(shipped_only)]
-        # Target → whether every way the matched refs reach it is only documented, not stated.
-        wanted: dict[str, bool] = {}
+        candidates = list(self._dependency_versions(shipped_only))
+        # Links a person stated in a Marshal file apply to every version that uses the linked ref.
+        attested: dict[str, list[tuple[str, str]]] = {}
+        for _, _, stored, _, _ in candidates:
+            for ref, target in links(stored.record):
+                if (target, who := attestation(stored.record)) not in attested.setdefault(ref, []):
+                    attested[ref].append((target, who))
+        versions = [(v, targets(self._with_event_bindings(v[0], v[2].record), attested)) for v in candidates]
+        # Target → the strongest evidence any matched ref has for it: "" (stated) beats "attested" beats "documented".
+        wanted: dict[str, str] = {}
+        order = {"": 0, "attested": 1, "documented": 2}
         direct = pattern.lower().split(":", 1)[0] in ("http", "mcp", "openapi", "url", "host", "lambda")
         for (agent, _, stored, _, _), found in versions:
             for t in found:
                 if (agent, stored.label, t.ref) in seen or (direct and fnmatch.fnmatchcase(t.target.lower(), pattern.lower())):
-                    wanted[t.target] = wanted.get(t.target, True) and bool(t.sources)
+                    current = wanted.get(t.target)
+                    wanted[t.target] = t.qualifier if current is None else min(current, t.qualifier, key=order.__getitem__)
         best: dict[tuple[str, str, str], Dependent] = {}
         for (agent, platform, stored, latest, shipped), found in versions:
             for t in found:
@@ -926,8 +935,8 @@ class Store:
                 if t.target not in wanted or key in seen or (relation and t.relation != relation):
                     continue
                 if key not in best or strength(t.target) > strength(best[key].via or ""):
-                    basis = t.basis + (": " + ", ".join(t.sources) if t.sources else "")
-                    match = label(t) if t.sources or not wanted[t.target] else label(t) + " (documented)"
+                    basis = t.basis + (": " + ", ".join(t.sources) if t.sources else "") + (f", {t.attested}" if t.attested else "")
+                    match = label(t, wanted[t.target])
                     best[key] = Dependent(agent, platform, stored.label, t.relation, t.ref, latest=latest, shipped=shipped,
                                           match=match, via=t.target, basis=basis)
         return sorted(best.values(), key=lambda d: (-strength(d.via or ""), d.agent, d.label, d.ref))
