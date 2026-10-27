@@ -22,7 +22,7 @@ A complete workflow is in [`examples/github-workflow.yml`](../examples/github-wo
     url: https://marshal.acme.example
 ```
 
-`@v0` follows the latest 0.x release. To decide when to upgrade, pin a release tag such as `@v0.1.0`, or a commit SHA. The Action installs Marshal from the same commit, so the client always matches the Action's version.
+`@v0` follows the latest 0.x release. To decide when to upgrade, pin a release tag such as `@v0.2.0`, or a commit SHA. The Action installs Marshal from the same commit, so the client always matches the Action's version.
 
 | Input | Required | Meaning |
 |---|---|---|
