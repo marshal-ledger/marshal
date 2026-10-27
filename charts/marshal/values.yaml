@@ -30,6 +30,17 @@ config:
     enabled: true
     user_header: X-Forwarded-Email
 
+serviceAccount:
+  # A service account for the pods, for example one annotated for an AKS workload identity
+  # (see docs/azure.md). Unset: the namespace's default service account.
+  create: false
+  name: ""          # defaults to the release name when created; otherwise an existing account
+  annotations: {}
+  #  azure.workload.identity/client-id: <managed identity client ID>
+
+# Extra labels on the pods, such as azure.workload.identity/use: "true".
+podLabels: {}
+
 persistence:
   # For a single-replica SQLite store only.
   enabled: false

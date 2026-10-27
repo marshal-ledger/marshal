@@ -75,3 +75,19 @@ def ledger_location(tmp_path):
         connection.execute("DROP SCHEMA public CASCADE")
         connection.execute("CREATE SCHEMA public")
     return url
+
+
+def postgres_password():
+    """The test Postgres password, as a store password provider (``conftest:postgres_password``)."""
+    import os
+    from urllib.parse import urlsplit
+
+    return urlsplit(os.environ["MARSHAL_TEST_POSTGRES_URL"]).password
+
+
+def without_password(url):
+    """``url`` with its password removed, so a password provider must supply it."""
+    from urllib.parse import urlsplit, urlunsplit
+
+    parts = urlsplit(url)
+    return urlunsplit(parts._replace(netloc=f"{parts.username}@{parts.hostname}:{parts.port or 5432}"))

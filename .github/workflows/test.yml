@@ -60,9 +60,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310  # v5.0.1
-      - name: Lint and render (Kubernetes defaults, and OpenShift with no fixed UID)
+      - name: Lint and render (Kubernetes defaults, OpenShift with no fixed UID, AKS workload identity)
         run: |
-          for values in ci-values.yaml ci-openshift-values.yaml; do
+          for values in ci-values.yaml ci-openshift-values.yaml ci-azure-values.yaml; do
             helm lint charts/marshal -f "charts/marshal/$values"
             helm template marshal charts/marshal -f "charts/marshal/$values" > "$RUNNER_TEMP/$values"
           done
@@ -70,6 +70,14 @@ jobs:
         run: |
           if grep -E 'runAsUser|fsGroup' "$RUNNER_TEMP/ci-openshift-values.yaml"; then exit 1; fi
           grep -q 'runAsUser: 10001' "$RUNNER_TEMP/ci-values.yaml"
+      - name: Only the AKS values add a service account and pod labels
+        run: |
+          if grep -E 'kind: ServiceAccount|serviceAccountName|azure.workload.identity' "$RUNNER_TEMP/ci-values.yaml"; then exit 1; fi
+          grep -q 'kind: ServiceAccount' "$RUNNER_TEMP/ci-azure-values.yaml"
+          grep -q 'serviceAccountName: marshal$' "$RUNNER_TEMP/ci-azure-values.yaml"
+          grep -q 'azure.workload.identity/client-id: 00000000-0000-0000-0000-000000000000' "$RUNNER_TEMP/ci-azure-values.yaml"
+          grep -q 'azure.workload.identity/use: "true"' "$RUNNER_TEMP/ci-azure-values.yaml"
+          grep -q 'store_auth: azure' "$RUNNER_TEMP/ci-azure-values.yaml"
 
   image:
     runs-on: ubuntu-latest
@@ -77,6 +85,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - run: docker build -t marshal:ci .
       - run: docker run --rm marshal:ci --version
+      - name: Includes Entra ID sign-in for the store
+        run: docker run --rm --entrypoint python marshal:ci -c "from marshal_ledger.dbauth import AzureTokenProvider; AzureTokenProvider()"
       # As OpenShift runs it: an arbitrary UID in group 0, a read-only root filesystem, no /tmp.
       - name: Runs as an arbitrary UID with a read-only root filesystem
         run: |

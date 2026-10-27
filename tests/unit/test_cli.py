@@ -105,3 +105,13 @@ def test_convert(tmp_path, capsys):
     assert code == 0 and (tmp_path / "out" / "calculator.oasf.json").exists()
     assert json.loads(report.read_text())[0]["target"] == "oasf"
     assert "warning: OASF requires at least one skill" in err
+
+
+def test_db_auth_needs_postgres_and_reports_an_unreachable_store(tmp_path, capsys):
+    try:
+        main(["ls", "--db", str(tmp_path / "ledger.sqlite"), "--db-auth", "azure"])
+    except SystemExit as exc:
+        assert exc.code == 2
+    assert "only to a postgresql:// store" in capsys.readouterr().err
+    code, _, err = run(capsys, "ls", "--db", "postgresql://marshal@127.0.0.1:1/marshal?connect_timeout=2")
+    assert code == 1 and "cannot connect to the Postgres store" in err

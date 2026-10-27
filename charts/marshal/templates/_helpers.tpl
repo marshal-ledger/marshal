@@ -19,6 +19,14 @@ app.kubernetes.io/name: {{ .Chart.Name }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 
+{{- define "marshal.serviceAccountName" -}}
+{{- if .Values.serviceAccount.create -}}
+{{- .Values.serviceAccount.name | default (include "marshal.fullname" .) -}}
+{{- else -}}
+{{- .Values.serviceAccount.name -}}
+{{- end -}}
+{{- end -}}
+
 {{/*
 A security context without its empty values, so `runAsUser: ""` or `fsGroup: null` leaves the
 field out and OpenShift's restricted SCC assigns it from the namespace's range.

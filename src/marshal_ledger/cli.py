@@ -19,7 +19,7 @@ from .readers import READERS, ReadOptions, ReadResult, detect
 from .report import markdown, text
 from .risk import rank
 from .service import AgentReport, ingest
-from .store import Store, StoreError
+from .store import Store, StoreError, StoreUnavailable
 
 DEFAULT_DB = "marshal.sqlite"
 DEFAULT_AUDIENCE = "marshal"
@@ -49,8 +49,21 @@ def _run_reader(args: argparse.Namespace) -> ReadResult:
     return result
 
 
+def _password(args: argparse.Namespace) -> Any:
+    from .dbauth import password_provider
+
+    if not args.db_auth:
+        return None
+    if not str(args.db).startswith(("postgresql://", "postgres://")):
+        raise SystemExit(_fail("--db-auth applies only to a postgresql:// store", 2))
+    try:
+        return password_provider(args.db_auth)
+    except (ImportError, ValueError) as exc:
+        raise SystemExit(_fail(str(exc), 2)) from exc
+
+
 def _open_store(args: argparse.Namespace) -> Store:
-    return Store(args.db)
+    return Store(args.db, password=_password(args))
 
 
 def _read(args: argparse.Namespace) -> int:
@@ -280,7 +293,7 @@ def _web(args: argparse.Namespace) -> int:
     settings = WebSettings(enabled=True, user_header=args.user_header or "X-Forwarded-Email",
                            allow_unauthenticated=loopback and not args.user_header)
     print(f"Marshal web view on http://{args.host}:{args.port}/", file=sys.stderr)
-    uvicorn.run(create_web_app(args.db, settings), host=args.host, port=args.port, log_level="warning")
+    uvicorn.run(create_web_app(args.db, settings, password=_password(args)), host=args.host, port=args.port, log_level="warning")
     return 0
 
 
@@ -491,6 +504,12 @@ def _add_db_arg(parser: argparse.ArgumentParser) -> None:
         default=os.environ.get("MARSHAL_DB", DEFAULT_DB),
         help=f"local store file (default: $MARSHAL_DB or {DEFAULT_DB})",
     )
+    parser.add_argument(
+        "--db-auth",
+        default=os.environ.get("MARSHAL_DB_AUTH") or None,
+        help="obtain the Postgres password at each connection: 'azure' for a Microsoft Entra ID token, "
+             "or module:callable (default: $MARSHAL_DB_AUTH, else the password in the URL)",
+    )
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -644,7 +663,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     log.set_defaults(handler=_log)
 
     args = parser.parse_args(argv)
-    return args.handler(args)
+    try:
+        return args.handler(args)
+    except StoreUnavailable as exc:
+        return _fail(str(exc))
 
 
 if __name__ == "__main__":
