@@ -1,0 +1,129 @@
+"""Entity resolution: refs on different platforms that reach the same API, server or source."""
+
+import json
+
+import pytest
+from fastapi.testclient import TestClient
+
+from marshal_ledger.cli import main
+from marshal_ledger.model import AgentSpec, DeploymentEvent, Grant, KnowledgeUse, Scope, Source, ToolUse
+from marshal_ledger.readers.base import build_record
+from marshal_ledger.resolve import mcp_target, normalize_url, targets
+from marshal_ledger.store import Store
+from marshal_ledger.web import WebSettings, create_web_app
+
+SHIPPED = DeploymentEvent.SHIPPED
+
+
+@pytest.mark.parametrize("url, normalized", [
+    ("https://API.acme.example/refunds/", "https://api.acme.example/refunds"),
+    ("https://api.acme.example:443/refunds?dry_run=1#x", "https://api.acme.example/refunds"),
+    ("http://api.acme.example:8080/orders/{order_id}", "http://api.acme.example:8080/orders/{}"),
+    ("https://api.acme.example/orders/{{task}}/lines/:line", "https://api.acme.example/orders/{}/lines/{}"),
+    ("https://api.acme.example/orders/${ORDER}", "https://api.acme.example/orders/{}"),
+    ("http://127.0.0.1:HOST_PORT/costs", None),       # a placeholder port
+    ("http://localhost:8000/costs", None),            # loopback isn't one shared system
+    ("https://${API_HOST}/refunds", None),             # an unresolved host
+    ("ftp://files.acme.example/x", None),
+])
+def test_urls_are_normalized_or_left_unresolved(url, normalized):
+    assert normalize_url(url) == normalized
+
+
+@pytest.mark.parametrize("server, target", [
+    ("https://api.githubcopilot.com/mcp/", "mcp:https://api.githubcopilot.com/mcp"),
+    ("npx -y @notionhq/notion-mcp-server", "mcp:npm:@notionhq/notion-mcp-server"),
+    ("npx --yes @notionhq/notion-mcp-server@1.9.0 --port 3000", "mcp:npm:@notionhq/notion-mcp-server"),
+    ("uvx mcp-server-fetch==2025.1", "mcp:pypi:mcp-server-fetch"),
+    ("github-mcp-server", None),                       # a bare name proves nothing
+    ("python server.py", None),                        # a local command
+    ("powerplatform.shared_custommcp", None),
+])
+def test_mcp_servers_resolve_by_url_or_package(server, target):
+    assert mcp_target(server) == target
+
+
+def record(agent, platform, tools=(), knowledge=(), grants=()):
+    spec = AgentSpec(
+        tools=[ToolUse(ref=ref, name=name) for ref, name in tools],
+        knowledge=[KnowledgeUse(ref=ref) for ref in knowledge],
+        permissions={"grants": [Grant(target=t, privilege="connect", scope=Scope.READ) for t in grants]},
+    )
+    return build_record(agent=agent, platform=platform, source=Source(format=platform, artifact="a"), spec=spec)
+
+
+SPEC = record("refunds-spec", "agent-spec", tools=[
+    ("tool/http.POST.https://api.acme.example/refunds", "issue_refund"),
+    ("tool/mcp.https://mcp.acme.example/mcp/.search_orders", "search_orders"),
+])
+COPILOT = record("refunds-copilot", "copilot-studio", tools=[("tool/http.POST.https://API.acme.example/refunds/", None)],
+                 knowledge=["knowledge/https://contoso.sharepoint.com/sites/hr/"])
+ADK = record("orders-adk", "google-adk", tools=[("tool/mcp.https://mcp.acme.example/mcp", "McpToolset")])
+ADL = record("ledger-adl", "adl", grants=["other/network.api.acme.example"])
+HR = record("hr-adl", "adl", knowledge=["knowledge/https://contoso.sharepoint.com/sites/hr"])
+
+
+def test_targets_of_a_version():
+    assert {(t.ref, t.target) for t in targets(SPEC)} == {
+        ("tool/http.POST.https://api.acme.example/refunds", "http:POST https://api.acme.example/refunds"),
+        ("tool/http.POST.https://api.acme.example/refunds", "host:api.acme.example"),
+        # The tool's name is split off the ref, so its server matches an ADK toolset for the same URL.
+        ("tool/mcp.https://mcp.acme.example/mcp/.search_orders", "mcp:https://mcp.acme.example/mcp"),
+        ("tool/mcp.https://mcp.acme.example/mcp/.search_orders", "host:mcp.acme.example"),
+    }
+
+
+@pytest.fixture
+def db(ledger_location):
+    with Store(ledger_location) as store:
+        store.record([SPEC, COPILOT, ADK, ADL, HR], event=SHIPPED, environment="prod")
+    return ledger_location
+
+
+def test_related_refs_on_other_platforms_are_found_strongest_first(db):
+    with Store(db) as store:
+        exact = store.dependents("tool/http.POST.https://api.acme.example/refunds")
+        related = store.related("tool/http.POST.https://api.acme.example/refunds", exact=exact)
+    assert [d.agent for d in exact] == ["refunds-spec"]
+    assert [(d.agent, d.match, d.via) for d in related] == [
+        ("refunds-copilot", "same HTTP operation", "http:POST https://api.acme.example/refunds"),
+        ("ledger-adl", "same API host", "host:api.acme.example"),
+    ]
+
+
+def test_mcp_servers_and_knowledge_urls_match_across_formats(db):
+    with Store(db) as store:
+        [orders] = store.related("tool/mcp.https://mcp.acme.example/mcp")
+        [hr] = store.related("knowledge/https://contoso.sharepoint.com/sites/hr")
+    assert (orders.agent, orders.ref, orders.match) == (
+        "refunds-spec", "tool/mcp.https://mcp.acme.example/mcp/.search_orders", "same MCP server")
+    assert (hr.agent, hr.match) == ("refunds-copilot", "same knowledge source")
+
+
+def test_a_target_can_be_searched_directly(db):
+    with Store(db) as store:
+        found = store.related("host:api.acme.example")
+    assert {d.agent for d in found} == {"refunds-spec", "refunds-copilot", "ledger-adl"}
+    assert {d.match for d in found} == {"same API host"}
+
+
+def test_deps_lists_related_refs_unless_exact(db, capsys):
+    main(["deps", "tool/http.POST.https://api.acme.example/refunds", "--db", db])
+    out = capsys.readouterr().out
+    assert "Reaching the same thing, on any platform:" in out
+    assert "refunds-copilot" in out and "same HTTP operation" in out
+    main(["deps", "tool/http.POST.https://api.acme.example/refunds", "--db", db, "--exact"])
+    assert "refunds-copilot" not in capsys.readouterr().out
+    main(["deps", "host:api.acme.example", "--db", db, "--output", "json"])
+    assert {d["agent"] for d in json.loads(capsys.readouterr().out)} == {"refunds-spec", "refunds-copilot", "ledger-adl"}
+
+
+def test_web_view_and_api_show_related_refs(db):
+    client = TestClient(create_web_app(db, WebSettings(enabled=True, allow_unauthenticated=True)))
+    page = client.get("/deps", params={"q": "tool/http.POST.https://api.acme.example/refunds"}).text
+    assert "Reaching the same thing, on any platform" in page and "refunds-copilot" in page
+    api = client.get("/v0/deps", params={"q": "tool/http.POST.https://api.acme.example/refunds"}).json()
+    assert [(d["agent"], d["match"]) for d in api] == [
+        ("refunds-spec", "exact"), ("refunds-copilot", "same HTTP operation"), ("ledger-adl", "same API host")]
+    exact = client.get("/v0/deps", params={"q": "tool/http.POST.https://api.acme.example/refunds", "resolve": "false"}).json()
+    assert [d["agent"] for d in exact] == ["refunds-spec"]

@@ -2,8 +2,10 @@
 
 ``marshal demo`` downloads a fixed set of agent definitions from public GitHub
 repositories, each pinned to a commit, and records them with a short history:
-agents shipped to prod, a proposed change that adds a refund function, and a Copilot
-Studio agent that drifted after an edit in its web designer.
+agents shipped to prod, a proposed change that adds a refund function, a Copilot
+Studio agent that drifted after an edit in its web designer, and a proposed Copilot
+Studio topic that calls the API host the public ADL agents may reach, so the agents
+that share it show up across platforms.
 
 The definitions are listed in ``demo-sources.json``, a subset of the golden test
 fixtures. They are downloaded rather than packaged so each file stays under its
@@ -31,6 +33,28 @@ from .store import Store
 
 PROPOSED = "databricks/agent-openai-agents-sdk"
 DRIFTED = "copilot-studio/mcp-agent"
+EXTENDED = "copilot-studio/all-the-things"
+# A topic in Microsoft's published authoring schema, with one HTTP request to the host the ADL
+# examples' network boundaries allow (api.acme.example).
+INVOICE_TOPIC = """\
+# Name: Check invoice status
+# Looks up the status of an invoice in the finance API.
+kind: AdaptiveDialog
+beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent:
+    displayName: Check invoice status
+    triggerQueries:
+      - What is the status of my invoice?
+      - Has my invoice been paid?
+
+  actions:
+    - kind: HttpRequestAction
+      id: httpRequest_invoiceStatus
+      method: Get
+      url: https://api.acme.example/invoices/status
+"""
 
 
 class DemoError(Exception):
@@ -137,6 +161,14 @@ def build(target: Path, cache: Optional[Path] = None, log: Callable[[str], None]
             result = READERS["copilot-studio"]().read(edited)
             ingest(store, result.records, event=DeploymentEvent.OBSERVED, environment="prod",
                    at=start + timedelta(days=44), channel=Channel.SCHEDULED)
+
+            # A pull request that gives a Copilot Studio agent an HTTP call to the finance API host.
+            extended = Path(work) / "extended"
+            shutil.copytree(cache / EXTENDED, extended)
+            (extended / "topics" / "CheckInvoiceStatus.mcs.yml").write_text(INVOICE_TOPIC)
+            result = READERS["copilot-studio"]().read(extended)
+            ingest(store, result.records, event=DeploymentEvent.PROPOSED, environment="prod",
+                   at=start + timedelta(days=42), channel=Channel.CI)
         return len(store.agents())
 
 

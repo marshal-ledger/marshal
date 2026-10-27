@@ -22,7 +22,7 @@ Marshal keeps one versioned record of every AI agent in an organization, whateve
 - **Inventory** of every agent across platforms, with versions, deployments, and each record's completeness.
 - **Risk-ranked review:** pull requests that change an agent get a comment that lists permission escalations, new write tools and removed guardrails first.
 - **Drift and freshness:** compares what is live with what was shipped, and shows how recently each record was confirmed and by which channel.
-- **Dependencies:** "who uses this tool, this knowledge source, this permission?" Entities match exactly, so this works within each platform today; matching the same API across platforms is the next milestone.
+- **Dependencies:** "who uses this tool, this knowledge source, this permission?" Refs on other platforms that reach the same HTTP operation, MCP server, knowledge URL or API host are listed too, each with how it matched.
 - **Translation** between formats, with a fidelity report computed by reading the result back.
 - **Portability scores** for moving an agent to another platform, from a community-maintained capability matrix.
 - **No shared secrets:** pipelines push records authenticated by their CI provider's OIDC token. Marshal never connects to agent platforms.
@@ -43,7 +43,7 @@ $ uvx --from 'marshal-ledger[server]' marshal demo
 $ uvx --from 'marshal-ledger[server]' marshal web --db demo.sqlite
 ```
 
-Or install it with `pip install 'marshal-ledger[server]'`. `marshal demo` downloads 28 public agent definitions from GitHub, each pinned to a commit, and records them with a short history: a proposed change, and a Copilot Studio agent that drifted after an edit in its web designer.
+Or install it with `pip install 'marshal-ledger[server]'`. `marshal demo` downloads 28 public agent definitions from GitHub, each pinned to a commit, and records them with a short history: two proposed changes, and a Copilot Studio agent that drifted after an edit in its web designer.
 
 ![An agent page in the web view: the Copilot Studio agent's live definition differs from what was shipped, and three HIGH changes show its tool switched to the maker's credentials](assets/web-drift-light.png#only-light)
 ![An agent page in the web view: the Copilot Studio agent's live definition differs from what was shipped, and three HIGH changes show its tool switched to the maker's credentials](assets/web-drift-dark.png#only-dark)

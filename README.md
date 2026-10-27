@@ -22,7 +22,7 @@ Marshal reads the agent definitions teams already produce: Databricks bundles, C
 - **Inventory** of every agent across platforms, with versions, deployments, and each record's completeness.
 - **Risk-ranked review:** pull requests that change an agent get a comment that lists permission escalations, new write tools and removed guardrails first.
 - **Drift and freshness:** compares what is live with what was shipped, and shows how recently each record was confirmed and by which channel.
-- **Dependencies:** "who uses this tool, this knowledge source, this permission?" Entities match exactly, so this works within each platform today; matching the same API across platforms is the next milestone.
+- **Dependencies:** "who uses this tool, this knowledge source, this permission?" Refs on other platforms that reach the same HTTP operation, MCP server, knowledge URL or API host are listed too, each with how it matched.
 - **Translation** between formats, with a fidelity report computed by reading the result back.
 - **Portability scores** for moving an agent to another platform, from a community-maintained capability matrix.
 - **No shared secrets:** pipelines push records authenticated by their CI provider's OIDC token. Marshal never connects to agent platforms.
