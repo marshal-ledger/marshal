@@ -2,6 +2,6 @@ apiVersion: v2
 name: marshal
 description: Marshal, a ledger for enterprise AI agents. Runs the ingest API and the read-only web view.
 type: application
-version: 0.5.0
-appVersion: "0.5.0"
+version: 0.6.0
+appVersion: "0.6.0"
 home: https://github.com/marshal-ledger/marshal
