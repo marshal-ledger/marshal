@@ -4,6 +4,8 @@ Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](
 
 ## 0.2.0 (unreleased)
 
+- The ingest API accepts OIDC tokens from Jenkins (OpenID Connect Provider plugin) and Azure DevOps pipelines. New settings: `issuers[].owner` and `policy.shipped.workflows`. Signing-key fetches read proxy settings at each fetch and refetch for an unknown key id at most once a minute.
+
 ## 0.1.0 (2026-10-26)
 
 The first release.

@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from conftest import GITHUB, GITLAB
+from conftest import AZURE_DEVOPS, GITHUB, GITLAB, JENKINS
 from marshal_ledger.hashing import sha256_text
 from marshal_ledger.model import AgentSpec, Instructions, Provenance, Source, ToolUse
 from marshal_ledger.oidc import IssuerConfig
@@ -148,3 +148,54 @@ def test_observed_events_need_the_shipped_policy_and_are_recorded_as_scheduled(c
     assert response.json()["reports"][0]["channel"] == "scheduled"
     with Store(config.store) as store:
         assert [e.channel.value for e, _, _ in store.history("finance/invoice")] == ["ci", "scheduled"]
+
+
+@pytest.fixture
+def ci_config(ledger_location):
+    return ServerConfig(
+        store=ledger_location,
+        issuers=[
+            IssuerConfig(
+                issuer=JENKINS, provider="jenkins", owner="parent", repositories=["https://jenkins.example.com/job/agents/*"]
+            ),
+            IssuerConfig(issuer=AZURE_DEVOPS, provider="azure-devops", owner="parent", repositories=["acme/agents"]),
+        ],
+        policy={
+            "shipped": {
+                "workflows": ["https://jenkins.example.com/job/agents/job/*/job/main/", "sc://acme/agents/marshal-prod"]
+            }
+        },
+    )
+
+
+def test_jenkins_branch_jobs_propose_and_the_main_job_ships(ci_config, signer):
+    client = TestClient(create_app(ci_config, key_resolver=signer.resolver))
+    pr_job = signer.jenkins(sub="https://jenkins.example.com/job/agents/job/finance/job/PR-7/")
+    assert client.post("/v0/events", json=body("proposed"), headers=auth(pr_job)).status_code == 200
+    assert client.post("/v0/events", json=body("shipped"), headers=auth(pr_job)).status_code == 403
+    # With owner: parent, both jobs are the multibranch project, so the main job may ship the agent.
+    assert client.post("/v0/events", json=body("shipped"), headers=auth(signer.jenkins())).status_code == 200
+    other_project = signer.jenkins(sub="https://jenkins.example.com/job/agents/job/hr/job/main/")
+    response = client.post("/v0/events", json=body("shipped"), headers=auth(other_project))
+    assert response.status_code == 403 and "belongs to" in response.json()["detail"]
+
+
+def test_azure_devops_pipeline_proposes_and_service_connection_ships(ci_config, signer):
+    client = TestClient(create_app(ci_config, key_resolver=signer.resolver))
+    pipeline = signer.azure_devops(sub="p://acme/agents/record-agents")
+    assert client.post("/v0/events", json=body("proposed"), headers=auth(pipeline)).status_code == 200
+    assert client.post("/v0/events", json=body("shipped"), headers=auth(pipeline)).status_code == 403
+    prod = signer.azure_devops(sub="sc://acme/agents/marshal-prod")
+    assert client.post("/v0/events", json=body("shipped"), headers=auth(prod)).status_code == 200
+    other = signer.azure_devops(sub="sc://acme/payments/marshal-prod")
+    assert client.post("/v0/events", json=body("proposed"), headers=auth(other)).status_code == 403
+
+
+def test_jenkins_build_number_and_job_are_audited(ci_config, signer):
+    client = TestClient(create_app(ci_config, key_resolver=signer.resolver))
+    client.post("/v0/events", json=body("shipped"), headers=auth(signer.jenkins(sha="9e8d7c6")))
+    with Store(ci_config.store) as store:
+        [(event, _, actor)] = store.history("finance/invoice")
+    assert (event.commit, event.pipeline_run) == ("9e8d7c6", "jenkins:42")
+    assert actor.repository == "https://jenkins.example.com/job/agents/job/finance/"
+    assert actor.workflow == "https://jenkins.example.com/job/agents/job/finance/job/main/"
