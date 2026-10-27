@@ -5,7 +5,7 @@
 site_name: Marshal ledger
 site_description: >-
   Marshal is an open-source, vendor-neutral ledger for enterprise AI agents: one versioned record of every agent
-  on Copilot Studio, Agentforce, Bedrock, Databricks, Google ADK and agent code, with risk-ranked diffs, drift and dependencies.
+  on Copilot Studio, Agentforce, Bedrock (CloudFormation or Terraform), Databricks, Google ADK and agent code, with risk-ranked diffs, drift and dependencies.
 site_url: https://marshal-ledger.github.io/marshal/
 repo_url: https://github.com/marshal-ledger/marshal
 repo_name: marshal-ledger/marshal
@@ -93,6 +93,7 @@ nav:
   - Formats:
       - Databricks Asset Bundles: formats/databricks.md
       - AWS CloudFormation and CDK: formats/cloudformation.md
+      - Terraform: formats/terraform.md
       - Microsoft Copilot Studio: formats/copilot-studio.md
       - Salesforce Agentforce: formats/agentforce.md
       - Google ADK Agent Config: formats/adk-config.md

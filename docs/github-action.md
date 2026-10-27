@@ -27,7 +27,7 @@ A complete workflow is in [`examples/github-workflow.yml`](../examples/github-wo
 | Input | Required | Meaning |
 |---|---|---|
 | `event` | yes | `proposed`, `shipped`, or `observed` for a [scheduled export](../examples/scheduled/) of a live definition |
-| `artifacts` | yes | Path of the agent artifact, such as a bundle directory |
+| `artifacts` | yes | Path of the agent artifact, such as a bundle directory, or the JSON of a [Terraform](formats/terraform.md#in-a-pipeline) plan |
 | `url` | yes | Base URL of the ingest API |
 | `target` | no | Deployment target whose overrides to apply |
 | `environment` | no | Environment the event applies to; defaults to `target` |

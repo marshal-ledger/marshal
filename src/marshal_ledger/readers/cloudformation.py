@@ -105,12 +105,25 @@ _SCOPE_ORDER = [Scope.READ, Scope.EXECUTE, Scope.WRITE, Scope.ADMIN]
 
 
 class _Template:
+    """A CloudFormation template being read. Other sources that describe the same AWS resources,
+    such as a Terraform plan, subclass it to name their own format and locations."""
+
+    source_format = FORMAT
+
     def __init__(self, data: dict[str, Any], artifact: str):
         self.data = data
         self.artifact = artifact
         self.parameters: dict[str, Any] = data.get("Parameters") or {}
         self.resources: dict[str, Any] = data.get("Resources") or {}
         self.used_defaults: set[str] = set()
+
+    def resource_type(self, logical: str) -> str:
+        """The resource's type as the source names it, for ``detected_by``."""
+        return str((self.resources.get(logical) or {}).get("Type"))
+
+    def path(self, logical: str, prop: str = "") -> str:
+        """Where a resource, or one of its properties, is in the source: the basis of values read from it."""
+        return f"Resources.{logical}" + (f".Properties.{prop}" if prop else "")
 
     def of_type(self, kind: str) -> dict[str, dict[str, Any]]:
         return {k: v for k, v in self.resources.items() if isinstance(v, dict) and v.get("Type") == kind}
@@ -245,7 +258,7 @@ class _Template:
                         target = self.string(resource) or str(self.resolve(resource))
                         grants.append(Grant(
                             target=f"other/aws.{target}", privilege=str(action), scope=action_scope(str(action)),
-                            basis=f"{self.artifact}#Resources.{logical}",
+                            basis=f"{self.artifact}#{self.path(logical)}",
                         ))
         managed = [self.string(a) or str(a) for a in props.get("ManagedPolicyArns") or []]
         return grants, managed
@@ -345,8 +358,13 @@ class CloudFormationReader(DocumentReader):
         return result
 
     def read_data(self, data: Any, artifact: str, options: ReadOptions | None = None) -> ReadResult:
+        return self.read_template(_Template(data, artifact), options)
+
+    def read_template(self, template: _Template, options: ReadOptions | None = None) -> ReadResult:
+        """Records for the Bedrock agents and AgentCore runtimes in a template, or in another
+        source translated into one (see :mod:`marshal_ledger.readers.terraform`)."""
         options = options or ReadOptions()
-        template = _Template(data, artifact)
+        artifact = template.artifact
         result = ReadResult()
         entities: dict[str, Entity] = {}
         stem = artifact.rsplit(".", 1)[0]
@@ -401,8 +419,8 @@ class CloudFormationReader(DocumentReader):
         permissions.identity = Value[IdentityKind].declared(IdentityKind.SERVICE_PRINCIPAL, f"{where}: IAM role {role}")
         name = template.string(template.props(role).get("RoleName"))
         permissions.principal = (
-            Value[str].declared(name, f"Resources.{role}.Properties.RoleName") if name and "${" not in name
-            else Value[str].declared(f"iam-role/{role}", f"Resources.{role}")
+            Value[str].declared(name, template.path(role, "RoleName")) if name and "${" not in name
+            else Value[str].declared(f"iam-role/{role}", template.path(role))
         )
         grants, managed = template.role_grants(role)
         permissions.grants += grants
@@ -413,7 +431,6 @@ class CloudFormationReader(DocumentReader):
 
     def _agent(self, template, logical, agent_ids, alias_agents, options, result, entities):
         props = template.props(logical)
-        where = f"Resources.{logical}.Properties"
         agent_id = agent_ids[logical]
         marshal = self._marshal(template.resources[logical])
         tool_refs: dict[str, str] = marshal.get("tool_refs") or {}
@@ -425,18 +442,18 @@ class CloudFormationReader(DocumentReader):
         def entity(kind: EntityKind, ref: str, display: Optional[str] = None) -> None:
             entities.setdefault(ref, Entity(ref=ref, kind=kind, platform="bedrock", identifier=ref.split("/", 1)[1], display_name=display))
 
-        spec.display_name = self._value(template, props.get("AgentName"), f"{where}.AgentName")
+        spec.display_name = self._value(template, props.get("AgentName"), template.path(logical, "AgentName"))
         if props.get("Description") is not None:
-            spec.description = self._value(template, props["Description"], f"{where}.Description")
+            spec.description = self._value(template, props["Description"], template.path(logical, "Description"))
             if isinstance(spec.description.value, str):
                 spec.description.value = redact(spec.description.value)[0]
 
-        model = self._value(template, props.get("FoundationModel"), f"{where}.FoundationModel")
+        model = self._value(template, props.get("FoundationModel"), template.path(logical, "FoundationModel"))
         spec.model.requested = model
         if model.is_known and (vendor := _provider(str(model.value))):
             spec.model.provider = Value[str].derived(vendor, f"model id {model.value}")
 
-        instruction = self._value(template, props.get("Instruction"), f"{where}.Instruction")
+        instruction = self._value(template, props.get("Instruction"), template.path(logical, "Instruction"))
         if instruction.is_known:
             text, count = redact(str(instruction.value))
             if count:
@@ -490,7 +507,7 @@ class CloudFormationReader(DocumentReader):
                                   description=function.get("Description"), input_schema=schema_ if params else None)
                     confirm = function.get("RequireConfirmation")
                     if confirm in ("ENABLED", "DISABLED"):
-                        use.requires_confirmation = Value[bool].declared(confirm == "ENABLED", f"{where}.ActionGroups[{name}]")
+                        use.requires_confirmation = Value[bool].declared(confirm == "ENABLED", template.path(logical, f"ActionGroups[{name}]"))
                     tools.append(use)
             else:
                 use = ToolUse(ref=base_ref, name=name, description=template.string(group.get("Description")))
@@ -543,7 +560,7 @@ class CloudFormationReader(DocumentReader):
             ))
             entity(EntityKind.KNOWLEDGE, ref, name)
 
-        self._identity(template, props.get("AgentResourceRoleArn"), f"{where}.AgentResourceRoleArn", spec.permissions, extension)
+        self._identity(template, props.get("AgentResourceRoleArn"), template.path(logical, "AgentResourceRoleArn"), spec.permissions, extension)
         for key, label in (("GuardrailConfiguration", "guardrail"), ("MemoryConfiguration", "memory"),
                            ("IdleSessionTTLInSeconds", "idle_session_ttl"), ("OrchestrationType", "orchestration"),
                            ("CustomOrchestration", "custom_orchestration")):
@@ -559,8 +576,9 @@ class CloudFormationReader(DocumentReader):
         spec.extensions["bedrock"] = extension
         return build_record(
             agent=agent_id, platform=marshal.get("platform") or "bedrock",
-            source=Source(format=FORMAT, artifact=template.artifact, locator=f"Resources.{logical}",
-                          detected_by=f"resource type {AGENT}", commit=options.commit, pipeline_run=options.pipeline_run),
+            source=Source(format=template.source_format, artifact=template.artifact, locator=template.path(logical),
+                          detected_by=f"resource type {template.resource_type(logical)}", commit=options.commit,
+                          pipeline_run=options.pipeline_run),
             spec=spec, bindings=bindings,
         )
 
@@ -608,15 +626,14 @@ class CloudFormationReader(DocumentReader):
 
     def _runtime(self, template, logical, stem, options, result, entities):
         props = template.props(logical)
-        where = f"Resources.{logical}.Properties"
         spec = AgentSpec()
         extension: dict[str, Any] = {"resource_type": RUNTIME}
-        spec.display_name = self._value(template, props.get("AgentRuntimeName"), f"{where}.AgentRuntimeName")
+        spec.display_name = self._value(template, props.get("AgentRuntimeName"), template.path(logical, "AgentRuntimeName"))
         if props.get("Description") is not None:
-            spec.description = self._value(template, props["Description"], f"{where}.Description")
+            spec.description = self._value(template, props["Description"], template.path(logical, "Description"))
         spec.model.requested = Value[str].unknown("set in the runtime's agent code")
         spec.instructions = Instructions(basis="set in the runtime's agent code")
-        self._identity(template, props.get("RoleArn"), f"{where}.RoleArn", spec.permissions, extension)
+        self._identity(template, props.get("RoleArn"), template.path(logical, "RoleArn"), spec.permissions, extension)
         artifact = template.resolve(props.get("AgentRuntimeArtifact") or {})
         if artifact:
             extension["artifact"] = artifact
@@ -632,8 +649,9 @@ class CloudFormationReader(DocumentReader):
             extension["endpoints"] = sorted(endpoints)
         spec.extensions["bedrock-agentcore"] = extension
         return build_record(
-            agent=f"{stem}/{logical}", platform="bedrock-agentcore",
-            source=Source(format=FORMAT, artifact=template.artifact, locator=f"Resources.{logical}",
-                          detected_by=f"resource type {RUNTIME}", commit=options.commit, pipeline_run=options.pipeline_run),
+            agent=self._marshal(template.resources[logical]).get("agent") or f"{stem}/{logical}", platform="bedrock-agentcore",
+            source=Source(format=template.source_format, artifact=template.artifact, locator=template.path(logical),
+                          detected_by=f"resource type {template.resource_type(logical)}", commit=options.commit,
+                          pipeline_run=options.pipeline_run),
             spec=spec,
         )

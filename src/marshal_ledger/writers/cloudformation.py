@@ -159,6 +159,9 @@ class CloudFormationWriter(Writer):
             if not item.ref.startswith("knowledge/bedrock.knowledge_base."):
                 continue
             kb_id = item.ref.removeprefix("knowledge/bedrock.knowledge_base.")
+            if not re.fullmatch(r"[0-9a-zA-Z]{10}", kb_id) and not kb_id.startswith("${"):
+                # A knowledge base the source defines itself has a resource name, not an id, until it is deployed.
+                kb_id = "${" + kb_id + "}"
             written_id = deployable(kb_id, f"knowledge[{item.ref}]*")
             if isinstance(written_id, dict) and "Ref" in written_id and f"knowledge[{item.ref}]*" in notes:
                 # The knowledge base reads back under the parameter's name.

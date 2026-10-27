@@ -17,6 +17,7 @@ from .marshalfile import MarshalFileReader
 from .oasf import OasfReader
 from .python import PythonAgentReader
 from .salesforcemetadata import SalesforceMetadataReader
+from .terraform import TerraformReader
 
 # Detection order: bundle formats (identified by a file name) before document formats.
 READERS: dict[str, type[Reader]] = {
@@ -25,6 +26,7 @@ READERS: dict[str, type[Reader]] = {
     AgentSpecReader.format: AgentSpecReader,
     OasfReader.format: OasfReader,
     CloudFormationReader.format: CloudFormationReader,
+    TerraformReader.format: TerraformReader,
     CopilotStudioReader.format: CopilotStudioReader,
     AgentforceReader.format: AgentforceReader,
     AdkConfigReader.format: AdkConfigReader,

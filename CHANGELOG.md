@@ -4,6 +4,9 @@ Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](
 
 ## 0.6.0 (unreleased)
 
+- Terraform: a new `terraform` reader reads `terraform show -json` of a saved plan or of state. It covers Bedrock agents defined with the AWS provider (`aws_bedrockagent_agent` and its action group, knowledge base, collaborator and alias resources) or the Cloud Control provider (`awscc_bedrock_agent`), and AgentCore runtimes. Values known only after apply are followed to their resources across module inputs and outputs; sensitive values are never copied. Agents are mapped by the CloudFormation reader's Bedrock mapping, so the same agent defined either way gets the same version.
+- The CloudFormation writer writes a knowledge base defined in the source itself as a template parameter, since it has no id until it is deployed.
+
 ## 0.5.0 (2026-10-27)
 
 - Dependencies across platforms: `marshal deps`, the web view and `/v0/deps` also list refs on any platform that reach the same HTTP operation, MCP server, OpenAPI operation, knowledge URL or API host, each with how it matched (`match`, `via`). Matches come only from what the definitions state; nothing is fetched or matched on a name. `--exact` (or `resolve=false`) turns it off, and a pattern can name a target, such as `host:api.acme.example`.
