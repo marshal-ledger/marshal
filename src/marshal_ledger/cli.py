@@ -129,6 +129,16 @@ def _collect(args: argparse.Namespace) -> int:
     return 0
 
 
+def _comment(args: argparse.Namespace) -> int:
+    from .gitlab import GitLabError, post_from_pipeline
+
+    try:
+        print(post_from_pipeline(args.report, args.gitlab_token_env))
+    except (GitLabError, OSError) as exc:
+        return _fail(str(exc))
+    return 0
+
+
 def _push(args: argparse.Namespace) -> int:
     from .client import ClientError, ci_token, push
 
@@ -560,6 +570,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     push_.add_argument("--audience", default=DEFAULT_AUDIENCE, help="OIDC audience to request (default: marshal)")
     push_.add_argument("--token-env", help="read the OIDC token from this variable instead of GitHub Actions")
     push_.set_defaults(handler=_push)
+
+    comment = commands.add_parser(
+        "comment", help="post a report on the merge request a GitLab pipeline runs for",
+        description="Create or update the Marshal comment on the current merge request, from a GitLab CI merge "
+        "request pipeline. Uses GitLab's predefined variables and a project access token in --gitlab-token-env. "
+        "Outside a merge request pipeline, or without the token, it posts nothing and exits successfully.",
+    )
+    comment.add_argument("report", help="the Markdown report `marshal push --report` wrote")
+    comment.add_argument("--gitlab-token-env", default="MARSHAL_GITLAB_TOKEN", metavar="VARIABLE",
+                         help="variable holding a GitLab token that can comment (default: MARSHAL_GITLAB_TOKEN)")
+    comment.set_defaults(handler=_comment)
 
     from .writers import WRITERS
 

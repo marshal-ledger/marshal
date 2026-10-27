@@ -280,7 +280,7 @@ A scheduled export is a job the organization runs wherever it already has access
 
 - **Core, readers, writers:** Python and Pydantic. The JSON Schema for ledger records is generated from the models.
 - **Store:** SQLite locally; Postgres for shared deployments.
-- **CI:** a GitHub Action; GitLab CI, Jenkins and Azure DevOps through `marshal push` with OIDC tokens.
+- **CI:** a GitHub Action and a GitLab CI template, both commenting on pull or merge requests; Jenkins and Azure DevOps through `marshal push` with OIDC tokens.
 - **UI:** a read-only web view, server-rendered with no scripts.
 - **Packaging:** a PyPI package, a signed container image and a Helm chart.
 
