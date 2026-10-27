@@ -2,6 +2,8 @@
 
 Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](https://semver.org). Before 1.0, a minor release may change the ledger model, the ingest API or the command line; each such change is listed here.
 
+## 0.8.0 (unreleased)
+
 ## 0.7.0 (2026-10-27)
 
 - GitLab CI: a template (`collect/gitlab-ci.yml`) to include from a release tag and extend, which records events with a GitLab ID token and comments on merge requests with the risk-ranked changes, updating one comment on later pushes. A new `marshal comment` command posts the comment; it needs a GitLab token (a project access token, or on GitLab.com Free a bot account's personal access token), and without one the report stays in the job log and artifacts. `MARSHAL_PACKAGE` installs Marshal from somewhere other than PyPI, such as a mirror. See the new GitLab CI page.
