@@ -35,6 +35,7 @@ Anything unresolved stays as a `${...}` token, and the field is recorded as unkn
 | `permissions.identity`, `principal` | `AgentResourceRoleArn`: the role's name, or the ARN | declared |
 | `permissions.grants[]` | Allow statements in the role's inline policies and in `AWS::IAM::Policy` resources attached to it; scope from the action verb | declared |
 | `extensions.bedrock` | Guardrail, memory, prompt overrides, orchestration, collaboration mode, aliases, disabled action groups, S3 schema locations, external collaborators, managed policy ARNs, conditions | declared |
+| `bindings.executors` | The Lambda function that runs each action group's tools, by tool ref: a literal function ARN, `import:<export>` for an imported one, or `function:<name>` when its name is stated. Used to match agents in other stacks that share it; see [Resolving refs across platforms](../ledger-model.md#resolving-refs-across-platforms) | declared |
 
 Action verbs map to scopes as follows: `Get`, `List`, `Describe`, `Retrieve`, `Query`, `Search`, `Scan` and `Read` are read; `Invoke`, `Execute`, `Start`, `Run`, `Converse`, `Send` and `Publish` are execute; other verbs are write; `*` is admin. Managed policies are listed by ARN but not expanded into grants.
 

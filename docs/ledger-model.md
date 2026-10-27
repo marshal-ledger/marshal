@@ -125,6 +125,7 @@ A ref names its platform, so an API called from two platforms has two refs. Mars
 | `mcp:https://api.githubcopilot.com/mcp`, `mcp:npm:@notionhq/notion-mcp-server` | MCP servers, by URL or by the package an `npx` or `uvx` command runs | same MCP server |
 | `openapi:<document>#<operationId>` | ADL tools annotated with an OpenAPI operation | same OpenAPI operation |
 | `url:https://contoso.sharepoint.com/sites/hr` | Knowledge sources at a URL | same knowledge source |
+| `lambda:arn:aws:lambda:...`, `lambda:import:<export>`, `lambda:function:<name>` | The Lambda function that runs a Bedrock action group: its ARN, the export it's imported from, or its stated name | same Lambda function, export or function name |
 | `host:api.acme.example` | The host of any URL above, and network grants | same API host |
 
 URLs are compared after lowercasing the host, dropping default ports, queries and trailing slashes, and writing every path parameter (`{id}`, `{{id}}`, `:id`) as `{}`. A same-host match is weaker: it says two agents reach the same system, not that they do the same thing, so it is listed after the others. Nothing is matched on a name alone, nothing is fetched, and a URL with a placeholder or loopback host has no target. `--exact` turns resolution off, and PATTERN can name a target directly, such as `marshal deps "host:api.acme.example"`.
@@ -142,7 +143,9 @@ https://agents.acme.example/invoice-processor  v1       prod (latest)  same API 
 https://agents.acme.example/legacy-analyzer    v1       prod (latest)  same API host  host:api.acme.example  other/network.api.acme.example
 ```
 
-Tools whose definitions name only a platform object, such as a Power Platform connector operation, an Apex class, a Unity Catalog function or a Bedrock action group's Lambda, match exactly within their platform and aren't resolved further yet.
+A Lambda function is environment-bound, so it is recorded in each event's bindings (`bindings.executors`, by tool ref) rather than in the hashed spec, and matched across every environment a version was recorded in. A function name is unique only within an AWS account and region, which a template doesn't state, so that match says so. A function whose name CloudFormation generates belongs to one stack and isn't matched.
+
+Tools whose definitions name only a platform object, such as a Power Platform connector operation, an Apex class or a Unity Catalog function, match exactly within their platform and aren't resolved further yet.
 
 ## Completeness
 
