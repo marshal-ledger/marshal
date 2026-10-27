@@ -151,6 +151,8 @@ class CloudFormationWriter(Writer):
             })
         if groups:
             props["ActionGroups"] = groups
+        # Prepare the agent on deploy, as the AWS samples do, so it can be tested without a separate step.
+        props["AutoPrepare"] = True
 
         knowledge_bases = []
         for item in spec.knowledge:

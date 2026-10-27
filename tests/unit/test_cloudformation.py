@@ -113,3 +113,8 @@ def test_function_parameter_names_are_made_valid():
     [function] = agent_properties(conversion)["ActionGroups"][0]["FunctionSchema"]["Functions"]
     assert list(function["Parameters"]) == ["Input-invoice_id"]
     assert any("parameter names" in (f.note or "") for f in conversion.report.lossy)
+
+
+def test_written_agents_are_prepared_on_deploy():
+    [record] = CloudFormationReader().read_data(load_template(TEMPLATE), "stack.yaml").records
+    assert agent_properties(convert(record, "cloudformation"))["AutoPrepare"] is True

@@ -53,6 +53,7 @@ The writer emits one `AWS::Bedrock::Agent`:
 - **Role:** the `AgentResourceRoleArn` template parameter, unless the record's principal is a role ARN.
 - **Tools:** functions in a `RETURN_CONTROL` action group, executed by the calling application. Built-in tools map back to their parent signatures.
 - **Knowledge:** Bedrock knowledge bases, attached by id.
+- **Preparation:** `AutoPrepare` is set, as in the AWS samples, so the agent is ready to test once the stack is deployed.
 - **Native extensions:** guardrail, memory, orchestration and prompt overrides are written back.
 - **Identity:** the agent id, platform and any foreign tool refs go in the resource's Marshal metadata.
 
