@@ -16,6 +16,11 @@ reaches, derived only from what the ref states:
   grants. Sharing a host says two agents reach the same system, not that they do the
   same thing, so host matches are weaker.
 
+Some refs reach something their definition doesn't name, such as a Power Platform MCP
+connector whose server the vendor documents. ``equivalents/*.yaml`` lists those links,
+each with the vendor pages that state it; matches through them are reported as
+documented.
+
 Nothing is fetched and nothing is matched on a name alone. A URL whose host is a
 placeholder, an unresolved ``${...}`` token or a loopback address has no target:
 two agents calling ``127.0.0.1`` aren't calling the same system.
@@ -26,8 +31,12 @@ from __future__ import annotations
 import re
 import shlex
 from dataclasses import dataclass
+from functools import lru_cache
+from importlib import resources
 from typing import Iterator, Optional
 from urllib.parse import urlsplit
+
+import yaml
 
 from .model import AgentVersion
 
@@ -56,6 +65,8 @@ class Target:
     target: str
     basis: str
     """The rule that derived the target, for display beside a match."""
+    sources: tuple[str, ...] = ()
+    """For a documented equivalent: the vendor pages that state it."""
 
     @property
     def kind(self) -> str:
@@ -73,6 +84,23 @@ def describe(target: str) -> str:
     if target.startswith("lambda:function:"):
         return "same Lambda function name"  # unique within an account and region, which the template doesn't state
     return KINDS.get(target.split(":", 1)[0], "same target")
+
+
+def label(target: Target) -> str:
+    """How a match through ``target`` is described, such as ``same MCP server (documented)``."""
+    return describe(target.target) + (" (documented)" if target.sources else "")
+
+
+@lru_cache(maxsize=1)
+def documented_equivalents() -> dict[str, list[tuple[str, tuple[str, ...]]]]:
+    """Ref → [(target, sources)], from every ``equivalents/*.yaml`` file."""
+    table: dict[str, list[tuple[str, tuple[str, ...]]]] = {}
+    for path in sorted((resources.files("marshal_ledger") / "equivalents").iterdir(), key=lambda p: p.name):
+        if not path.name.endswith(".yaml"):
+            continue
+        for entry in (yaml.safe_load(path.read_text(encoding="utf-8")) or {}).get("entries") or []:
+            table.setdefault(entry["ref"], []).append((entry["target"], tuple(entry["sources"])))
+    return table
 
 
 def normalize_url(url: str) -> Optional[str]:
@@ -153,9 +181,21 @@ def _tool_targets(ref: str, name: Optional[str]) -> Iterator[tuple[str, str]]:
             yield f"openapi:{spec}#{operation}", "OpenAPI document and operation id"
 
 
+def _documented(ref: str, relation: str) -> Iterator[Target]:
+    for target, sources in documented_equivalents().get(ref, []):
+        yield Target(ref, relation, target, "documented equivalent", sources)
+        if target.startswith(("mcp:http", "http:", "url:")):
+            url = target.split(" ", 1)[-1].removeprefix("mcp:").removeprefix("url:")
+            yield Target(ref, relation, _host(url), "host of the documented equivalent", sources)
+
+
 def targets(record: AgentVersion) -> list[Target]:
     """Every target the refs of one version reach."""
     out: list[Target] = []
+    for use in record.spec.tools:
+        out += _documented(use.ref, "tool")
+    for item in record.spec.knowledge:
+        out += _documented(item.ref, "knowledge")
     for use in record.spec.tools:
         out += [Target(use.ref, "tool", t, basis) for t, basis in _tool_targets(use.ref, use.name)]
     for item in record.spec.knowledge:
@@ -175,4 +215,4 @@ def targets(record: AgentVersion) -> list[Target]:
     return list(dict.fromkeys(out))
 
 
-__all__ = ["KINDS", "Target", "describe", "mcp_target", "normalize_url", "strength", "targets"]
+__all__ = ["KINDS", "Target", "describe", "documented_equivalents", "label", "mcp_target", "normalize_url", "strength", "targets"]

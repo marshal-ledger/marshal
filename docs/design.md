@@ -242,7 +242,7 @@ It runs as a CLI with a local SQLite store, or as a service (ingest API and read
 
 ## Next
 
-- **More entity resolution:** Bedrock executor Lambda functions, a curated table of documented equivalents (such as Power Platform MCP connectors and the servers behind them), and links a person attests in a Marshal file
+- **More entity resolution:** more documented equivalents, and links a person attests in a Marshal file
 - **Policy checks:** rules such as "write-scope or irreversible tools need approval" or "models must be on an approved list," the same on every platform
 - **Import-tested writers,** starting with Copilot Studio
 - **Forking with lineage:** copy another team's agent into your platform's format and track the upstream

@@ -178,3 +178,30 @@ def test_agents_in_different_stacks_sharing_an_exported_lambda(ledger_location):
                       bedrock_stack("billing", "!ImportValue refunds-stack-FunctionArn")], event=SHIPPED, environment="prod")
         [other] = store.related("tool/bedrock.support.*")
     assert (other.agent, other.match, other.via) == ("billing/Agent", "same Lambda export", "lambda:import:refunds-stack-FunctionArn")
+
+
+def test_every_documented_equivalent_cites_its_sources():
+    from marshal_ledger.resolve import KINDS, documented_equivalents
+
+    table = documented_equivalents()
+    assert table, "the table loads from package data"
+    for ref, entries in table.items():
+        assert ref.split("/", 1)[0] in ("tool", "knowledge") and "*" not in ref
+        for target, sources in entries:
+            assert target.split(":", 1)[0] in KINDS
+            assert sources and all(s.startswith("https://") for s in sources)
+
+
+LEARN_CONNECTOR = record("docs-copilot", "copilot-studio",
+                         tools=[("tool/mcp.powerplatform.shared_microsoftlearndocsmcpserver", "Microsoft Learn Docs MCP Server")])
+LEARN_ADK = record("docs-adk", "google-adk", tools=[("tool/mcp.https://learn.microsoft.com/api/mcp/", "McpToolset")])
+
+
+def test_a_documented_connector_matches_the_server_it_calls(ledger_location):
+    with Store(ledger_location) as store:
+        store.record([LEARN_CONNECTOR, LEARN_ADK], event=SHIPPED, environment="prod")
+        [from_connector] = store.related("*shared_microsoftlearndocsmcpserver")
+        [from_server] = store.related("tool/mcp.https://learn.microsoft.com/api/mcp/")
+    assert (from_connector.agent, from_connector.match) == ("docs-adk", "same MCP server (documented)")
+    assert (from_server.agent, from_server.match) == ("docs-copilot", "same MCP server (documented)")
+    assert "https://learn.microsoft.com/en-us/connectors/microsoftlearndocsmcpserver/" in from_server.basis
