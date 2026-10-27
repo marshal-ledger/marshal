@@ -38,6 +38,7 @@ DEMO = [
     ("python/google-adk", None),
     ("adk-config/samples/multi_agent", None),
     ("adl/examples/packages", None),
+    ("terraform/acwwat-basic", None),
 ]
 
 

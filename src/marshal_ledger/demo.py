@@ -1,7 +1,8 @@
 """A demo ledger built from real, public agent definitions.
 
 ``marshal demo`` downloads a fixed set of agent definitions from public GitHub
-repositories, each pinned to a commit, and records them with a short history:
+repositories, each pinned to a commit (one is a Terraform plan this project generated
+from a public example; see tests/fixtures/terraform/README.md), and records them with a short history:
 agents shipped to prod, a proposed change that adds a refund function, a Copilot
 Studio agent that drifted after an edit in its web designer, and a proposed Copilot
 Studio topic that calls the API host the public ADL agents may reach, so the agents

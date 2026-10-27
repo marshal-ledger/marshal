@@ -13,7 +13,7 @@ A vendor-neutral, open-source ledger for enterprise AI agents. Any format in, an
 
 Marshal reads the agent definitions teams already produce: Databricks bundles, Copilot Studio agents, Bedrock templates, Agentforce metadata, agent code and the open standards. It builds a normalized, versioned record of every agent: what model it asks for, what tools and data it can reach, and who it acts as. Every field says where its value came from, and nothing is guessed.
 
-<img src="docs/assets/web-tour.gif" alt="A walk through the Marshal web view: the inventory of 28 public agents, a Copilot Studio agent in drift whose tool was switched to the maker's credentials, a proposed change that adds a refund function, and the agents that share an Apex action">
+<img src="docs/assets/web-tour.gif" alt="A walk through the Marshal web view: the inventory of 29 public agents, a Copilot Studio agent in drift whose tool was switched to the maker's credentials, a proposed change that adds a refund function, and the agents that share an Apex action">
 
 **Status:** alpha. Before 1.0 a minor release may change the ledger model, the ingest API or the command line; the [changelog](CHANGELOG.md) lists each such change.
 
@@ -52,7 +52,7 @@ Readers are tested against real, public definitions, pinned to a commit. No writ
 
 ## Try it
 
-Browse the [live demo](https://marshal-ledger.github.io/marshal/demo/), or build it yourself from 28 public agents, with nothing to install but [uv](https://docs.astral.sh/uv/):
+Browse the [live demo](https://marshal-ledger.github.io/marshal/demo/), or build it yourself from 29 public agents, with nothing to install but [uv](https://docs.astral.sh/uv/):
 
 ```console
 $ uvx --from 'marshal-ledger[server]' marshal demo

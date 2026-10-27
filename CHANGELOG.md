@@ -4,6 +4,7 @@ Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](
 
 ## 0.6.0 (unreleased)
 
+- `marshal demo` adds a Bedrock agent read from a Terraform plan of a public example, for 29 agents.
 - Terraform: a new `terraform` reader reads `terraform show -json` of a saved plan or of state. It covers Bedrock agents defined with the AWS provider (`aws_bedrockagent_agent` and its action group, knowledge base, collaborator and alias resources) or the Cloud Control provider (`awscc_bedrock_agent`), and AgentCore runtimes. Values known only after apply are followed to their resources across module inputs and outputs; sensitive values are never copied. Agents are mapped by the CloudFormation reader's Bedrock mapping, so the same agent defined either way gets the same version.
 - The CloudFormation writer writes a knowledge base defined in the source itself as a template parameter, since it has no id until it is deployed.
 
