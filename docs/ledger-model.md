@@ -136,9 +136,24 @@ Every change in a diff gets a severity, and reports list the highest first. An u
 
 | Severity | Changes |
 |---|---|
-| HIGH | Identity changed; grant added with write or admin scope; tool added with write, admin or unknown scope, or known to be irreversible; tool scope widened; tool became irreversible; requested model changed; knowledge added with write scope |
-| MED | Principal changed; grant added with read or execute scope; access rule added; tool added with execute scope; tool reversibility became unknown; resolved model changed; knowledge removed, added with unknown scope, or widened |
-| LOW | Removals of tools, grants and access; read-only additions; instructions, metadata and other extension changes |
+| HIGH | Identity changed; grant added with write or admin scope; tool added with write, admin or unknown scope, or known to be irreversible; tool scope widened; tool became irreversible; tool no longer requires confirmation; model provider changed; instructions changed and a removed line held a guardrail word; knowledge added with write scope |
+| MED | Principal changed; grant added with read or execute scope; access rule added; tool added with execute scope; tool reversibility became unknown; requested or resolved model changed within a provider, or model parameters changed; instructions changed; knowledge removed, added with unknown scope, or widened |
+| LOW | Removals of tools, grants and access; read-only additions; metadata and other extension changes |
+
+Instructions often carry an agent's guardrails, such as "never approve payment without AP approval," so a removed guardrail can widen what the agent does more than a new tool. When both versions' instruction text is stored, Marshal looks in the removed lines for words that usually state a limit: never, must not, do not, cannot, not allowed, forbidden, prohibited, approve or approval, confirm or confirmation, limit, maximum, at most, no more than, only if and unless. A word that also appears in an added line counts as reworded, not removed. The diff names the words it found. The public ADL invoice processor, with "and never approve payment without explicit AP approval" taken out of its instructions:
+
+<!-- example: diff-guardrail -->
+```
+https://agents.acme.example/invoice-processor (adl)  v1 → v2
+
+  HIGH  ~ instructions: +1 -1 lines; removed a line with 'never', 'approve', 'approval'
+
+  Completeness 100%
+```
+
+This is a heuristic: it can't tell a guardrail from an ordinary sentence that happens to use one of these words, and in hash-only mode, with no text, a change to instructions ranks MED.
+
+A different model from the same provider, such as a routine upgrade, ranks MED; a different provider ranks HIGH, because another party then sees the agent's data. Checking models against an approved list belongs to policy checks, a planned milestone.
 
 Platform-specific fields that control identity or access rank by their key wherever they appear in an extension: connection and credential modes, authentication mode, access policy, agent user, user API scopes, authorizers and attached managed policies are HIGH; guardrails, security settings and permission blocks are MED.
 

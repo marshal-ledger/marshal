@@ -4,6 +4,7 @@ Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](
 
 ## 0.4.0 (unreleased)
 
+- Risk ranking: a changed model ranks MED, and HIGH only when its provider changes, so routine upgrades no longer drown out escalations. Changed instructions rank MED instead of LOW, and HIGH when a removed line holds a word that usually states a limit (such as "never", "must not" or "approval"); the diff names the words. Diff changes carry a new optional `guardrails` field.
 - A conversion's fidelity report lists defaulted fields in the same order on every run.
 - Example outputs in the documentation are generated from the demo and the public fixtures by `scripts/doc_examples.py`, and a test fails when one is out of date. The design page now describes Marshal as it is, with real output in place of illustrative examples.
 - The formats tables say how each writer is tested, and that no writer's output has yet been imported into its platform.

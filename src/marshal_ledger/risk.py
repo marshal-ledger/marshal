@@ -2,8 +2,9 @@
 
 Each change from :mod:`marshal_ledger.diff` gets a severity. The rules put the
 changes a reviewer most needs to see first: escalated permissions, new tools
-that can write, model changes and removed knowledge. An unknown scope is ranked
-as if it were a write, because the ledger does not assume a tool is safe.
+that can write, a new model provider, instructions that lost a guardrail, and
+removed knowledge. An unknown scope is ranked as if it were a write, because the
+ledger does not assume a tool is safe.
 """
 
 from __future__ import annotations
@@ -105,9 +106,13 @@ def severity(change: Change) -> Severity:
         return Severity.LOW
 
     if change.category == "model":
-        if path in ("model.requested", "model.provider"):
-            return Severity.HIGH
-        return Severity.MEDIUM
+        # A routine upgrade within one provider is reviewed, not escalated; a new provider
+        # means a new party sees the agent's data.
+        return Severity.HIGH if path == "model.provider" else Severity.MEDIUM
+
+    if change.category == "instructions":
+        # Instructions often carry the agent's guardrails, so any change is reviewed.
+        return Severity.HIGH if change.guardrails else Severity.MEDIUM
 
     if change.category == "knowledge":
         if kind == "removed":

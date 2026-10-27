@@ -84,6 +84,19 @@ class Examples:
         agent = CACHE / "adl/examples/packages/adl-agent/examples/openclaw-passport/enterprise/agents/invoice-processor.adl.yaml"
         return run("convert", agent, "--to", "agent-spec", stream="stderr")
 
+    def diff_guardrail(self) -> str:
+        """The public ADL invoice processor, with the guardrail sentence taken out of its instructions."""
+        source = CACHE / "adl/examples/packages/adl-agent/examples/openclaw-passport/enterprise/agents/invoice-processor.adl.yaml"
+        agent = self.work / "guardrail" / source.name
+        agent.parent.mkdir()
+        shutil.copy(source, agent)
+        db = self.work / "guardrail.sqlite"
+        run("collect", agent, "--db", db, "--event", "shipped", "--environment", "prod")
+        edit(agent, "Match invoices to purchase orders,\n  flag discrepancies, and never approve payment without explicit AP approval.",
+             "Match invoices to purchase orders\n  and flag discrepancies.")
+        run("collect", agent, "--db", db, "--event", "proposed", "--environment", "prod")
+        return run("diff", "https://agents.acme.example/invoice-processor", "--db", db)
+
     def record_hr(self) -> str:
         """An abbreviated ledger record: the public Bedrock HR assistant, as `marshal read` prints it."""
         path = CACHE / "cloudformation/bedrock-agents/hr-assistant"
