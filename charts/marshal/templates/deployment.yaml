@@ -12,11 +12,18 @@ spec:
     matchLabels: {{- include "marshal.selector" . | nindent 6 }}
   template:
     metadata:
-      labels: {{- include "marshal.selector" . | nindent 8 }}
+      labels:
+        {{- include "marshal.selector" . | nindent 8 }}
+        {{- with omit .Values.podLabels "app.kubernetes.io/name" "app.kubernetes.io/instance" }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
       annotations:
         checksum/config: {{ toYaml .Values.config | sha256sum }}
     spec:
-      securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- with include "marshal.serviceAccountName" . }}
+      serviceAccountName: {{ . }}
+      {{- end }}
+      securityContext: {{- include "marshal.securityContext" .Values.podSecurityContext | nindent 8 }}
       containers:
         - name: marshal
           image: "{{ required "image.repository is required" .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
@@ -36,7 +43,7 @@ spec:
           livenessProbe:
             httpGet: {path: /healthz, port: http}
             periodSeconds: 20
-          securityContext: {{- toYaml .Values.securityContext | nindent 12 }}
+          securityContext: {{- include "marshal.securityContext" .Values.securityContext | nindent 12 }}
           resources: {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
             - name: config

@@ -1,0 +1,25 @@
+{{- if .Values.route.enabled }}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ include "marshal.fullname" . }}
+  labels: {{- include "marshal.labels" . | nindent 4 }}
+  {{- with .Values.route.annotations }}
+  annotations: {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.route.host }}
+  host: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.route.path }}
+  path: {{ . }}
+  {{- end }}
+  to:
+    kind: Service
+    name: {{ include "marshal.fullname" . }}
+  port:
+    targetPort: http
+  {{- with .Values.route.tls }}
+  tls: {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}

@@ -4,7 +4,8 @@ import pytest
 
 from marshal_ledger.model import AgentSpec, DeploymentEvent, Entity, EntityKind, Source, ToolUse, Value
 from marshal_ledger.readers.base import build_record
-from marshal_ledger.store import SCHEMA_VERSION, Store, StoreError
+from conftest import postgres_password, without_password
+from marshal_ledger.store import SCHEMA_VERSION, Store, StoreError, StoreUnavailable
 
 T0 = datetime(2026, 10, 1, tzinfo=timezone.utc)
 SHIPPED, PROPOSED = DeploymentEvent.SHIPPED, DeploymentEvent.PROPOSED
@@ -182,3 +183,92 @@ def test_concurrent_writers_get_distinct_sequence_numbers(ledger_location):
     with Store(ledger_location) as s:
         labels = sorted(int(seq) for _, seq, _ in s.history("finance/invoice"))
     assert labels == list(range(1, 10))
+
+
+# -- lost Postgres connections ------------------------------------------------
+
+
+def postgres(location):
+    if not location.startswith("postgresql://"):
+        pytest.skip("connection loss is exercised against Postgres (set MARSHAL_TEST_POSTGRES_URL)")
+    return location
+
+
+def terminate(location, store):
+    """End the store's server process, as a failover or an idle timeout would."""
+    import psycopg
+
+    pid = store._db.info.backend_pid
+    with psycopg.connect(location, autocommit=True) as admin:
+        assert admin.execute("SELECT pg_terminate_backend(%s)", (pid,)).fetchone()[0]
+    return pid
+
+
+def test_a_read_after_the_connection_is_lost_reconnects_and_retries(ledger_location):
+    with Store(postgres(ledger_location)) as store:
+        store.record([record()], event=SHIPPED, environment="prod", at=T0)
+        old = terminate(ledger_location, store)
+        assert store.resolve("finance/invoice", "shipped:prod").label == "v1"
+        assert store._db.info.backend_pid != old
+
+
+def test_a_write_after_the_connection_is_lost_starts_on_a_new_connection(ledger_location):
+    with Store(postgres(ledger_location)) as store:
+        store.record([record()], event=SHIPPED, environment="prod", at=T0)
+        terminate(ledger_location, store)
+        store.record([record(description="v2")], event=PROPOSED, environment="prod", at=T0 + timedelta(1))
+        assert [seq for _, seq, _ in store.history("finance/invoice")] == [1, 2]
+
+
+def test_a_write_interrupted_mid_transaction_fails_and_is_not_replayed(ledger_location, monkeypatch):
+    with Store(postgres(ledger_location)) as store:
+        store.record([record()], event=SHIPPED, environment="prod", at=T0)
+        original = store._record_one
+
+        def lose_connection(*args, **kwargs):
+            terminate(ledger_location, store)
+            return original(*args, **kwargs)
+
+        monkeypatch.setattr(store, "_record_one", lose_connection)
+        with pytest.raises(StoreUnavailable, match="lost the connection"):
+            store.record([record(description="v2")], event=PROPOSED, environment="prod", at=T0 + timedelta(1))
+        monkeypatch.undo()
+        # The next operation uses a new connection, and the interrupted write left nothing behind.
+        assert [seq for _, seq, _ in store.history("finance/invoice")] == [1]
+        assert store.resolve("finance/invoice", "latest").label == "v1"
+
+
+def test_a_failed_statement_is_not_mistaken_for_a_lost_connection(ledger_location):
+    import psycopg
+
+    with Store(postgres(ledger_location)) as store:
+        pid = store._db.info.backend_pid
+        store._q("SET statement_timeout = 10")
+        with pytest.raises(psycopg.errors.QueryCanceled):
+            store._q("SELECT pg_sleep(1)")
+        assert store._db.info.backend_pid == pid
+
+
+def test_a_password_provider_is_asked_at_each_connection(ledger_location):
+    calls = []
+
+    def password():
+        calls.append(1)
+        return postgres_password()
+
+    with Store(without_password(postgres(ledger_location)), password=password) as store:
+        store.record([record()], event=SHIPPED, environment="prod", at=T0)
+        assert len(calls) == 1
+        terminate(ledger_location, store)
+        assert store.has_agent("finance/invoice")
+        assert len(calls) == 2
+
+
+def test_an_unreachable_store_is_unavailable():
+    with pytest.raises(StoreUnavailable, match="cannot connect"):
+        Store("postgresql://marshal@127.0.0.1:1/marshal?connect_timeout=2")
+
+
+def test_a_password_provider_needs_postgres(tmp_path):
+    with pytest.raises(ValueError, match="only to Postgres"):
+        Store(tmp_path / "ledger.sqlite", password=lambda: "secret")

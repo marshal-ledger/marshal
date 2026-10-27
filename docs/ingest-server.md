@@ -18,6 +18,7 @@ See [`examples/marshal-server.yaml`](../examples/marshal-server.yaml).
 | Key | Meaning |
 |---|---|
 | `store` | A SQLite file path, a `postgresql://` URL, or `env:VARIABLE` to read either from the environment |
+| `store_auth` | How a Postgres store gets its password at each connection: `azure` for a Microsoft Entra ID token (see [Running Marshal on Azure](azure.md)), or `module:callable` for a function of your own. Unset: the password in the URL |
 | `hash_only` | Store instruction hashes but never instruction text |
 | `issuers[].issuer` | The token issuer, such as `https://token.actions.githubusercontent.com`, a GitLab instance URL, `https://<jenkins>/oidc` or `https://vstoken.dev.azure.com/<organization id>` |
 | `issuers[].provider` | `github`, `gitlab`, `jenkins` or `azure-devops`, which selects the claim mapping |

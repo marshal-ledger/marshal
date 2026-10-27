@@ -60,8 +60,24 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310  # v5.0.1
-      - run: helm lint charts/marshal -f charts/marshal/ci-values.yaml
-      - run: helm template marshal charts/marshal -f charts/marshal/ci-values.yaml > /dev/null
+      - name: Lint and render (Kubernetes defaults, OpenShift with no fixed UID, AKS workload identity)
+        run: |
+          for values in ci-values.yaml ci-openshift-values.yaml ci-azure-values.yaml; do
+            helm lint charts/marshal -f "charts/marshal/$values"
+            helm template marshal charts/marshal -f "charts/marshal/$values" > "$RUNNER_TEMP/$values"
+          done
+      - name: OpenShift values leave the UID and fsGroup to the SCC
+        run: |
+          if grep -E 'runAsUser|fsGroup' "$RUNNER_TEMP/ci-openshift-values.yaml"; then exit 1; fi
+          grep -q 'runAsUser: 10001' "$RUNNER_TEMP/ci-values.yaml"
+      - name: Only the AKS values add a service account and pod labels
+        run: |
+          if grep -E 'kind: ServiceAccount|serviceAccountName|azure.workload.identity' "$RUNNER_TEMP/ci-values.yaml"; then exit 1; fi
+          grep -q 'kind: ServiceAccount' "$RUNNER_TEMP/ci-azure-values.yaml"
+          grep -q 'serviceAccountName: marshal$' "$RUNNER_TEMP/ci-azure-values.yaml"
+          grep -q 'azure.workload.identity/client-id: 00000000-0000-0000-0000-000000000000' "$RUNNER_TEMP/ci-azure-values.yaml"
+          grep -q 'azure.workload.identity/use: "true"' "$RUNNER_TEMP/ci-azure-values.yaml"
+          grep -q 'store_auth: azure' "$RUNNER_TEMP/ci-azure-values.yaml"
 
   image:
     runs-on: ubuntu-latest
@@ -69,6 +85,22 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - run: docker build -t marshal:ci .
       - run: docker run --rm marshal:ci --version
+      - name: Includes Entra ID sign-in for the store
+        run: docker run --rm --entrypoint python marshal:ci -c "from marshal_ledger.dbauth import AzureTokenProvider; AzureTokenProvider()"
+      # As OpenShift runs it: an arbitrary UID in group 0, a read-only root filesystem, no /tmp.
+      - name: Runs as an arbitrary UID with a read-only root filesystem
+        run: |
+          cat > "$RUNNER_TEMP/server.yaml" <<'YAML'
+          store: /var/lib/marshal/ledger.sqlite
+          issuers: [{issuer: "https://token.actions.githubusercontent.com", provider: github, repositories: ["example-org/*"]}]
+          web: {enabled: true}
+          YAML
+          docker run -d --name marshal --user 123456:0 --read-only --cap-drop ALL --security-opt no-new-privileges \
+            -v "$RUNNER_TEMP/server.yaml:/etc/marshal/marshal-server.yaml:ro" -v marshal-data:/var/lib/marshal \
+            -p 8080:8080 marshal:ci
+          for _ in $(seq 30); do curl -fs http://127.0.0.1:8080/healthz && break; sleep 1; done
+          curl -fs -H 'X-Forwarded-Email: ci@example.com' -o /dev/null http://127.0.0.1:8080/ || { docker logs marshal; exit 1; }
+          docker exec marshal test -s /var/lib/marshal/ledger.sqlite
 
   # Runs the GitHub Action from this checkout against a local ingest server that trusts this
   # repository's OIDC tokens. Pull requests from forks get no OIDC token, so they skip it.

@@ -1,13 +1,14 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from conftest import AZURE_DEVOPS, GITHUB, GITLAB, JENKINS
+from conftest import AZURE_DEVOPS, GITHUB, GITLAB, JENKINS, without_password
 from marshal_ledger.hashing import sha256_text
 from marshal_ledger.model import AgentSpec, Instructions, Provenance, Source, ToolUse
 from marshal_ledger.oidc import IssuerConfig
 from marshal_ledger.readers.base import build_record
 from marshal_ledger.server import ServerConfig, create_app
-from marshal_ledger.store import Store
+from marshal_ledger.store import Store, StoreUnavailable
+from marshal_ledger.web import WebSettings
 
 
 def record(agent="finance/invoice", tools=()):
@@ -51,6 +52,16 @@ def auth(token):
 
 def test_health(client):
     assert client.get("/healthz").json() == {"status": "ok"}
+
+
+@pytest.mark.parametrize("web", [False, True])
+def test_no_unauthenticated_api_docs(config, signer, web):
+    """FastAPI's docs pages would be unauthenticated and load scripts from a CDN."""
+    config.web.enabled = web
+    client = TestClient(create_app(config, key_resolver=signer.resolver))
+    for path in ("/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect"):
+        assert client.get(path).status_code == 404, path
+    assert client.get("/healthz").status_code == 200
 
 
 def test_missing_or_bad_token_is_401(client):
@@ -199,3 +210,34 @@ def test_jenkins_build_number_and_job_are_audited(ci_config, signer):
     assert (event.commit, event.pipeline_run) == ("9e8d7c6", "jenkins:42")
     assert actor.repository == "https://jenkins.example.com/job/agents/job/finance/"
     assert actor.workflow == "https://jenkins.example.com/job/agents/job/finance/job/main/"
+
+
+def test_an_unreachable_store_is_503_with_retry_after(client, signer, monkeypatch):
+    def unreachable(*args, **kwargs):
+        raise StoreUnavailable("cannot connect to the Postgres store: db.internal refused")
+
+    monkeypatch.setattr("marshal_ledger.server.Store", unreachable)
+    response = client.post("/v0/events", json=body(), headers=auth(signer.github()))
+    assert response.status_code == 503
+    assert response.headers["Retry-After"] == "5"
+    assert "db.internal" not in response.text
+
+
+def test_store_auth_needs_a_postgres_store(config):
+    config = config.model_copy(update={"store": "ledger.sqlite", "store_auth": "azure"})
+    with pytest.raises(ValueError, match="postgresql"):
+        create_app(config)
+
+
+def test_store_auth_supplies_the_postgres_password(config, signer, ledger_location):
+    if not ledger_location.startswith("postgresql://"):
+        pytest.skip("needs Postgres (set MARSHAL_TEST_POSTGRES_URL)")
+    config = config.model_copy(update={
+        "store": without_password(ledger_location),
+        "store_auth": "conftest:postgres_password",
+        "web": WebSettings(enabled=True),
+    })
+    client = TestClient(create_app(config, key_resolver=signer.resolver))
+    assert client.post("/v0/events", json=body(), headers=auth(signer.github())).status_code == 200
+    page = client.get("/v0/agents", headers={"X-Forwarded-Email": "ana@acme.example"})
+    assert [a["agent"] for a in page.json()] == ["finance/invoice"]

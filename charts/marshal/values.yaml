@@ -30,6 +30,17 @@ config:
     enabled: true
     user_header: X-Forwarded-Email
 
+serviceAccount:
+  # A service account for the pods, for example one annotated for an AKS workload identity
+  # (see docs/azure.md). Unset: the namespace's default service account.
+  create: false
+  name: ""          # defaults to the release name when created; otherwise an existing account
+  annotations: {}
+  #  azure.workload.identity/client-id: <managed identity client ID>
+
+# Extra labels on the pods, such as azure.workload.identity/use: "true".
+podLabels: {}
+
 persistence:
   # For a single-replica SQLite store only.
   enabled: false
@@ -50,10 +61,33 @@ ingress:
   #    paths: [{path: /, pathType: Prefix}]
   tls: []
 
+route:
+  # An OpenShift Route instead of an Ingress. Expose the web view only through your SSO proxy.
+  enabled: false
+  host: ""         # assigned by the router when empty
+  path: ""
+  annotations: {}
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+
+networkPolicy:
+  # Admit traffic only from the peers listed in `from`, such as the ingress controller's and
+  # the SSO proxy's namespaces. The web view trusts the user header from anyone who reaches
+  # the pod, so nothing else should.
+  enabled: false
+  from: []
+  #  - namespaceSelector:
+  #      matchLabels: {kubernetes.io/metadata.name: ingress-nginx}
+  #  - namespaceSelector:
+  #      matchLabels: {kubernetes.io/metadata.name: sso-proxy}
+
 resources:
   requests: {cpu: 100m, memory: 256Mi}
   limits: {memory: 512Mi}
 
+# On OpenShift, set runAsUser and fsGroup to "" so the restricted SCC assigns them; an empty
+# value leaves the field out. The image runs as any UID with group 0.
 podSecurityContext:
   runAsNonRoot: true
   runAsUser: 10001

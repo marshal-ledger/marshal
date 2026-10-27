@@ -15,12 +15,13 @@ from __future__ import annotations
 import fnmatch
 import json
 import sqlite3
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable, Iterator, Optional
+from typing import Any, Callable, Iterable, Iterator, Optional
 
+from .dbauth import PasswordProvider
 from .freshness import FreshnessPolicy
 from .model import AgentVersion, Channel, Deployment, DeploymentEvent, Entity
 
@@ -207,6 +208,15 @@ class StoreError(LookupError):
     """A requested agent or version is not in the store."""
 
 
+class StoreUnavailable(ConnectionError):
+    """The store's database could not be reached, or the connection was lost.
+
+    A write interrupted this way is rolled back by the database, unless the
+    connection was lost while committing, when its outcome is unknown. Writes are
+    never replayed. The next operation on the store opens a new connection.
+    """
+
+
 class OwnershipError(PermissionError):
     """A caller tried to record an agent that belongs to another repository."""
 
@@ -321,46 +331,134 @@ class Store:
 
     ``location`` is a SQLite file path (optionally ``sqlite:///path``) or a
     ``postgresql://`` URL. Postgres needs the ``postgres`` extra.
+
+    ``password`` supplies the Postgres password each time the store connects,
+    in place of one in the URL (see :mod:`marshal_ledger.dbauth`). A lost Postgres
+    connection is replaced on the next operation; see :class:`StoreUnavailable`.
     """
 
-    def __init__(self, location: str | Path):
+    def __init__(self, location: str | Path, *, password: PasswordProvider | None = None):
         self.path = str(location)
         self._postgres = self.path.startswith(("postgresql://", "postgres://"))
+        self._password = password
+        self._tx_depth = 0
         if self._postgres:
             try:
                 import psycopg
-                from psycopg.rows import dict_row
             except ImportError as exc:  # pragma: no cover - depends on the environment
                 raise StoreError("Postgres stores need: pip install 'marshal-ledger[postgres]'") from exc
-            # Autocommit: reads run on their own, and each transaction block is a real, committed transaction.
-            self._db = psycopg.connect(self.path, row_factory=dict_row, autocommit=True)
+            self._operational_error = psycopg.OperationalError
+            self._db = self._connect()
         else:
+            if password is not None:
+                raise ValueError("a password provider applies only to Postgres stores")
             self._db = sqlite3.connect(self.path.removeprefix("sqlite:///"))
             self._db.row_factory = sqlite3.Row
             self._db.execute("PRAGMA foreign_keys = ON")
         self._migrate()
 
+    def _connect(self) -> Any:
+        import psycopg
+        from psycopg.rows import dict_row
+
+        options: dict[str, Any] = {}
+        if self._password is not None:
+            # Overrides any password in the URL. Obtained per connection, so it can be a short-lived token.
+            options["password"] = self._password()
+        try:
+            # Autocommit: reads run on their own, and each transaction block is a real, committed transaction.
+            return psycopg.connect(self.path, row_factory=dict_row, autocommit=True, **options)
+        except psycopg.OperationalError as exc:
+            raise StoreUnavailable(f"cannot connect to the Postgres store: {exc}") from exc
+
+    def _lost(self, exc: BaseException) -> bool:
+        """Whether ``exc`` means the connection is gone, rather than a failed statement."""
+        return isinstance(exc, self._operational_error) and self._db.closed
+
+    def _reconnect_if_closed(self) -> None:
+        if self._db.closed:
+            self._db = self._connect()
+
+    def _pg(self, operation: Callable[[Any], Any], *, read: bool) -> Any:
+        """Run ``operation`` on the Postgres connection, reconnecting if it was lost.
+
+        A read outside a transaction is retried once on a new connection. Losing the
+        connection during anything else raises :class:`StoreUnavailable`, and the next
+        operation reconnects.
+        """
+        if self._tx_depth == 0:
+            self._reconnect_if_closed()
+        try:
+            return operation(self._db)
+        except self._operational_error as exc:
+            if not self._lost(exc):
+                raise
+            if not read or self._tx_depth:
+                raise StoreUnavailable(f"lost the connection to the Postgres store: {exc}") from exc
+        self._db = self._connect()
+        try:
+            return operation(self._db)
+        except self._operational_error as exc:
+            if self._lost(exc):
+                raise StoreUnavailable(f"lost the connection to the Postgres store: {exc}") from exc
+            raise
+
     def _sql(self, sql: str) -> str:
         return sql.replace("?", "%s") if self._postgres else sql
 
     def _q(self, sql: str, params: Iterable[Any] = ()) -> Any:
-        return self._db.execute(self._sql(sql), tuple(params))
+        params = tuple(params)
+        if not self._postgres:
+            return self._db.execute(sql, params)
+        # Client-side cursors hold the whole result, so fetching afterwards needs no connection.
+        return self._pg(lambda db: db.execute(self._sql(sql), params), read=sql.lstrip()[:6].upper() == "SELECT")
 
     def _qm(self, sql: str, rows: list[tuple[Any, ...]]) -> None:
         if self._postgres:
-            with self._db.cursor() as cursor:
-                cursor.executemany(self._sql(sql), rows)
+            def run(db: Any) -> None:
+                with db.cursor() as cursor:
+                    cursor.executemany(self._sql(sql), rows)
+
+            self._pg(run, read=False)
         else:
             self._db.executemany(sql, rows)
 
+    def _script(self, sql: str) -> None:
+        """Run a multi-statement script inside a transaction block."""
+        self._pg(lambda db: db.execute(sql), read=False)
+
     @contextmanager
     def _tx(self) -> Iterator[None]:
-        if self._postgres:
-            with self._db.transaction():
-                yield
-        else:
+        if not self._postgres:
             with self._db:
                 yield
+            return
+        try:
+            with ExitStack() as stack:
+                self._begin(stack)
+                self._tx_depth += 1
+                try:
+                    yield
+                finally:
+                    self._tx_depth -= 1
+        except self._operational_error as exc:
+            if self._lost(exc):
+                raise StoreUnavailable(f"lost the connection to the Postgres store: {exc}") from exc
+            raise
+
+    def _begin(self, stack: ExitStack) -> None:
+        if self._tx_depth:
+            stack.enter_context(self._db.transaction())
+            return
+        self._reconnect_if_closed()
+        try:
+            stack.enter_context(self._db.transaction())
+        except self._operational_error as exc:
+            # Lost before BEGIN: nothing has been sent, so a new connection may start the transaction.
+            if not self._lost(exc):
+                raise
+            self._db = self._connect()
+            stack.enter_context(self._db.transaction())
 
     def close(self) -> None:
         self._db.close()
@@ -397,7 +495,7 @@ class Store:
         exists = self._q("SELECT to_regclass('meta') AS meta").fetchone()["meta"]
         if exists is None:
             with self._tx():
-                self._db.execute(_SCHEMA_POSTGRES)
+                self._script(_SCHEMA_POSTGRES)
                 self._q("INSERT INTO meta (key, value) VALUES ('schema_version', ?)", (str(SCHEMA_VERSION),))
             return
         row = self._q("SELECT value FROM meta WHERE key = 'schema_version'").fetchone()
@@ -406,7 +504,7 @@ class Store:
             raise StoreError(f"store schema version {found}, expected {SCHEMA_VERSION}")
         for version in range(found, SCHEMA_VERSION):
             with self._tx():
-                self._db.execute(_MIGRATIONS_POSTGRES[version])
+                self._script(_MIGRATIONS_POSTGRES[version])
                 self._q("UPDATE meta SET value = ? WHERE key = 'schema_version'", (str(version + 1),))
 
     # -- writes ----------------------------------------------------------

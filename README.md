@@ -69,6 +69,7 @@ $ marshal web                                        # browse the store
 - Formats: [Databricks](docs/formats/databricks.md), [CloudFormation](docs/formats/cloudformation.md), [Copilot Studio](docs/formats/copilot-studio.md), [Agentforce](docs/formats/agentforce.md), [ADK Agent Config](docs/formats/adk-config.md), [Vertex AI Agent Engine](docs/formats/vertex-agent-engine.md), [Python agent code](docs/formats/python.md), [ADL](docs/formats/adl.md), [Agent Spec](docs/formats/agent-spec.md), [OASF](docs/formats/oasf.md), [Marshal file](docs/formats/marshal-file.md)
 - [Platform exportability](docs/platform-exportability.md): what each closed platform exposes
 - [Ingest API](docs/ingest-server.md), [GitHub Action](docs/github-action.md), [Jenkins and Azure DevOps](docs/other-ci.md) and [Deployment](docs/deployment.md)
+- [Security review](docs/security-review.md): what is stored, authentication, network, supply chain, retention and audit, for security reviewers
 
 ## Development
 
