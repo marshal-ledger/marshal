@@ -1,0 +1,20 @@
+# Values used by CI to lint and render the chart as on OpenShift: no fixed UID or fsGroup,
+# a Route instead of an Ingress, and a NetworkPolicy.
+image: {repository: registry.example.com/marshal}
+store: {existingSecret: marshal-store}
+config:
+  issuers:
+    - issuer: https://token.actions.githubusercontent.com
+      provider: github
+      repositories: ["example-org/*"]
+podSecurityContext:
+  runAsUser: ""
+  fsGroup: ""
+route:
+  enabled: true
+  host: marshal.apps.example.com
+networkPolicy:
+  enabled: true
+  from:
+    - namespaceSelector:
+        matchLabels: {policy-group.network.openshift.io/ingress: ""}
