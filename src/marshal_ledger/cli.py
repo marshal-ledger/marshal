@@ -360,9 +360,7 @@ def _ls(args: argparse.Namespace) -> int:
         rows.append(
             (a.id, a.platform, a.latest.label, shipped, freshness, f"{a.latest.record.quality.completeness:.0%}")
         )
-    widths = [max(len(row[i]) for row in rows) for i in range(len(rows[0]))]
-    for row in rows:
-        print("  ".join(cell.ljust(width) for cell, width in zip(row, widths)).rstrip())
+    _table(rows)
     return 0
 
 
@@ -419,33 +417,44 @@ def _diff(args: argparse.Namespace) -> int:
     return 0
 
 
-def _deps(args: argparse.Namespace) -> int:
-    with _open_store(args) as store:
-        found = store.dependents(args.pattern, relation=args.relation, shipped_only=args.shipped)
-    if args.output == "json":
-        json.dump([d.__dict__ for d in found], sys.stdout, indent=2, default=list)
-        sys.stdout.write("\n")
-        return 0
-    if not found:
-        print(f"no agents reference {args.pattern}")
-        return 0
-    rows = [("AGENT", "VERSION", "WHERE", "RELATION", "REF")]
-    for d in found:
-        where = ", ".join(d.shipped) + (" (latest)" if d.latest and d.shipped else "latest" if d.latest else "")
-        rows.append((d.agent, d.label, where or "-", d.relation, d.ref))
+def _table(rows: list[tuple[str, ...]]) -> None:
     widths = [max(len(r[i]) for r in rows) for i in range(len(rows[0]))]
     for row in rows:
         print("  ".join(c.ljust(w) for c, w in zip(row, widths)).rstrip())
+
+
+def _deps(args: argparse.Namespace) -> int:
+    with _open_store(args) as store:
+        found = store.dependents(args.pattern, relation=args.relation, shipped_only=args.shipped)
+        related = [] if args.exact else store.related(args.pattern, relation=args.relation, shipped_only=args.shipped,
+                                                      exact=found)
+    if args.output == "json":
+        json.dump([d.__dict__ for d in found + related], sys.stdout, indent=2, default=list)
+        sys.stdout.write("\n")
+        return 0
+    if not found and not related:
+        print(f"no agents reference {args.pattern}")
+        return 0
+
+    def where(d) -> str:
+        return (", ".join(d.shipped) + (" (latest)" if d.latest and d.shipped else "latest" if d.latest else "")) or "-"
+
+    if found:
+        _table([("AGENT", "VERSION", "WHERE", "RELATION", "REF")]
+               + [(d.agent, d.label, where(d), d.relation, d.ref) for d in found])
+    if related:
+        if found:
+            print()
+        print("Reaching the same thing, on any platform:")
+        _table([("AGENT", "VERSION", "WHERE", "MATCH", "VIA", "REF")]
+               + [(d.agent, d.label, where(d), d.match, d.via or "", d.ref) for d in related])
     return 0
 
 
 def _entities(args: argparse.Namespace) -> int:
     with _open_store(args) as store:
         found = store.entities(args.kind)
-    rows = [("REF", "KIND", "AGENTS")] + [(e.ref, e.kind.value, str(n)) for e, n in found if n or args.all]
-    widths = [max(len(r[i]) for r in rows) for i in range(3)]
-    for row in rows:
-        print("  ".join(c.ljust(w) for c, w in zip(row, widths)).rstrip())
+    _table([("REF", "KIND", "AGENTS")] + [(e.ref, e.kind.value, str(n)) for e, n in found if n or args.all])
     return 0
 
 
@@ -642,11 +651,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         "deps", help="find agents that use a tool, knowledge source or grant target",
         description="Find agents whose latest or shipped versions reference an entity matching PATTERN, a glob "
         "matched against the ref, its identifier, or the ref without its kind, such as 'sap.*' or "
-        "'knowledge/https://contoso.sharepoint.com/*'.",
+        "'knowledge/https://contoso.sharepoint.com/*'. Refs on any platform that reach the same HTTP operation, "
+        "MCP server, OpenAPI operation, knowledge URL or API host are listed after them. PATTERN can also name "
+        "such a target, such as 'host:api.acme.example' or 'mcp:npm:*'.",
     )
     deps.add_argument("pattern")
     deps.add_argument("--relation", choices=["tool", "knowledge", "grant"])
     deps.add_argument("--shipped", action="store_true", help="only versions that are shipped somewhere")
+    deps.add_argument("--exact", action="store_true",
+                      help="only refs matching PATTERN, without refs on other platforms that reach the same API or server")
     deps.add_argument("--output", choices=["table", "json"], default="table")
     _add_db_arg(deps)
     deps.set_defaults(handler=_deps)

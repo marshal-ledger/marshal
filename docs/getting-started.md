@@ -14,6 +14,7 @@ $ marshal web --db demo.sqlite
 - **`eval_testAgent`:** a Copilot Studio agent that drifted after one of its tools was switched to the maker's credentials.
 - **`mpa_LeaveManagement`:** a Copilot Studio agent read from an exported solution. Its topics read Dataverse and Office 365 as the signed-in user, and it calls a Power Automate flow, so its identity is unknown rather than guessed.
 - **Dependencies:** search for `*CheckWeather` to see the Agentforce agents that share an Apex action.
+- **Across platforms:** `test_allthethings` has a proposed topic that calls `api.acme.example`. Search for `*api.acme.example/invoices*` to see the ADL agents whose network boundaries allow the same host.
 
 ## Read your own agents
 

@@ -113,7 +113,36 @@ model/databricks.serving_endpoint.databricks-claude-sonnet-5-5
 
 An agent that another agent calls is referenced by its agent id: `agent/<agent id>`. Functions defined in code are scoped to their project (`tool/python.<project>/<module>:<function>`), so same-named functions in different projects are different entities.
 
-`marshal deps PATTERN` lists the agents whose latest or shipped versions reference a matching tool, knowledge source or grant target, and where those versions are shipped. `marshal entities` lists shared entities with the number of agents that use them. In v0, two references are the same entity only when they match exactly. A ref includes its platform, so dependency queries find the agents that share an entity within a platform. Recognizing that refs on different platforms, or different connectors, call the same underlying API (entity resolution) is the next major milestone.
+`marshal deps PATTERN` lists the agents whose latest or shipped versions reference a matching tool, knowledge source or grant target, and where those versions are shipped. `marshal entities` lists shared entities with the number of agents that use them.
+
+### Resolving refs across platforms
+
+A ref names its platform, so an API called from two platforms has two refs. Marshal derives a *target* from what each ref states, and `marshal deps` also lists refs on any platform that share one with a match:
+
+| Target | From | Match |
+|---|---|---|
+| `http:GET https://api.acme.example/invoices/status` | HTTP calls: Agent Spec remote tools and Copilot Studio HTTP request steps | same HTTP operation |
+| `mcp:https://api.githubcopilot.com/mcp`, `mcp:npm:@notionhq/notion-mcp-server` | MCP servers, by URL or by the package an `npx` or `uvx` command runs | same MCP server |
+| `openapi:<document>#<operationId>` | ADL tools annotated with an OpenAPI operation | same OpenAPI operation |
+| `url:https://contoso.sharepoint.com/sites/hr` | Knowledge sources at a URL | same knowledge source |
+| `host:api.acme.example` | The host of any URL above, and network grants | same API host |
+
+URLs are compared after lowercasing the host, dropping default ports, queries and trailing slashes, and writing every path parameter (`{id}`, `{{id}}`, `:id`) as `{}`. A same-host match is weaker: it says two agents reach the same system, not that they do the same thing, so it is listed after the others. Nothing is matched on a name alone, nothing is fetched, and a URL with a placeholder or loopback host has no target. `--exact` turns resolution off, and PATTERN can name a target directly, such as `marshal deps "host:api.acme.example"`.
+
+In the demo, a proposed Copilot Studio topic calls the host that the public ADL examples' network boundaries allow:
+
+<!-- example: deps-across-platforms -->
+```
+AGENT              VERSION  WHERE   RELATION  REF
+test_allthethings  v2       latest  tool      tool/http.GET.https://api.acme.example/invoices/status
+
+Reaching the same thing, on any platform:
+AGENT                                          VERSION  WHERE          MATCH          VIA                    REF
+https://agents.acme.example/invoice-processor  v1       prod (latest)  same API host  host:api.acme.example  other/network.api.acme.example
+https://agents.acme.example/legacy-analyzer    v1       prod (latest)  same API host  host:api.acme.example  other/network.api.acme.example
+```
+
+Tools whose definitions name only a platform object, such as a Power Platform connector operation, an Apex class, a Unity Catalog function or a Bedrock action group's Lambda, match exactly within their platform and aren't resolved further yet.
 
 ## Completeness
 

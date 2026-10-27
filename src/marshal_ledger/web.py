@@ -454,13 +454,19 @@ def create_web_app(store_path: str, settings: WebSettings, *, password: Optional
     @app.get("/deps", response_class=HTMLResponse)
     def deps(request: Request, q: str = "", shipped: bool = False) -> HTMLResponse:
         who = user(request)
-        rows = []
+        rows, related = [], []
         if q:
             with store() as s:
-                for d in s.dependents(q, shipped_only=shipped):
+                found = s.dependents(q, shipped_only=shipped)
+                for d in found:
                     where = ", ".join(d.shipped) or ("latest" if d.latest else "–")
                     rows.append([_agent_link(d.agent), _e(d.label), _e(where), f'<span class="chip">{_e(d.relation)}</span>',
                                  f"<span class=mono>{_e(d.ref)}</span>"])
+                for d in s.related(q, shipped_only=shipped, exact=found):
+                    where = ", ".join(d.shipped) or ("latest" if d.latest else "–")
+                    related.append([_agent_link(d.agent), _e(d.label), _e(where), f'<span class="chip">{_e(d.match)}</span>',
+                                    f'<a href="deps?{urlencode({"q": d.via})}" class="mono">{_e(d.via)}</a>',
+                                    f"<span class=mono>{_e(d.ref)}</span>"])
         form = ('<form class="toolbar" method="get">'
                 f'<label class="search" style="max-width:520px">{_ICONS["search"]}<input name="q" '
                 f'placeholder="Tool, knowledge source or grant target (glob)" value="{_e(q)}" aria-label="Entity"></label>'
@@ -488,7 +494,10 @@ def create_web_app(store_path: str, settings: WebSettings, *, password: Optional
         body = ('<div class="head"><div><h1>Who depends on this?</h1>'
                 f"<p class=sub>{intro}</p></div></div>" + form
                 + (_card("Dependents", _table(["Agent", "Version", "Where", "Relation", "Ref"], rows, "No agents reference it."),
-                         f"{len(rows)} result{'s' * (len(rows) != 1)}") if q else ""))
+                         f"{len(rows)} result{'s' * (len(rows) != 1)}") if q else "")
+                + (_card("Reaching the same thing, on any platform",
+                         _table(["Agent", "Version", "Where", "Match", "Via", "Ref"], related),
+                         "Refs whose HTTP operation, MCP server, knowledge URL or API host is the same") if related else ""))
         return page("Dependencies", body, who, "deps")
 
     @app.get("/v0/agents")
@@ -511,10 +520,13 @@ def create_web_app(store_path: str, settings: WebSettings, *, password: Optional
                 raise HTTPException(404, str(exc)) from exc
 
     @app.get("/v0/deps")
-    def api_deps(request: Request, q: str, shipped: bool = False) -> list[dict[str, Any]]:
+    def api_deps(request: Request, q: str, shipped: bool = False, resolve: bool = True) -> list[dict[str, Any]]:
         user(request)
         with store() as s:
-            return [d.__dict__ | {"shipped": list(d.shipped)} for d in s.dependents(q, shipped_only=shipped)]
+            found = s.dependents(q, shipped_only=shipped)
+            if resolve:
+                found += s.related(q, shipped_only=shipped, exact=found)
+            return [d.__dict__ | {"shipped": list(d.shipped)} for d in found]
 
     return app
 

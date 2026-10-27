@@ -68,6 +68,9 @@ class Examples:
         shutil.copytree(CACHE / source, copy)
         return copy
 
+    def deps_across_platforms(self) -> str:
+        return run("deps", "*api.acme.example/invoices*", "--db", self.demo)
+
     def diff_refund(self) -> str:
         return run("diff", "agent_openai_agents_sdk/agent_openai_agents_sdk", "--db", self.demo)
 

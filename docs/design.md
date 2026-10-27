@@ -76,7 +76,7 @@ No writer's output has yet been imported into a hosted platform: an agent writte
 - **Version:** content-addressed, a hash of the normalized definition (`spec`). Environment-bound values (endpoints, connection references, warehouse IDs) go in `bindings` and are excluded, so the same definition in dev and prod is the same version. Versions are selected as `v3`, `shipped:prod`, `proposed`, `latest` or a hash prefix such as `82c3255`.
 - **Deployment:** version + environment + event + time + channel, with the commit and pipeline run where known. "Which version runs where" is a query.
 
-**Shared entities.** Tools, knowledge sources and grant targets are records shared across agents, so the ledger can answer "who depends on this?" Entity refs have the form `<kind>/<platform>.<type>.<identifier>`, such as `tool/databricks.uc.function.main.billing.issue_refund`. Entities match on the exact ref, and the ref includes the platform, so today "who depends on this?" is answered within each platform. Recognizing that a Copilot Studio connector, an MCP tool and an OpenAPI operation call the same API is entity resolution, the next major milestone.
+**Shared entities.** Tools, knowledge sources and grant targets are records shared across agents, so the ledger can answer "who depends on this?" Entity refs have the form `<kind>/<platform>.<type>.<identifier>`, such as `tool/databricks.uc.function.main.billing.issue_refund`. Refs include the platform, so the same API has a different ref on each platform. Entity resolution links them through what the definitions state: refs that reach the same HTTP operation, MCP server, OpenAPI operation, knowledge URL or API host are listed with each match's strength and basis. See [Entity references](ledger-model.md#entity-references).
 
 **Two events per deploy, and observations.**
 
@@ -235,14 +235,14 @@ Fidelity: 5 lossless · 13 dropped · 2 defaulted
 | **Drift and freshness** | What is live against what was shipped, and how recently each record was confirmed, by which channel |
 | **Conversion** | Between supported formats, with a fidelity report computed by readback |
 | **Portability scores** | Per target, split into platform limitations and agent-specific issues |
-| **Discovery** | Search by tool, knowledge source, model or permission; "who depends on this?" within a platform |
+| **Discovery** | Search by tool, knowledge source, model or permission; "who depends on this?", across platforms where the definitions name the same API, server or source |
 | **Audit trail** | Every proposed, shipped and observed event: when, from which pipeline and commit |
 
 It runs as a CLI with a local SQLite store, or as a service (ingest API and read-only web view) on Postgres, from a container image and Helm chart.
 
 ## Next
 
-- **Entity resolution** across connector types and platforms for the same underlying API, from what the definitions state (such as a connector's or an OpenAPI schema's host and operation)
+- **More entity resolution:** Bedrock executor Lambda functions, a curated table of documented equivalents (such as Power Platform MCP connectors and the servers behind them), and links a person attests in a Marshal file
 - **Policy checks:** rules such as "write-scope or irreversible tools need approval" or "models must be on an approved list," the same on every platform
 - **Import-tested writers,** starting with Copilot Studio
 - **Forking with lineage:** copy another team's agent into your platform's format and track the upstream
