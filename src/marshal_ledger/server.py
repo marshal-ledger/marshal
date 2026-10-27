@@ -45,6 +45,11 @@ class ShippedPolicy(BaseModel):
     """Accept any ref the provider reports as protected (GitLab)."""
     protected_environments: bool = False
     """Accept any environment the provider reports as protected (GitLab)."""
+    workflows: list[str] = Field(default_factory=list)
+    """Glob patterns for the caller's workflow, for providers whose tokens name no ref: a Jenkins
+    job URL, such as the main branch's job, or an Azure DevOps subject, such as a service
+    connection with a branch control check. Also matches GitHub workflow refs and GitLab CI
+    config refs."""
 
 
 class Policy(BaseModel):
@@ -99,6 +104,8 @@ def may_ship(caller: Caller, policy: ShippedPolicy) -> bool:
         return True
     if policy.protected_environments and caller.environment_protected:
         return True
+    if caller.workflow and any(fnmatch.fnmatchcase(caller.workflow, p) for p in policy.workflows):
+        return True
     return False
 
 
@@ -142,7 +149,7 @@ def create_app(config: ServerConfig, key_resolver: KeyResolver | None = None) ->
             raise HTTPException(
                 403,
                 f"{who.repository} at {who.ref or 'an unknown ref'} may not record {request.event.value} events; "
-                "the shipped policy requires a protected ref or deployment environment",
+                "the shipped policy requires a protected ref, a deployment environment or a workflow it lists",
             )
         channel = Channel.SCHEDULED if request.event is DeploymentEvent.OBSERVED else Channel.CI
         records = []

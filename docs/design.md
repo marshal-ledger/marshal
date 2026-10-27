@@ -118,7 +118,7 @@ team pipeline                          Marshal (inside the org network)
                                        write to store
 ```
 
-**Identity.** CI providers such as GitHub Actions and GitLab CI issue short-lived, signed OIDC tokens that name the repository, ref, workflow and deployment environment. The Marshal step requests one at run time; nothing is provisioned per team and nothing needs rotating. Marshal accepts only tokens from configured issuers with its own audience.
+**Identity.** CI providers such as GitHub Actions and GitLab CI issue short-lived, signed OIDC tokens that name the repository, ref, workflow and deployment environment. Jenkins (with the OpenID Connect Provider plugin) and Azure DevOps issue tokens that name the job or pipeline. The Marshal step requests one at run time; nothing is provisioned per team and nothing needs rotating. Marshal accepts only tokens from configured issuers with its own audience, or with the fixed audience of a provider that doesn't let pipelines choose one (Azure DevOps).
 
 **Authorization.**
 
@@ -316,7 +316,7 @@ Pro-code readers come before the closed-platform adapters. Most agents on Databr
 
 - **Core, readers, writers:** Python and Pydantic. The JSON Schema for ledger records is generated from the models and published with each release
 - **Store:** SQLite or DuckDB locally; Postgres for shared deployments
-- **CI:** GitHub Action first; GitLab CI through `marshal push` with ID tokens; Azure DevOps later
+- **CI:** GitHub Action first; GitLab CI, Jenkins and Azure DevOps through `marshal push` with OIDC tokens
 - **UI:** a lightweight read-only web view
 - **Packaging:** Docker image and Helm chart for self-hosting
 

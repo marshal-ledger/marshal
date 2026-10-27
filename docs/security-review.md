@@ -12,7 +12,7 @@ To report a vulnerability, see [SECURITY.md](../SECURITY.md).
 | Where data lives | Your SQLite file or Postgres database. Nothing is sent to the Marshal project or any third party |
 | What data | Agent definitions: names, descriptions, model, instructions, tools, knowledge sources, grants, access rules, and who recorded each version |
 | Credentials stored | None by design. Readers drop each format's credential fields, record environment variables by name, and redact credential patterns in free text (limits below). CI authenticates with short-lived OIDC tokens, which are not stored |
-| Who can write | Pipelines with a valid OIDC token from a configured issuer, from an allowlisted repository |
+| Who can write | Pipelines with a valid OIDC token from a configured issuer (GitHub Actions, GitLab CI, Jenkins or Azure DevOps), from an allowlisted repository, Jenkins job or Azure DevOps pipeline |
 | Who can read | Anyone the SSO proxy lets through. There are no per-agent read permissions |
 | Outbound connections | The store, and each configured OIDC issuer's signing keys. Never an agent platform |
 | Retention and deletion | None built in. The ledger is append-only, and there is no delete command |
@@ -85,17 +85,19 @@ Environment-bound values (`bindings`) such as warehouse IDs, endpoint URLs and e
 
 ### Pipelines: the ingest API
 
-Pipelines authenticate with their CI provider's OIDC token; no shared secret is stored in CI ([`oidc.py`](../src/marshal_ledger/oidc.py), [ingest API guide](ingest-server.md)). For each request the server checks:
+Pipelines authenticate with their CI provider's OIDC token; no shared secret is stored in CI ([`oidc.py`](../src/marshal_ledger/oidc.py), [ingest API guide](ingest-server.md), [Jenkins and Azure DevOps](other-ci.md)). Supported issuers are GitHub Actions, GitLab CI, Jenkins with the OpenID Connect Provider plugin, and Azure DevOps. For each request the server checks:
 
 | Check | Failure |
 |---|---|
-| A bearer token signed by a configured issuer (RS or ES algorithms only), with the configured audience, unexpired (30 seconds leeway), with `exp`, `iat`, `iss` and `aud` present | `401` |
-| The token's repository matches one of the issuer's `repositories` patterns. An issuer such as GitHub signs tokens for every repository it hosts, so this allowlist is what limits writes to your organization | `403` |
-| For `shipped` and `observed` events, the token's ref or deployment environment satisfies `policy.shipped`, such as `refs/heads/main` or a GitHub environment with required reviewers | `403` |
+| A bearer token signed by a configured issuer (RS or ES algorithms only), with the configured audience, unexpired (30 seconds leeway), with `exp`, `iat`, `iss` and `aud` present, naming its caller (the repository, or `sub` for Jenkins and Azure DevOps) | `401` |
+| The token's caller matches one of the issuer's `repositories` patterns: a repository, a Jenkins job URL or an Azure DevOps subject. An issuer such as GitHub signs tokens for every repository it hosts, a Jenkins controller for every job, and an Azure DevOps organization for every pipeline, so this allowlist is what limits writes | `403` |
+| For `shipped` and `observed` events, the token's ref, deployment environment or workflow satisfies `policy.shipped`, such as `refs/heads/main`, a GitHub environment with required reviewers, or a listed Jenkins job or Azure DevOps subject | `403` |
 | Each agent is unbound, or bound to the same issuer and repository. An agent is bound to the first repository that records it | `403` |
 | The body is a valid event of at most 500 records | `422` |
 
-The commit and pipeline run come from the token when it carries them, rather than from the request body. Version hashes and quality scores are recomputed by the server.
+The commit and pipeline run come from the token when it carries them, rather than from the request body. Azure DevOps tokens carry neither, and Jenkins tokens carry only the build number unless an administrator adds a `sha` claim template, so for those the commit (and, for Azure DevOps, the run) is what the pipeline sent. Version hashes and quality scores are recomputed by the server.
+
+Azure DevOps tokens always have the audience `api://AzureADTokenExchange`, so a token sent to Marshal is also accepted by any system federated with the same subject, such as Microsoft Entra ID for a service connection. Whoever runs the server could use it until it expires. [Jenkins and Azure DevOps](other-ci.md#audience-and-reuse) recommends pipeline tokens and subjects federated with nothing else.
 
 Because an agent is bound to the first repository that records it, any allowlisted repository can claim an agent id that hasn't been recorded yet. Keep `repositories` as narrow as your organization allows. Moving an agent to another repository is an administrative operation through the store API (`Store.transfer`); there is no HTTP endpoint for it.
 
@@ -139,7 +141,7 @@ Marshal never starts a connection to an agent platform ([design](design.md#netwo
 |---|---|---|
 | Inbound | CI runners | `POST /v0/events` |
 | Inbound | SSO proxy | Web view and `/v0/` JSON |
-| Outbound | Each configured OIDC issuer | `<issuer>/.well-known/openid-configuration`, then its key set, cached for an hour. Set `jwks_uri` to fetch the keys from a mirror and skip discovery |
+| Outbound | Each configured OIDC issuer, such as `token.actions.githubusercontent.com`, a GitLab instance, a Jenkins controller (`<jenkins>/oidc`) or `vstoken.dev.azure.com` | `<issuer>/.well-known/openid-configuration`, then its key set, cached for an hour; a token with an unknown key id causes a new fetch at most once a minute. Set `jwks_uri` to fetch the keys from a mirror and skip discovery. Fetches honor `HTTPS_PROXY`, `HTTP_PROXY` and `NO_PROXY`, and trust OpenSSL's default CA store, which `SSL_CERT_FILE` and `SSL_CERT_DIR` replace ([details](ingest-server.md#signing-keys-and-egress)) |
 | Outbound | The store | SQLite on a volume, or Postgres |
 | Outbound | Microsoft Entra ID, only with `store_auth: azure` | A database access token from the managed identity endpoint or Entra ID's token endpoint, when the store connects and the cached token is near expiry |
 
@@ -182,7 +184,7 @@ Each event in the store records:
 
 - the event (`proposed`, `shipped` or `observed`), environment and version;
 - the time, set by the server;
-- the caller's OIDC issuer, repository, ref and workflow, from the verified token;
+- the caller's OIDC issuer, repository (for Jenkins the job URL, for Azure DevOps the subject, or their parent with `owner: parent`), ref and workflow, from the verified token;
 - the commit and pipeline run, from the token where it carries them;
 - the channel: `ci` for pipeline events, `scheduled` for observed events from a scheduled export, `manual` for local `marshal collect`.
 
@@ -197,7 +199,7 @@ What it doesn't record:
 ## Checklist for a deployment
 
 - Keep each issuer's `repositories` to your organization's repositories, as narrowly as practical.
-- Require a protected branch or a deployment environment with reviewers in `policy.shipped`.
+- Require a protected branch or a deployment environment with reviewers in `policy.shipped`. For Jenkins and Azure DevOps, list only the jobs or subjects that release in `policy.shipped.workflows`.
 - Put the web view behind the SSO proxy only; expose only `POST /v0/events` to runners; enable the chart's NetworkPolicy. Turn the web view off if there is no proxy.
 - Turn on `hash_only` if agent instructions are more sensitive than the rest of the definition.
 - Use Postgres with TLS and encryption at rest; keep its credentials in a Secret, or on Azure sign in with a managed identity instead of a password.

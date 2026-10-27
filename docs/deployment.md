@@ -69,7 +69,7 @@ $ helm install marshal charts/marshal \
     -f my-values.yaml
 ```
 
-`my-values.yaml` holds the server configuration under `config:`: OIDC issuers with their repository allowlists, the shipped policy, hash-only mode, and the web view. See [`values.yaml`](../charts/marshal/values.yaml) and the [ingest API guide](ingest-server.md). Pods run as non-root with a read-only root filesystem, no privilege escalation and all capabilities dropped. A SQLite store on a persistent volume is limited to one replica, and the chart refuses more.
+`my-values.yaml` holds the server configuration under `config:`: OIDC issuers with their repository allowlists, the shipped policy, hash-only mode, and the web view. See [`values.yaml`](../charts/marshal/values.yaml), the [ingest API guide](ingest-server.md) and, for Jenkins and Azure DevOps pipelines, [Jenkins and Azure DevOps](other-ci.md). Pods run as non-root with a read-only root filesystem, no privilege escalation and all capabilities dropped. A SQLite store on a persistent volume is limited to one replica, and the chart refuses more.
 
 ### OpenShift
 
@@ -132,7 +132,7 @@ Marshal never starts a connection to an agent platform (see [Network posture](de
 
 - **Inbound from CI runners:** `POST /v0/events`. For hosted runners, expose only this path through your ingress.
 - **Inbound from users:** the web view at `/` and the read-only JSON API under `/v0/`, only through your SSO proxy. The proxy sets the configured user header (default `X-Forwarded-Email`), and requests without it are refused. The proxy must replace any user header the client sent, and must be the only route to the web view: anything else that reaches the pod can set the header itself.
-- **Outbound to the OIDC issuers:** to fetch their signing keys, for example `token.actions.githubusercontent.com`. Without `jwks_uri`, the server reads `<issuer>/.well-known/openid-configuration` and then the key set it names. Set `jwks_uri` per issuer to fetch the keys from a mirror instead.
+- **Outbound to the OIDC issuers:** to fetch their signing keys, for example `token.actions.githubusercontent.com`, a Jenkins controller (`<jenkins>/oidc`) or `vstoken.dev.azure.com`. Without `jwks_uri`, the server reads `<issuer>/.well-known/openid-configuration` and then the key set it names. Set `jwks_uri` per issuer to fetch the keys from a mirror instead. These fetches honor `HTTPS_PROXY`, `HTTP_PROXY` and `NO_PROXY`, and `SSL_CERT_FILE` for an internal CA ([Signing keys and egress](ingest-server.md#signing-keys-and-egress)).
 - **Outbound to the store.** With `store_auth: azure`, also to Microsoft Entra ID or the managed identity endpoint for database tokens.
 
 The server speaks plain HTTP on port 8080. Terminate TLS at the ingress, Route or proxy. For TLS to Postgres, add `sslmode=verify-full` (and `sslrootcert` if needed) to the store URL.
