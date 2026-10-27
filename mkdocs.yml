@@ -107,6 +107,7 @@ nav:
       - Deployment: deployment.md
       - Ingest API: ingest-server.md
       - GitHub Action: github-action.md
+      - GitLab CI: gitlab-ci.md
       - Jenkins and Azure DevOps: other-ci.md
       - Azure: azure.md
   - Security review: security-review.md

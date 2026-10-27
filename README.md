@@ -40,7 +40,7 @@ The [security review](docs/security-review.md) covers what Marshal stores, what 
 
 <img src="docs/assets/architecture.svg" alt="How Marshal runs: agent definitions in repositories and web designers reach your CI pipelines, which push proposed, shipped and observed events to Marshal's ingest API with their OIDC token. Marshal records them in the ledger, and teams see risk-ranked pull request comments, the web view and the CLI. Marshal never connects to an agent platform.">
 
-Pipelines you already run record each agent: a pull request records the proposed definition and gets a comment ranking its changes, a deploy records what was shipped, and an optional scheduled export records what is live in a web designer. See the [GitHub Action](docs/github-action.md), [Jenkins and Azure DevOps](docs/other-ci.md) and [Deployment](docs/deployment.md).
+Pipelines you already run record each agent: a pull request records the proposed definition and gets a comment ranking its changes, a deploy records what was shipped, and an optional scheduled export records what is live in a web designer. See the [GitHub Action](docs/github-action.md), [GitLab CI](docs/gitlab-ci.md), [Jenkins and Azure DevOps](docs/other-ci.md) and [Deployment](docs/deployment.md).
 
 ## Formats
 
@@ -84,7 +84,7 @@ $ marshal port my-team/my_agent --to all             # portability to every plat
 $ marshal web                                        # browse the store
 ```
 
-`collect` writes to a local SQLite store (`marshal.sqlite`, or `--db` / `$MARSHAL_DB`). In a shared deployment, pipelines run `marshal push` or the [GitHub Action](docs/github-action.md) against the [ingest API](docs/ingest-server.md). Optional [scheduled workflows](examples/scheduled/) export agents built in a web designer, such as Copilot Studio and Agentforce, and report drift from what was shipped.
+`collect` writes to a local SQLite store (`marshal.sqlite`, or `--db` / `$MARSHAL_DB`). In a shared deployment, pipelines run `marshal push`, the [GitHub Action](docs/github-action.md) or the [GitLab CI template](docs/gitlab-ci.md) against the [ingest API](docs/ingest-server.md). Optional [scheduled workflows](examples/scheduled/) export agents built in a web designer, such as Copilot Studio and Agentforce, and report drift from what was shipped.
 
 ## Documentation
 
@@ -98,7 +98,7 @@ The documentation is published at [marshal-ledger.github.io/marshal](https://mar
 - [Conversion and fidelity](docs/conversion.md) and [Portability](docs/portability.md)
 - Formats: [Databricks](docs/formats/databricks.md), [CloudFormation](docs/formats/cloudformation.md), [Copilot Studio](docs/formats/copilot-studio.md), [Agentforce](docs/formats/agentforce.md), [ADK Agent Config](docs/formats/adk-config.md), [Vertex AI Agent Engine](docs/formats/vertex-agent-engine.md), [Python agent code](docs/formats/python.md), [ADL](docs/formats/adl.md), [Agent Spec](docs/formats/agent-spec.md), [OASF](docs/formats/oasf.md), [Marshal file](docs/formats/marshal-file.md)
 - [Platform exportability](docs/platform-exportability.md): what each closed platform exposes
-- [Ingest API](docs/ingest-server.md), [GitHub Action](docs/github-action.md), [Jenkins and Azure DevOps](docs/other-ci.md) and [Deployment](docs/deployment.md)
+- [Ingest API](docs/ingest-server.md), [GitHub Action](docs/github-action.md), [GitLab CI](docs/gitlab-ci.md), [Jenkins and Azure DevOps](docs/other-ci.md) and [Deployment](docs/deployment.md)
 - [Security review](docs/security-review.md): what is stored, authentication, network, supply chain, retention and audit, for security reviewers
 
 ## Development

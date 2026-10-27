@@ -46,9 +46,13 @@ def test_changelog_has_a_section_for_the_version():
 
 
 def test_action_references_use_the_current_major_tag():
-    for path in [*ROOT.glob("docs/**/*.md"), *ROOT.glob("examples/**/*.yml"), ROOT / "README.md"]:
-        for tag in re.findall(r"marshal-ledger/marshal/collect@(\S+)", path.read_text()):
+    for path in [*ROOT.glob("docs/**/*.md"), *ROOT.glob("examples/**/*.yml"), ROOT / "README.md", ROOT / "collect" / "gitlab-ci.yml"]:
+        text = path.read_text()
+        for tag in re.findall(r"marshal-ledger/marshal/collect@(\S+)", text):
             assert tag == MAJOR, f"{path.relative_to(ROOT)}: collect@{tag}, expected @{MAJOR}"
+        # GitLab includes the template from a tag the same way.
+        for tag in re.findall(r"marshal-ledger/marshal/(v[\w.]+)/collect/gitlab-ci\.yml", text):
+            assert tag == MAJOR, f"{path.relative_to(ROOT)}: GitLab template from {tag}, expected {MAJOR}"
 
 
 @pytest.mark.parametrize("doc", ["docs/deployment.md", "docs/github-action.md"])

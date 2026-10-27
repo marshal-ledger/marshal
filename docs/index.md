@@ -43,7 +43,7 @@ The [security review](security-review.md) covers what Marshal stores, what it co
 
 ![How Marshal runs: agent definitions in repositories and web designers reach your CI pipelines, which push proposed, shipped and observed events to Marshal's ingest API with their OIDC token. Marshal records them in the ledger, and teams see risk-ranked pull request comments, the web view and the CLI. Marshal never connects to an agent platform.](assets/architecture.svg)
 
-Pipelines you already run record each agent: a pull request records the proposed definition and gets a comment ranking its changes, a deploy records what was shipped, and an optional scheduled export records what is live in a web designer. See the [GitHub Action](github-action.md), [Jenkins and Azure DevOps](other-ci.md) and [Deployment](deployment.md).
+Pipelines you already run record each agent: a pull request records the proposed definition and gets a comment ranking its changes, a deploy records what was shipped, and an optional scheduled export records what is live in a web designer. See the [GitHub Action](github-action.md), [GitLab CI](gitlab-ci.md), [Jenkins and Azure DevOps](other-ci.md) and [Deployment](deployment.md).
 
 ## Try it in a minute
 
@@ -80,5 +80,5 @@ Readers are tested against real, public definitions, pinned to a commit. Only th
 - [How Marshal compares](comparison.md) with platform admin tools, observability, AI gateways, registries and governance platforms.
 - [Getting started](getting-started.md): read your own agents and record their history.
 - [Design](design.md): the problem, the architecture, and the security and network posture.
-- [GitHub Action](github-action.md), [Jenkins and Azure DevOps](other-ci.md): record agents from CI and comment on pull requests.
+- [GitHub Action](github-action.md), [GitLab CI](gitlab-ci.md), [Jenkins and Azure DevOps](other-ci.md): record agents from CI and comment on pull and merge requests.
 - [Deployment](deployment.md) and the [security review](security-review.md): run the ingest API and web view for a whole organization.

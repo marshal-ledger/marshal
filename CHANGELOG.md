@@ -4,6 +4,7 @@ Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](
 
 ## 0.7.0 (unreleased)
 
+- GitLab CI: a template (`collect/gitlab-ci.yml`) to include from a release tag and extend, which records events with a GitLab ID token and comments on merge requests with the risk-ranked changes, updating one comment on later pushes. A new `marshal comment` command posts the comment; it needs a project access token, and without one the report stays in the job log and artifacts. See the new GitLab CI page.
 - The README and documentation say why Marshal is easy to approve: it runs inside your network, uses no AI, and needs no platform credentials. The architecture diagram's footnote keeps even spacing in every font.
 
 ## 0.6.0 (2026-10-27)

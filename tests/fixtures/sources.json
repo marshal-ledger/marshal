@@ -508,6 +508,15 @@
       "files": [
         "acwwat-basic.plan.json"
       ]
+    },
+    {
+      "id": "gitlab/schema",
+      "repo": "gitlabhq/gitlabhq",
+      "commit": "d7b9a6176ab4e279465ba3ee09922cde2b74de47",
+      "root": "app/assets/javascripts/editor/schema",
+      "files": [
+        "ci.json"
+      ]
     }
   ]
 }

@@ -1,0 +1,55 @@
+# Marshal for GitLab CI: record agent definitions in a Marshal ledger, and comment on merge
+# requests with the risk-ranked changes. Include it from a release tag, then extend the job:
+#
+#   include:
+#     - remote: https://raw.githubusercontent.com/marshal-ledger/marshal/v0/collect/gitlab-ci.yml
+#
+#   marshal-proposed:
+#     extends: .marshal-collect
+#     variables:
+#       MARSHAL_EVENT: proposed
+#       MARSHAL_URL: https://marshal.example.com
+#       MARSHAL_TARGET: prod
+#     rules:
+#       - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+#
+# The pipeline signs in to Marshal with a GitLab ID token; no secret is stored for Marshal.
+# Merge request comments need a project access token in MARSHAL_GITLAB_TOKEN; without it,
+# the report is in the job log and the job's artifacts. See docs/gitlab-ci.md.
+
+.marshal-collect:
+  image: ${MARSHAL_PYTHON_IMAGE}
+  variables:
+    MARSHAL_VERSION: "0.7.0"            # the Marshal release this template comes from
+    MARSHAL_PYTHON_IMAGE: "python:3.12-slim"
+    MARSHAL_EVENT: proposed             # proposed, shipped or observed
+    MARSHAL_ARTIFACTS: "."              # path of the agent artifact, such as a bundle directory or a Terraform plan's JSON
+    MARSHAL_URL: ""                     # base URL of the ingest API
+    MARSHAL_TARGET: ""                  # deployment target whose overrides to apply
+    MARSHAL_ENVIRONMENT: ""             # environment the event applies to; defaults to MARSHAL_TARGET
+    MARSHAL_PORTABILITY: ""             # space-separated platforms to score portability to in the report
+    MARSHAL_COMMENT: "true"             # comment on merge requests (needs MARSHAL_GITLAB_TOKEN)
+  id_tokens:
+    MARSHAL_ID_TOKEN:
+      aud: marshal                      # the audience the Marshal server expects; override id_tokens to change it
+  script:
+    - python -m pip install --quiet --disable-pip-version-check "marshal-ledger==${MARSHAL_VERSION}"
+    - |
+      set -eu
+      set -- push "$MARSHAL_ARTIFACTS" --event "$MARSHAL_EVENT" --url "$MARSHAL_URL" \
+        --token-env MARSHAL_ID_TOKEN --pipeline-run "$CI_PIPELINE_ID" --report marshal-report.md
+      # An observed definition comes from the platform, not from this commit.
+      if [ "$MARSHAL_EVENT" != "observed" ]; then set -- "$@" --commit "$CI_COMMIT_SHA"; fi
+      if [ -n "$MARSHAL_TARGET" ]; then set -- "$@" --target "$MARSHAL_TARGET"; fi
+      if [ -n "$MARSHAL_ENVIRONMENT" ]; then set -- "$@" --environment "$MARSHAL_ENVIRONMENT"; fi
+      for platform in $MARSHAL_PORTABILITY; do set -- "$@" --portability "$platform"; done
+      marshal "$@"
+    - |
+      if [ "$MARSHAL_COMMENT" = "true" ] && [ "$MARSHAL_EVENT" = "proposed" ]; then
+        marshal comment marshal-report.md
+      fi
+  artifacts:
+    when: always
+    expose_as: Marshal report
+    paths:
+      - marshal-report.md

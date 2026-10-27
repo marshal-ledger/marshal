@@ -57,4 +57,4 @@ $ marshal port my-team/my_agent --to all
 
 ## Put it in your pipelines
 
-Run the [ingest API](ingest-server.md) (see [Deployment](deployment.md)) and add the [GitHub Action](github-action.md) around your deploy step. Pull requests get a risk-ranked comment, deploys are recorded as shipped, and teams never hold store credentials.
+Run the [ingest API](ingest-server.md) (see [Deployment](deployment.md)) and add the [GitHub Action](github-action.md) or the [GitLab CI template](gitlab-ci.md) around your deploy step. Pull requests get a risk-ranked comment, deploys are recorded as shipped, and teams never hold store credentials.
