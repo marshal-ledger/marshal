@@ -205,3 +205,67 @@ def test_a_documented_connector_matches_the_server_it_calls(ledger_location):
     assert (from_connector.agent, from_connector.match) == ("docs-adk", "same MCP server (documented)")
     assert (from_server.agent, from_server.match) == ("docs-copilot", "same MCP server (documented)")
     assert "https://learn.microsoft.com/en-us/connectors/microsoftlearndocsmcpserver/" in from_server.basis
+
+
+LINKS_FILE = """
+marshal: agent/v0
+id: billing/refund-bot
+platform: in-house
+attested_by: billing-platform@example.com
+attested_at: 2026-10-27
+tools:
+  - ref: tool/in-house.refunds
+    name: refunds
+links:
+  - ref: tool/python.billing/refunds:issue_refund
+    same_as: http:post https://API.acme.example/refunds/
+  - ref: tool/in-house.refunds
+    same_as: tool/python.billing/refunds:issue_refund
+  - ref: refunds                      # not a full ref
+    same_as: host:api.acme.example
+  - ref: tool/in-house.refunds
+    same_as: http:FETCH https://api.acme.example/refunds   # not a target
+"""
+
+
+def marshal_file(tmp_path, text=LINKS_FILE):
+    from marshal_ledger.readers import READERS
+
+    path = tmp_path / "refund-bot.marshal.yaml"
+    path.write_text(text)
+    return READERS["marshal-file"]().read(path)
+
+
+def test_marshal_file_links_are_normalized_and_checked(tmp_path):
+    result = marshal_file(tmp_path)
+    [record] = result.records
+    assert record.spec.extensions["marshal-file"]["links"] == [
+        {"ref": "tool/python.billing/refunds:issue_refund", "same_as": "http:POST https://api.acme.example/refunds"},
+        {"ref": "tool/in-house.refunds", "same_as": "tool/python.billing/refunds:issue_refund"},
+    ]
+    assert sum("links[" in w for w in result.warnings) == 2
+
+
+def test_marshal_file_links_round_trip(tmp_path):
+    from marshal_ledger.convert import convert
+
+    [record] = marshal_file(tmp_path).records
+    conversion = convert(record, "marshal-file")
+    assert conversion.report.lossy == []
+    assert conversion.read_back.version == record.version
+    assert "\nlinks:\n" in conversion.text
+
+
+def test_attested_links_join_refs_no_definition_connects(tmp_path, ledger_location):
+    [linker] = marshal_file(tmp_path).records
+    python_agent = record("billing/refunds", "python", tools=[("tool/python.billing/refunds:issue_refund", "issue_refund")])
+    with Store(ledger_location) as store:
+        store.record([SPEC, python_agent, linker], event=SHIPPED, environment="prod")
+        found = {d.agent: d for d in store.related("tool/http.POST.https://api.acme.example/refunds")}
+        linked = {d.agent: d.match for d in store.related("tool/python.billing/refunds:issue_refund")}
+    python = found["billing/refunds"]
+    assert python.match == "same HTTP operation (attested)"
+    assert "attested by billing-platform@example.com on 2026-10-27" in python.basis
+    # From the Python tool: the Agent Spec tool through the HTTP link, and the hand-written
+    # agent's own tool through the ref-to-ref link.
+    assert linked == {"refunds-spec": "same HTTP operation (attested)", "billing/refund-bot": "same entity (attested)"}

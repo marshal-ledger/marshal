@@ -47,10 +47,27 @@ Every ledger field has a place, with the same name:
 | `permissions.principal` | same | The account the agent acts as |
 | `permissions.grants[]` | same | `target`, `privilege`, `scope`, all three required. Each grant is attested |
 | `permissions.access[]` | same | `principal`, `principal_type` (`user`, `group`, `service_principal`, `unknown`), `level` |
+| `links[]` | `extensions.marshal-file.links` | `ref` and `same_as`: links between refs that no definition shows. See [Links](#links) |
 | `bindings` | `bindings` | Environment-bound values. Not part of the version hash |
 | `extensions` | `extensions` | Platform-specific fields, keyed by platform, kept as written |
 
 Refs follow the ledger's `<kind>/<identifier>` convention. A ref without a `/` is qualified with the agent's platform. For example, a tool named `refund` becomes `tool/<platform>.refund`, a knowledge source becomes `knowledge/<platform>.<name>`, and a grant target becomes `other/<platform>.<target>`. A tool or knowledge source can be a bare ref string. Use the same ref in every file that names the same tool, so `marshal deps` finds every agent that uses it.
+
+## Links
+
+A definition often doesn't say what a tool reaches. A Python function that calls an HTTP API, or a Lambda function behind a Bedrock action group, is recorded by its own name, so it doesn't match the other agents that call the same API. A person who knows can say so:
+
+```yaml
+links:
+  - ref: tool/python.billing/refunds:issue_refund      # any agent's ref, not only this file's
+    same_as: http:POST https://api.acme.example/refunds
+  - ref: tool/in-house.refunds
+    same_as: tool/python.billing/refunds:issue_refund  # or another ref: the two are the same entity
+```
+
+`same_as` is a target, written as `marshal deps` shows it (`http:<METHOD> <url>`, `mcp:<url>`, `mcp:npm:<package>`, `url:<url>`, `host:<host>`), or a full ref. Targets are normalized like the ones Marshal derives. `marshal deps` then lists agents that reach the same thing through a link, labelled as attested, with the file and who attested it.
+
+A link applies wherever the ref is used, so put it in the Marshal file of the agent it concerns, or in one your team keeps for the tools it owns. It counts while that file's agent has a current version, latest or shipped. Links change dependency results only; they don't change how risk is ranked.
 
 ## Validation
 
@@ -59,6 +76,7 @@ A hand-written file has typos, so the reader reports them as warnings rather tha
 - A file without `id` or `platform` is skipped, with the reason.
 - An invalid scope, identity or boolean is recorded as `unknown`, with a warning naming the field.
 - A tool or knowledge source with neither `ref` nor `name` is skipped. So is a grant missing its target, privilege or scope, and an access rule missing its principal or level.
+- A link without `ref` or `same_as`, with a ref that isn't a full ref, or with a `same_as` that is neither a target nor a full ref is skipped, with a warning.
 - Unrecognized top-level keys, such as `tool:` for `tools:`, are kept under `extensions.marshal-file` with a warning, so nothing is lost silently.
 
 ## Credentials

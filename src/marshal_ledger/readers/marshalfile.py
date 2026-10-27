@@ -39,6 +39,7 @@ from ..model import (
     Value,
 )
 from ..redact import redact
+from ..resolve import normalize_target
 from .base import DocumentReader, ReadOptions, ReadResult, Skipped, build_record
 
 FORMAT = "marshal-file"
@@ -50,7 +51,7 @@ _SECRET_KEY = re.compile(r"(password|passwd|secret|api[_-]?key|access[_-]?key|pr
 _HASH = re.compile(r"^sha256:[0-9a-f]{64}$")
 TOP_LEVEL_KEYS = {
     "marshal", "id", "platform", "attested_by", "attested_at", "display_name", "description", "model",
-    "instructions", "tools", "knowledge", "permissions", "bindings", "extensions",
+    "instructions", "tools", "knowledge", "permissions", "bindings", "extensions", "links",
 }
 _KINDS = {k.value for k in EntityKind}
 
@@ -290,6 +291,32 @@ class MarshalFileReader(DocumentReader):
         if unexpected:
             warn(f"unexpected top-level key(s) {', '.join(sorted(map(str, unexpected)))}; kept under extensions.{FORMAT}")
             spec.extensions.setdefault(FORMAT, {}).update(scrub(unexpected, f"extensions.{FORMAT}"))
+
+        # Links between refs that no definition shows, attested like every other value in the file.
+        stated_links = []
+        for index, link in enumerate(items(doc.get("links"), "links")):
+            where = f"links[{index}]"
+            ref = clean(link.get("ref"), f"{where}.ref", warn) if isinstance(link, dict) else None
+            same_as = clean(link.get("same_as"), f"{where}.same_as", warn) if isinstance(link, dict) else None
+            if not ref or not same_as:
+                warn(f"{where}: a link needs ref and same_as; skipped")
+                continue
+            if "/" not in ref:
+                warn(f"{where}.ref: {ref!r} isn't a full ref such as tool/<platform>.<name>; skipped")
+                continue
+            if ":" in same_as.split("/", 1)[0]:
+                target = normalize_target(same_as)
+                if target is None:
+                    warn(f"{where}.same_as: {same_as!r} isn't a target such as 'http:POST https://api.example.com/x', "
+                         "'mcp:<url>' or 'host:<host>'; skipped")
+                    continue
+                same_as = target
+            elif "/" not in same_as:
+                warn(f"{where}.same_as: {same_as!r} is neither a target nor a full ref; skipped")
+                continue
+            stated_links.append({"ref": ref, "same_as": same_as})
+        if stated_links:
+            spec.extensions.setdefault(FORMAT, {})["links"] = stated_links
 
         record = build_record(
             agent=agent,
