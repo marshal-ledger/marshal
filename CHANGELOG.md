@@ -2,7 +2,7 @@
 
 Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](https://semver.org). Before 1.0, a minor release may change the ledger model, the ingest API or the command line; each such change is listed here.
 
-## 0.3.0 (unreleased)
+## 0.3.0 (2026-10-27)
 
 - `marshal web --export DIR` writes the web view as static files, for sharing a ledger without running a server.
 - `marshal demo` reads its proposed change from a folder with the agent's own name, so the agent's Python tool keeps its ref and the diff no longer shows it removed and re-added. The proposal now ranks MED: a refund function and the grant to run it.
