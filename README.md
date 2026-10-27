@@ -38,16 +38,16 @@ Pipelines you already run record each agent: a pull request records the proposed
 | Source | Read | Write | Writer tested by |
 |---|---|---|---|
 | Databricks Asset Bundles (Genie spaces, agent apps) | ✓ | |  |
-| AWS CloudFormation and CDK (Bedrock Agents, AgentCore) | ✓ | Bedrock Agents | losses explained |
+| AWS CloudFormation and CDK (Bedrock Agents, AgentCore) | ✓ | Bedrock Agents | cfn-lint |
 | Microsoft Copilot Studio (agent workspaces, solutions) | ✓ | ✓ | published schema, partly |
 | Salesforce Agentforce (Agent Script, legacy metadata) | ✓ | Agent Script | round trip |
-| Google ADK Agent Config | ✓ | ✓ | losses explained |
+| Google ADK Agent Config | ✓ | ✓ | published schema; loads in ADK |
 | Vertex AI Agent Engine (saved API responses) | inventory | |  |
 | Python agent code (OpenAI Agents SDK, LangChain/LangGraph, Google ADK, CrewAI, direct model API calls) | ✓ | |  |
 | ADL, Open Agent Spec, AGNTCY OASF | ✓ | ✓ | round trip; published schema for ADL and Agent Spec |
 | Marshal file: a hand-written definition for agents no reader covers, recorded as attested | ✓ | ✓ | round trip |
 
-Readers are tested against real, public definitions, pinned to a commit. No writer has yet been tested by importing its output into the platform itself; see [how each format is verified](docs/design.md#formats-and-how-each-is-verified).
+Readers are tested against real, public definitions, pinned to a commit. No writer's output has yet been imported into a hosted platform; see [how each format is verified](docs/design.md#formats-and-how-each-is-verified).
 
 ## Try it
 

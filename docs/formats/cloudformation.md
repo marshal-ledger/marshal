@@ -44,7 +44,9 @@ The record holds the runtime name and description, the execution role's identity
 
 ## Writing
 
-**Tested:** every loss in converting every fixture is explained, and the agent keeps its identity. The template hasn't yet been deployed to an AWS account.
+**Tested:** every loss in converting every fixture is explained, the agent keeps its identity, and every written template passes [cfn-lint](https://github.com/aws-cloudformation/cfn-lint), AWS's CloudFormation linter. The one exception is an instruction shorter than Bedrock's 40-character minimum, which the writer reports as a warning rather than padding. The template hasn't yet been deployed to an AWS account.
+
+References the source template couldn't resolve are written back as CloudFormation: an imported value as `Fn::ImportValue`, and an attribute of a resource in the source stack, such as a guardrail's id, as a template parameter to fill in when deploying.
 
 The writer emits one `AWS::Bedrock::Agent`:
 

@@ -33,13 +33,26 @@ def _file_name(text: str) -> str:
     return name[:60]
 
 
+class _Dumper(yaml.SafeDumper):
+    """Writes multi-line text, such as instructions, as a literal block that reads as written."""
+
+
+_Dumper.add_representer(
+    str, lambda dumper, value: dumper.represent_scalar("tag:yaml.org,2002:str", value, style="|" if "\n" in value else None)
+)
+
+
+def _dump(data: Any, **options: Any) -> str:
+    return yaml.dump(data, Dumper=_Dumper, sort_keys=False, allow_unicode=True, **options)
+
+
 def _yaml(data: dict[str, Any], name: str | None = None, description: str | None = None) -> str:
     header = ""
     if name:
         header += f"# Name: {name}\n"
     if description:
         header += f"# {description.splitlines()[0]}\n"
-    return header + yaml.safe_dump(data, sort_keys=False, allow_unicode=True, width=100)
+    return header + _dump(data, width=100)
 
 
 class CopilotStudioWriter(Writer):
@@ -129,7 +142,7 @@ class CopilotStudioWriter(Writer):
             settings["authenticationMode"] = "Integrated"
             notes.setdefault("extensions.copilot-studio.settings", "the source sets no authentication mode; integrated was added")
         header = f"# {MARSHAL_NAMESPACE}: {json.dumps(marshal)}\n" if marshal else ""
-        files["settings.mcs.yml"] = header + yaml.safe_dump(settings, sort_keys=False, allow_unicode=True)
+        files["settings.mcs.yml"] = header + _dump(settings)
 
         default_mode = "Invoker" if spec.permissions.identity.value is IdentityKind.ON_BEHALF_OF_USER else "Maker"
         action_extras = ext.get("actions") or {}
@@ -152,7 +165,13 @@ class CopilotStudioWriter(Writer):
                     "the source calls this from a topic; it is written as an action, named after the operation"
                 )
             if "connectionReference" in action:
-                mode = extra.get("connection_mode") or default_mode
+                mode = extra.get("connection_mode")
+                if not mode:
+                    mode = default_mode
+                    notes.setdefault("extensions.copilot-studio.actions", (
+                        "the source states no connection mode, so each action's was set from the agent's identity: "
+                        "Invoker for an agent that acts on behalf of users, otherwise Maker"
+                    ))
                 action["connectionProperties"] = {"mode": mode}
             dialog: dict[str, Any] = {"kind": "TaskDialog"}
             inputs = self._inputs(use.input_schema)

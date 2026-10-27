@@ -61,4 +61,4 @@ Golden tests run against real, public definitions in each format:
 
 - **Round trip.** Every ADL, Agent Spec, OASF, Agentforce and Marshal file fixture is read, written in its own format, and read back. The result must be lossless, with the same version hash. CloudFormation round trips are held to "every loss explained" instead, because a template also defines roles and executors that the writer references rather than generates.
 - **Every loss explained.** Every fixture, in every format, converts to every writer. Each lost or defaulted field must have a reason, and the agent must keep its identity.
-- **Schema validity.** Written ADL and Agent Spec documents, and every written Copilot Studio file with a `kind`, must validate against the formats' published schemas.
+- **Schema validity.** Written ADL, Agent Spec and ADK Agent Config documents, and every written Copilot Studio file with a `kind`, must validate against the formats' published schemas. Written CloudFormation templates must pass cfn-lint.

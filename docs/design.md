@@ -62,10 +62,11 @@ The formats table on the [home page](index.md#formats) lists what Marshal reads 
 |---|---|
 | Round trip and published schema | The output validates against the format's published schema, and reading it back gives the same record and version hash (ADL, Agent Spec) |
 | Round trip | Reading the output back gives the same record and version hash (OASF, Agentforce Agent Script, Marshal file) |
+| Published schema | Every loss is explained, and the output validates against Google's published ADK Agent Config schema. Written configs also load in ADK itself (an optional test, run with google-adk 2.13) apart from the agent's own Python functions, which ADK imports from the agent's project (ADK Agent Config) |
+| Platform linter | Every loss is explained, and the template passes cfn-lint, AWS's CloudFormation linter, apart from values the source lacks, which the writer warns about (CloudFormation for Bedrock Agents) |
 | Published schema, partly | Each written file that has a published schema validates against it; every loss is explained (Copilot Studio, whose settings and connection reference files have no published schema) |
-| Losses explained | Every loss in converting every fixture is explained, and the agent keeps its identity (CloudFormation, ADK Agent Config) |
 
-No writer has yet been tested by importing its output into the platform itself. Until one has, read a written Copilot Studio, Agentforce or Bedrock definition as a well-formed starting point to review, not as a tested deployment.
+No writer's output has yet been imported into a hosted platform: an agent written for Copilot Studio, Agentforce or Bedrock is a well-formed starting point to review, not a tested deployment.
 
 ## Data model
 

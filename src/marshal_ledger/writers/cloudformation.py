@@ -10,6 +10,7 @@ calling application executes.
 from __future__ import annotations
 
 import re
+from functools import partial
 from typing import Any
 
 from ..model import MARSHAL_NAMESPACE, AgentVersion
@@ -18,6 +19,8 @@ from ..readers.cloudformation import AGENT, FORMAT
 from .base import Writer, Written
 
 _NAME = re.compile(r"[^0-9a-zA-Z_-]+")
+_TOKEN = re.compile(r"^\$\{([^}]+)\}$")
+_OUTSIDE = "a reference to a resource outside the written template becomes a template parameter"
 _JSON_TYPES = {"string", "number", "integer", "boolean", "array"}
 _MIN_INSTRUCTION = 40
 _MAX_DESCRIPTION = 200
@@ -99,6 +102,8 @@ class CloudFormationWriter(Writer):
             notes["instructions"] = "instruction text is not available (hash-only source)"
 
         parameters: dict[str, Any] = {}
+        # Unresolved references in the source (``${...}`` tokens) are written back as CloudFormation.
+        deployable = partial(_deployable, parameters=parameters, notes=notes)
         principal = spec.permissions.principal.value if spec.permissions.principal.is_known else None
         if principal and str(principal).startswith("arn:aws:iam::"):
             props["AgentResourceRoleArn"] = principal
@@ -130,7 +135,7 @@ class CloudFormationWriter(Writer):
             function: dict[str, Any] = {"Name": function_name}
             if use.description:
                 function["Description"] = use.description
-            parameters_ = self._parameters(use.input_schema, base, notes)
+            parameters_ = _function_parameters(use.input_schema, base, notes)
             if parameters_:
                 function["Parameters"] = parameters_
             if use.requires_confirmation.is_known:
@@ -152,8 +157,12 @@ class CloudFormationWriter(Writer):
             if not item.ref.startswith("knowledge/bedrock.knowledge_base."):
                 continue
             kb_id = item.ref.removeprefix("knowledge/bedrock.knowledge_base.")
+            written_id = deployable(kb_id, f"knowledge[{item.ref}]*")
+            if isinstance(written_id, dict) and "Ref" in written_id and f"knowledge[{item.ref}]*" in notes:
+                # The knowledge base reads back under the parameter's name.
+                notes[f"knowledge[knowledge/bedrock.knowledge_base.${{{written_id['Ref']}}}]*"] = _OUTSIDE
             knowledge_bases.append({
-                "KnowledgeBaseId": kb_id,
+                "KnowledgeBaseId": written_id,
                 "Description": item.description or item.name or f"Knowledge base {kb_id}",
                 "KnowledgeBaseState": "ENABLED",
             })
@@ -167,7 +176,7 @@ class CloudFormationWriter(Writer):
                            ("custom_orchestration", "CustomOrchestration"), ("prompt_override", "PromptOverrideConfiguration"),
                            ("collaboration", "AgentCollaboration")):
             if label in ext:
-                props[key] = ext[label]
+                props[key] = deployable(ext[label], f"extensions.bedrock.{label}")
         for label in ("aliases", "external_schemas", "external_collaborators", "disabled_action_groups",
                       "managed_policies", "conditional"):
             if label in ext:
@@ -192,20 +201,52 @@ class CloudFormationWriter(Writer):
         template["Resources"] = {logical: resource}
         return Written(document=template, notes=notes, warnings=warnings)
 
-    def _parameters(self, schema: Any, base: str, notes: dict[str, str]) -> dict[str, Any]:
-        if not isinstance(schema, dict):
-            return {}
-        required = set(schema.get("required") or [])
-        out = {}
-        for name, prop in (schema.get("properties") or {}).items():
-            kind = prop.get("type") if isinstance(prop, dict) else None
-            if kind not in _JSON_TYPES:
-                notes[f"{base}.input_schema"] = "Bedrock function parameters are flat and typed string, number, integer, boolean or array"
-                kind = "string"
-            elif isinstance(prop, dict) and set(prop) - {"type", "description"}:
-                notes[f"{base}.input_schema"] = "Bedrock function parameters keep only a type and a description"
-            entry: dict[str, Any] = {"Type": kind, "Required": name in required}
-            if isinstance(prop, dict) and prop.get("description"):
-                entry["Description"] = prop["description"]
-            out[name] = entry
-        return out
+
+def _function_parameters(schema: Any, base: str, notes: dict[str, str]) -> dict[str, Any]:
+    if not isinstance(schema, dict):
+        return {}
+    required = set(schema.get("required") or [])
+    out = {}
+    for name, prop in (schema.get("properties") or {}).items():
+        kind = prop.get("type") if isinstance(prop, dict) else None
+        if kind not in _JSON_TYPES:
+            notes[f"{base}.input_schema"] = "Bedrock function parameters are flat and typed string, number, integer, boolean or array"
+            kind = "string"
+        elif isinstance(prop, dict) and set(prop) - {"type", "description"}:
+            notes[f"{base}.input_schema"] = "Bedrock function parameters keep only a type and a description"
+        entry: dict[str, Any] = {"Type": kind, "Required": name in required}
+        if isinstance(prop, dict) and prop.get("description"):
+            entry["Description"] = prop["description"]
+        valid = _name(name)
+        if valid != name:
+            notes[f"{base}.input_schema"] = "Bedrock parameter names allow only letters, digits, hyphens and underscores"
+        while valid in out:
+            valid += "_"
+        out[valid] = entry
+    return out
+
+
+def _deployable(value: Any, path: str, *, parameters: dict[str, Any], notes: dict[str, str]) -> Any:
+    """``value`` with the reader's tokens for unresolved references turned back into CloudFormation.
+
+    An import becomes ``Fn::ImportValue`` and a pseudo parameter a ``Ref``; both read back as the same
+    token. Any other reference, such as an attribute of a resource in the source stack, becomes a
+    template parameter for the deployer to fill in.
+    """
+    if isinstance(value, dict):
+        return {k: _deployable(v, path, parameters=parameters, notes=notes) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_deployable(v, path, parameters=parameters, notes=notes) for v in value]
+    match = _TOKEN.match(value) if isinstance(value, str) else None
+    if not match:
+        return value
+    ref = match.group(1)
+    if ref.startswith("import:"):
+        return {"Fn::ImportValue": ref.removeprefix("import:")}
+    if ref.startswith("AWS::"):
+        return {"Ref": ref}
+    name = ref if re.fullmatch(r"[A-Za-z][A-Za-z0-9]*", ref) else _logical(ref)
+    parameters.setdefault(name, {"Type": "String", "Description": f"Stands in for {ref} in the source template"})
+    if name != ref:
+        notes[path] = _OUTSIDE
+    return {"Ref": name}

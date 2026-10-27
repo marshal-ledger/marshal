@@ -53,16 +53,16 @@ Or install it with `pip install 'marshal-ledger[server]'`. `marshal demo` downlo
 | Source | Read | Write | Writer tested by |
 |---|---|---|---|
 | [Databricks Asset Bundles](formats/databricks.md) (Genie spaces, agent apps) | ✓ | |  |
-| [AWS CloudFormation and CDK](formats/cloudformation.md) (Bedrock Agents, AgentCore) | ✓ | Bedrock Agents | losses explained |
+| [AWS CloudFormation and CDK](formats/cloudformation.md) (Bedrock Agents, AgentCore) | ✓ | Bedrock Agents | cfn-lint |
 | [Microsoft Copilot Studio](formats/copilot-studio.md) (agent workspaces, solutions) | ✓ | ✓ | published schema, partly |
 | [Salesforce Agentforce](formats/agentforce.md) (Agent Script, legacy metadata) | ✓ | Agent Script | round trip |
-| [Google ADK Agent Config](formats/adk-config.md) | ✓ | ✓ | losses explained |
+| [Google ADK Agent Config](formats/adk-config.md) | ✓ | ✓ | published schema; loads in ADK |
 | [Vertex AI Agent Engine](formats/vertex-agent-engine.md) (saved API responses) | inventory | |  |
 | [Python agent code](formats/python.md) (OpenAI Agents SDK, LangChain/LangGraph, Google ADK, CrewAI, direct model API calls) | ✓ | |  |
 | [ADL](formats/adl.md), [Open Agent Spec](formats/agent-spec.md), [AGNTCY OASF](formats/oasf.md) | ✓ | ✓ | round trip; published schema for ADL and Agent Spec |
 | [Marshal file](formats/marshal-file.md): a hand-written definition for agents no reader covers | ✓ | ✓ | round trip |
 
-Readers are tested against real, public definitions, pinned to a commit. No writer has yet been tested by importing its output into the platform itself; see [how each format is verified](design.md#formats-and-how-each-is-verified).
+Readers are tested against real, public definitions, pinned to a commit. No writer's output has yet been imported into a hosted platform; see [how each format is verified](design.md#formats-and-how-each-is-verified).
 
 ## Where to next
 

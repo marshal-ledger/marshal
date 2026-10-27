@@ -444,6 +444,15 @@
       ]
     },
     {
+      "id": "adk-config/schema",
+      "repo": "google/adk-python",
+      "commit": "bf6739723c1b8b03bff8bb1e6ffada4d88098fcf",
+      "root": "src/google/adk/agents/config_schemas",
+      "files": [
+        "AgentConfig.json"
+      ]
+    },
+    {
       "id": "salesforce-metadata/coral-cloud",
       "repo": "trailheadapps/coral-cloud",
       "commit": "040a86b01c546b9b0d2ecacef09523e938ff90b3",

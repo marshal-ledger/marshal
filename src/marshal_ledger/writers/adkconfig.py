@@ -9,7 +9,7 @@ from typing import Any
 import yaml
 
 from ..model import MARSHAL_NAMESPACE, AgentVersion
-from ..readers.adkconfig import BUILTINS, FORMAT, ROOT_FILE
+from ..readers.adkconfig import BUILTINS, FORMAT, ROOT_FILE, mcp_server
 from .base import Writer, Written
 
 _BUILTIN_REFS = {ref: name for name, (ref, _) in BUILTINS.items()}
@@ -66,11 +66,17 @@ class AdkConfigWriter(Writer):
             doc["description"] = spec.description.value
         if spec.instructions.text:
             doc["instruction"] = spec.instructions.text
-        elif spec.instructions.hash:
-            notes["instructions"] = "instruction text is not available (hash-only source)"
+        else:
+            # ADK requires an instruction. An empty one reads back as none, so nothing is invented.
+            doc["instruction"] = ""
+            warnings.append("ADK Agent Config requires an instruction and the source has none; write one before loading the agent")
+            if spec.instructions.hash:
+                notes["instructions"] = "instruction text is not available (hash-only source)"
 
         tools: list[dict[str, Any]] = []
-        extras = {t["name"]: t for t in ext.pop("tools", []) if isinstance(t, dict) and "name" in t}
+        kept = [t for t in ext.pop("tools", []) if isinstance(t, dict) and "name" in t]
+        extras = {t["name"]: t for t in kept}
+        toolsets = [t for t in kept if t["name"] == "McpToolset"]
         for use in spec.tools:
             if use.ref in _BUILTIN_REFS:
                 tools.append({"name": _BUILTIN_REFS[use.ref]})
@@ -82,16 +88,20 @@ class AdkConfigWriter(Writer):
                 tools.append(wrapped if wrapped else {"name": path})
             elif use.ref.startswith("tool/mcp."):
                 server = use.ref.removeprefix("tool/mcp.")
-                existing = extras.get("McpToolset")
+                existing = next((s for s in toolsets if mcp_server(s.get("args") or {}) == server), None)
                 if existing:
-                    tools.append(existing)
-                    continue
-                notes["extensions.adk-config.tools"] = "MCP toolset connections were written from the tool refs"
-                if server.startswith(("http://", "https://")):
+                    tools.append(_without_secrets(existing, notes, warnings))
+                elif server.startswith(("http://", "https://")):
+                    notes["extensions.adk-config.tools"] = "MCP toolset connections were written from the tool refs"
                     tools.append({"name": "McpToolset", "args": {"streamable_http_connection_params": {"url": server}}})
-                else:
+                elif record.source.format == FORMAT:
+                    # Only an ADK config's own stdio server has a command line for a ref.
+                    notes["extensions.adk-config.tools"] = "MCP toolset connections were written from the tool refs"
                     command, *args = server.split()
                     tools.append({"name": "McpToolset", "args": {"stdio_connection_params": {"server_params": {"command": command, "args": args}}}})
+                else:
+                    notes[f"tools[{use.ref}]"] = "the source names this MCP server but not its URL or command"
+                    warnings.append(f"MCP server {server}: add a McpToolset with its URL before loading the agent")
         if tools:
             doc["tools"] = tools
 
@@ -109,3 +119,19 @@ class AdkConfigWriter(Writer):
             marshal["platform"] = record.platform
         text = f"# {MARSHAL_NAMESPACE}: {json.dumps(marshal)}\n" + yaml.safe_dump(doc, sort_keys=False, allow_unicode=True, width=100)
         return Written(document=doc, notes=notes, warnings=warnings, files={ROOT_FILE: text})
+
+
+def _without_secrets(toolset: dict[str, Any], notes: dict[str, str], warnings: list[str]) -> dict[str, Any]:
+    """A toolset without the environment values and headers the reader redacted, which ADK can't load."""
+    def strip(value: Any) -> Any:
+        if isinstance(value, dict):
+            return {k: strip(v) for k, v in value.items() if not (k in ("env", "headers") and v == "<redacted>")}
+        if isinstance(value, list):
+            return [strip(v) for v in value]
+        return value
+
+    stripped = strip(toolset)
+    if stripped != toolset:
+        notes["extensions.adk-config.tools"] = "MCP server environment values and headers aren't recorded, so they are left out"
+        warnings.append("an MCP server's environment values or headers aren't recorded; set them before loading the agent")
+    return stripped
