@@ -10,6 +10,7 @@ To report a vulnerability, see [SECURITY.md](../SECURITY.md).
 |---|---|
 | What runs | One service: the ingest API and a read-only web view, as one container ([`server.py`](../src/marshal_ledger/server.py), [`web.py`](../src/marshal_ledger/web.py)) |
 | Where data lives | Your SQLite file or Postgres database. Nothing is sent to the Marshal project or any third party |
+| AI models | None. Marshal reads definitions with parsers and fixed rules, and never sends them to a language model. Its runtime dependencies are Pydantic and PyYAML, plus FastAPI, Uvicorn and PyJWT for the service |
 | What data | Agent definitions: names, descriptions, model, instructions, tools, knowledge sources, grants, access rules, and who recorded each version |
 | Credentials stored | None by design. Readers drop each format's credential fields, record environment variables by name, and redact credential patterns in free text (limits below). CI authenticates with short-lived OIDC tokens, which are not stored |
 | Who can write | Pipelines with a valid OIDC token from a configured issuer (GitHub Actions, GitLab CI, Jenkins or Azure DevOps), from an allowlisted repository, Jenkins job or Azure DevOps pipeline |
