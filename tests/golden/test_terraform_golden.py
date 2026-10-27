@@ -64,3 +64,23 @@ def test_supervisor_and_collaborators_across_modules():
     # module's output. Its alias comes through a local, which a plan doesn't record.
     assert len(supervisor.spec.extensions["bedrock"]["external_collaborators"]) == 2
     assert len(found) == 3
+
+
+def warnings(name):
+    path = FIXTURES / f"{name}.plan.json"
+    if not path.exists():
+        pytest.skip("Terraform fixtures are not in this source archive")
+    return TerraformReader().read(path).warnings
+
+
+def test_links_lost_through_locals_are_reported():
+    found = warnings("aws-ia-agent-only")
+    assert any("aws_iam_role_policy.agent_policy[0]: role comes from local.agent_role_name" in w
+               and "permissions aren't linked to a role" in w for w in found)
+    assert any("action_groups comes from local.action_group_list" in w for w in found)
+    collaborators = warnings("aws-ia-agent-collaborator")
+    assert any("alias_arn comes from local.bedrock_agent_alias" in w and "isn't linked to its agent" in w for w in collaborators)
+
+
+def test_plans_without_locals_in_the_way_read_without_warnings():
+    assert warnings("acwwat-basic") == []
