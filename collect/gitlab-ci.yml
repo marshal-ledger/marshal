@@ -20,7 +20,7 @@
 .marshal-collect:
   image: ${MARSHAL_PYTHON_IMAGE}
   variables:
-    MARSHAL_VERSION: "0.8.0"            # the Marshal release this template comes from
+    MARSHAL_VERSION: "0.7.1"            # the Marshal release this template comes from
     MARSHAL_PACKAGE: ""                 # what pip installs instead of that release, such as a mirror's URL
     MARSHAL_PYTHON_IMAGE: "python:3.12-slim"
     MARSHAL_EVENT: proposed             # proposed, shipped or observed

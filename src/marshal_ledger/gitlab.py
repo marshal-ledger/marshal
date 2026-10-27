@@ -31,8 +31,10 @@ Opener = Callable[[urllib.request.Request], Any]
 
 def _request(opener: Opener, method: str, url: str, token: str, body: Optional[dict[str, Any]] = None) -> Any:
     data = json.dumps(body).encode() if body is not None else None
+    # The Bearer header takes every kind of GitLab token: personal, project and group access tokens,
+    # and OAuth tokens such as glab's sign-in, which the PRIVATE-TOKEN header refuses.
     request = urllib.request.Request(url, data=data, method=method,
-                                     headers={"PRIVATE-TOKEN": token, "Content-Type": "application/json"})
+                                     headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
     try:
         with opener(request) as response:
             return json.loads(response.read() or b"null")
