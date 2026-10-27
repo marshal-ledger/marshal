@@ -17,14 +17,16 @@ from pathlib import Path
 from typing import Any, Optional
 
 import yaml
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from . import __version__
+from .dbauth import password_provider
 from .model import AgentVersion, Channel, DeploymentEvent, Entity
 from .oidc import Caller, IssuerConfig, KeyResolver, RepositoryNotAllowed, TokenError, Verifier
 from .service import ingest
-from .store import Actor, OwnershipError, Store
+from .store import Actor, OwnershipError, Store, StoreUnavailable
 from .web import WebSettings, create_web_app
 
 MAX_RECORDS = 500
@@ -56,6 +58,9 @@ class ServerConfig(BaseModel):
 
     store: str
     """A SQLite file path, a postgresql:// URL, or env:VARIABLE to read either from the environment."""
+    store_auth: Optional[str] = None
+    """How a Postgres store gets its password at each connection: ``azure`` for a Microsoft Entra ID
+    access token, or ``module:callable`` for a function of your own. Unset: the password in the URL."""
     issuers: list[IssuerConfig] = Field(min_length=1)
     policy: Policy = Field(default_factory=Policy)
     hash_only: bool = False
@@ -97,9 +102,21 @@ def may_ship(caller: Caller, policy: ShippedPolicy) -> bool:
     return False
 
 
+def store_unavailable(request: Request, exc: Exception) -> JSONResponse:
+    # The cause can name hosts, so it stays out of the response.
+    return JSONResponse({"detail": "the store is unavailable; retry shortly"}, status_code=503,
+                        headers={"Retry-After": "5"})
+
+
 def create_app(config: ServerConfig, key_resolver: KeyResolver | None = None) -> FastAPI:
     verifier = Verifier(config.issuers, key_resolver)
+    password = None
+    if config.store_auth:
+        if not config.store.startswith(("postgresql://", "postgres://")):
+            raise ValueError("store_auth applies only to a postgresql:// store")
+        password = password_provider(config.store_auth)
     app = FastAPI(title="Marshal ingest API", version=__version__)
+    app.add_exception_handler(StoreUnavailable, store_unavailable)
 
     def caller(authorization: Optional[str] = Header(default=None)) -> Caller:
         scheme, _, token = (authorization or "").partition(" ")
@@ -137,7 +154,7 @@ def create_app(config: ServerConfig, key_resolver: KeyResolver | None = None) ->
             )
             records.append(record.model_copy(update={"source": source}))
         actor = Actor(issuer=who.issuer, repository=who.repository, ref=who.ref, workflow=who.workflow)
-        with Store(config.store) as store:
+        with Store(config.store, password=password) as store:
             try:
                 reports = ingest(
                     store,
@@ -154,5 +171,5 @@ def create_app(config: ServerConfig, key_resolver: KeyResolver | None = None) ->
         return {"reports": [r.to_dict() for r in reports]}
 
     if config.web.enabled:
-        app.mount("/", create_web_app(config.store, config.web))
+        app.mount("/", create_web_app(config.store, config.web, password=password))
     return app

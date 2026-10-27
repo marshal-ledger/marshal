@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 
 from marshal_ledger.model import AgentSpec, Channel, DeploymentEvent, Grant, Scope, Source, ToolUse, Value
 from marshal_ledger.readers.base import build_record
-from marshal_ledger.store import Store
+from marshal_ledger.store import Store, StoreUnavailable
 from marshal_ledger.web import WebSettings, create_web_app
 
 T0 = datetime(2026, 10, 1, tzinfo=timezone.utc)
@@ -102,3 +102,14 @@ def test_serves_the_logo_as_the_favicon(db):
     assert icon.status_code == 200 and icon.headers["content-type"] == "image/svg+xml"
     page = client.get("/", headers={"X-Forwarded-Email": "ana@acme.example"}).text
     assert 'rel=icon href="favicon.svg"' in page and 'class="mark"' in page
+
+
+def test_an_unreachable_store_is_503(db, monkeypatch):
+    def unreachable(*args, **kwargs):
+        raise StoreUnavailable("cannot connect to the Postgres store: db.internal refused")
+
+    monkeypatch.setattr("marshal_ledger.web.Store", unreachable)
+    client = TestClient(create_web_app(db, WebSettings(enabled=True, allow_unauthenticated=True)))
+    response = client.get("/")
+    assert (response.status_code, response.headers["Retry-After"]) == (503, "5")
+    assert "db.internal" not in response.text

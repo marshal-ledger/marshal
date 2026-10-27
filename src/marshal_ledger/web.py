@@ -21,10 +21,11 @@ from fastapi.responses import HTMLResponse, Response
 from pydantic import BaseModel, ConfigDict
 
 from . import __version__
+from .dbauth import PasswordProvider
 from .diff import diff_specs
 from .model import AgentVersion
 from .risk import rank
-from .store import Store, StoreError
+from .store import Store, StoreError, StoreUnavailable
 
 
 class WebSettings(BaseModel):
@@ -265,8 +266,14 @@ def _table(headers: list[str], rows: list[list[str]], empty: str = "None", numer
     return f'<div class="scroll"><table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table></div>'
 
 
-def create_web_app(store_path: str, settings: WebSettings) -> FastAPI:
+def create_web_app(store_path: str, settings: WebSettings, *, password: Optional[PasswordProvider] = None) -> FastAPI:
     app = FastAPI(title="Marshal web view", version=__version__, docs_url=None, redoc_url=None)
+
+    @app.exception_handler(StoreUnavailable)
+    def unavailable(request: Request, exc: StoreUnavailable) -> Response:
+        # The cause can name hosts, so it stays out of the page.
+        return Response("The ledger store is unavailable. Retry shortly.", status_code=503,
+                        media_type="text/plain", headers={"Retry-After": "5"})
 
     def user(request: Request) -> Optional[str]:
         value = request.headers.get(settings.user_header)
@@ -275,7 +282,7 @@ def create_web_app(store_path: str, settings: WebSettings) -> FastAPI:
         return value
 
     def store() -> Store:
-        return Store(store_path)
+        return Store(store_path, password=password)
 
     @app.get("/favicon.svg", include_in_schema=False)
     def favicon() -> Response:

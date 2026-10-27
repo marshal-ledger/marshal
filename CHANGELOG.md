@@ -4,6 +4,8 @@ Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](
 
 ## 0.2.0 (unreleased)
 
+- Postgres stores replace a lost connection and retry the read that found it; a write is never replayed, and the ingest API and web view answer `503` while the database is unreachable. A new `store_auth` setting (`--db-auth` on the command line) obtains the password at each connection, including Microsoft Entra ID tokens for Azure Database for PostgreSQL with the `azure` extra. See [Running Marshal on Azure](docs/azure.md).
+
 ## 0.1.0 (2026-10-26)
 
 The first release.

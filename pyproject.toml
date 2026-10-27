@@ -40,6 +40,10 @@ server = [
 postgres = [
     "psycopg[binary]>=3.1",
 ]
+# Microsoft Entra ID sign-in to Azure Database for PostgreSQL (store_auth: azure).
+azure = [
+    "azure-identity>=1.13",
+]
 dev = [
     "pytest>=8",
     "httpx>=0.27",
