@@ -2,15 +2,15 @@
 
 Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](https://semver.org). Before 1.0, a minor release may change the ledger model, the ingest API or the command line; each such change is listed here.
 
-## 0.6.0 (unreleased)
+## 0.6.0 (2026-10-27)
 
-- Bedrock: a value equal to Bedrock's default (idle session timeout 600, agent collaboration `DISABLED`, orchestration type `DEFAULT`) is recorded as absent, so a Terraform plan and the state after apply give the same version, and so does a CloudFormation template whether it states the default or not. An agent whose template states one of these defaults gets a new version once.
-- The Terraform reader has been tested against a real plan and state: a public example planned and applied in an AWS account gave the same version from both.
-- The CloudFormation writer has been deployed to Amazon Bedrock: a written template deployed unchanged and the agent Bedrock stored matched the source. The writer now warns when the source doesn't say whether a function needs confirmation, since Bedrock then stores it as not needing one.
-- The Terraform reader warns when a value it needs comes through a `local`, which a plan doesn't record, and says what that leaves out, such as a role policy's permissions or a collaborator's link to its agent.
-- `marshal demo` adds a Bedrock agent read from a Terraform plan of a public example, for 29 agents.
 - Terraform: a new `terraform` reader reads `terraform show -json` of a saved plan or of state. It covers Bedrock agents defined with the AWS provider (`aws_bedrockagent_agent` and its action group, knowledge base, collaborator and alias resources) or the Cloud Control provider (`awscc_bedrock_agent`), and AgentCore runtimes. Values known only after apply are followed to their resources across module inputs and outputs; sensitive values are never copied. Agents are mapped by the CloudFormation reader's Bedrock mapping, so the same agent defined either way gets the same version.
+- The Terraform reader has been tested against a real plan and state: a public example planned and applied in an AWS account gave the same version from both.
+- The Terraform reader warns when a value it needs comes through a `local`, which a plan doesn't record, and says what that leaves out, such as a role policy's permissions or a collaborator's link to its agent.
+- The CloudFormation writer has been deployed to Amazon Bedrock: a written template deployed unchanged and the agent Bedrock stored matched the source. The writer now warns when the source doesn't say whether a function needs confirmation, since Bedrock then stores it as not needing one.
+- Bedrock: a value equal to Bedrock's default (idle session timeout 600, agent collaboration `DISABLED`, orchestration type `DEFAULT`) is recorded as absent, so a Terraform plan and the state after apply give the same version, and so does a CloudFormation template whether it states the default or not. An agent whose template states one of these defaults gets a new version once.
 - The CloudFormation writer writes a knowledge base defined in the source itself as a template parameter, since it has no id until it is deployed.
+- `marshal demo` adds a Bedrock agent read from a Terraform plan of a public example, for 29 agents.
 
 ## 0.5.0 (2026-10-27)
 
