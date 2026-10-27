@@ -7,7 +7,7 @@
 [![Tests](https://github.com/marshal-ledger/marshal/actions/workflows/test.yml/badge.svg)](https://github.com/marshal-ledger/marshal/actions/workflows/test.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
-A vendor-neutral, open-source ledger for enterprise AI agents. Any format in, any format out, with versions, diffs, portability and audit across every platform.
+An open-source AI agent inventory for the enterprise: one versioned record of every agent on Copilot Studio, Agentforce, Bedrock, Databricks and agent code, with risk-ranked diffs, drift, dependencies and audit evidence. Any format in, any format out. It runs inside your network, uses no AI and needs no platform credentials.
 
 **[Live demo](https://marshal-ledger.github.io/marshal/demo/)** · **[Documentation](https://marshal-ledger.github.io/marshal/)** · **[Getting started](docs/getting-started.md)**
 
@@ -92,7 +92,7 @@ The documentation is published at [marshal-ledger.github.io/marshal](https://mar
 
 - [Getting started](docs/getting-started.md)
 - Guides: [Copilot Studio inventory](docs/guides/copilot-studio-inventory.md), [pull request review](docs/guides/pull-request-review.md), [agents in code](docs/guides/agents-in-code.md), [drift](docs/guides/drift-detection.md), [ADK to Agent Spec](docs/guides/convert-adk-to-agent-spec.md), [audit evidence](docs/guides/audit-evidence.md)
-- [How Marshal compares](docs/comparison.md) with platform admin tools, observability, AI gateways, registries and governance platforms
+- [How Marshal compares](docs/comparison.md) with cloud agent registries, platform admin tools, observability, AI gateways and governance platforms
 - [Design](docs/design.md): the problem, architecture, security and network posture, roadmap
 - [Ledger model v0](docs/ledger-model.md): records, provenance, version hashing, the version store, risk ranking, freshness
 - [Conversion and fidelity](docs/conversion.md) and [Portability](docs/portability.md)

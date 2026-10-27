@@ -1,8 +1,19 @@
 {% extends "base.html" %}
 
+{# The page title leads with what people search for; the site name follows on every page but the home page, whose title names it. #}
+{% block htmltitle %}
+  {% if page and page.is_homepage and page.meta.title %}
+  <title>{{ page.meta.title | striptags }}</title>
+  {% elif page and (page.meta.title or page.title) %}
+  <title>{{ (page.meta.title or page.title) | striptags }} - {{ config.site_name }}</title>
+  {% else %}
+  <title>{{ config.site_name }}</title>
+  {% endif %}
+{% endblock %}
+
 {% block extrahead %}
   {% if page %}
-  {% set title = config.site_name if page.is_homepage else page.title ~ " · " ~ config.site_name %}
+  {% set title = (page.meta.title or config.site_name) if page.is_homepage else (page.meta.title or page.title) ~ " · " ~ config.site_name %}
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="{{ config.site_name }}">
   <meta property="og:title" content="{{ title }}">

@@ -1,15 +1,15 @@
 ---
-title: Marshal, an agent ledger
+title: "Marshal: open-source AI agent inventory for Copilot Studio, Agentforce, Bedrock and Databricks"
 description: >-
-  Marshal is an open-source, vendor-neutral ledger for enterprise AI agents: one versioned record of every agent,
-  with risk-ranked diffs, drift and dependencies across Copilot Studio, Agentforce, Bedrock, Databricks and agent code.
+  A self-hosted AI agent inventory with versions, risk-ranked diffs, drift and dependencies across Copilot Studio,
+  Agentforce, Bedrock, Databricks and agent code. Runs inside your network; no AI, no platform credentials.
 hide:
   - navigation
 ---
 
 # Marshal — an agent ledger
 
-Marshal keeps one versioned record of every AI agent in an organization, whatever platform it was built on. It reads the agent definitions teams already produce: Databricks bundles, Copilot Studio agents, Bedrock templates, Agentforce metadata, agent code and the open standards. For each agent it records what model it asks for, what tools and data it can reach, and who it acts as. Every value says where it came from, and nothing is guessed.
+Marshal is an open-source AI agent inventory. It keeps one versioned record of every AI agent in an organization, whatever platform it was built on. It reads the agent definitions teams already produce: Databricks bundles, Copilot Studio agents, Bedrock templates, Agentforce metadata, agent code and the open standards. For each agent it records what model it asks for, what tools and data it can reach, and who it acts as. Every value says where it came from, and nothing is guessed.
 
 [Try the live demo](https://marshal-ledger.github.io/marshal/demo/){ .md-button .md-button--primary }
 [Get started](getting-started.md){ .md-button }
@@ -77,7 +77,7 @@ Readers are tested against real, public definitions, pinned to a commit. Only th
 ## Where to next
 
 - Guides: [inventory Copilot Studio agents](guides/copilot-studio-inventory.md), [review agent changes in pull requests](guides/pull-request-review.md), [track agents in code](guides/agents-in-code.md), [detect drift](guides/drift-detection.md), [convert an ADK agent to Agent Spec](guides/convert-adk-to-agent-spec.md), and [an agent inventory for audit](guides/audit-evidence.md).
-- [How Marshal compares](comparison.md) with platform admin tools, observability, AI gateways, registries and governance platforms.
+- [How Marshal compares](comparison.md) with cloud agent registries, platform admin tools, observability, AI gateways and governance platforms.
 - [Getting started](getting-started.md): read your own agents and record their history.
 - [Design](design.md): the problem, the architecture, and the security and network posture.
 - [GitHub Action](github-action.md), [GitLab CI](gitlab-ci.md), [Jenkins and Azure DevOps](other-ci.md): record agents from CI and comment on pull and merge requests.

@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "marshal-ledger"
 dynamic = ["version", "readme"]
-description = "Marshal — a vendor-neutral, open-source ledger for enterprise AI agents."
+description = "Marshal agent ledger: an open-source, self-hosted AI agent inventory for Copilot Studio, Agentforce, Bedrock, Databricks and agent code."
 requires-python = ">=3.10"
 license = "Apache-2.0"
 license-files = ["LICENSE"]

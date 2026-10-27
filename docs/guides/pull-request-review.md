@@ -1,4 +1,8 @@
-# Review agent permission changes in pull requests
+---
+title: "Review AI agent permission changes in pull requests"
+---
+
+# Review AI agent permission changes in pull requests
 
 An agent's power is spread across files: the model and instructions in one place, the tools in another, the IAM role or grants somewhere else. A reviewer looking at a diff of a CloudFormation template sees `dynamodb:UpdateItem` added to a policy; Marshal tells them that the HR agent can now write to DynamoDB, and ranks that first.
 

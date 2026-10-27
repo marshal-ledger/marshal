@@ -1,3 +1,7 @@
+---
+title: "Convert a Google ADK agent to Open Agent Spec"
+---
+
 # Convert a Google ADK agent to Open Agent Spec
 
 `marshal convert` reads an agent in one format and writes it in another, then reads the result back and reports exactly what survived. Nothing is dropped silently: each field is lossless, dropped with a reason, or filled with a default the target requires.
