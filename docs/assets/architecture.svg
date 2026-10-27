@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1200 550" width="1200" height="550" role="img" aria-label="How Marshal runs: agent definitions in repositories and web designers reach your CI pipelines, which push proposed, shipped and observed events to Marshal's ingest API with their OIDC token. Marshal records them in the ledger, and teams see risk-ranked pull request comments, the web view and the CLI. Marshal never connects to an agent platform.">
+  <style>
+    .bg { fill: #fbfbfa; }
+    .card { fill: #fff; stroke: #d9d7d3; stroke-width: 1.5; }
+    .group { fill: #f4f4f2; stroke: #e8e7e4; stroke-width: 1.5; }
+    .h { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; letter-spacing: .08em; fill: #8c8a85; }
+    .t { font: 600 16px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1d1c1b; }
+    .s { font: 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #5e5c58; }
+    .m { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; fill: #1d1c1b; }
+    .wire { fill: none; stroke: #b9b7b2; stroke-width: 1.5; }
+    .loop { fill: none; stroke: #b9b7b2; stroke-width: 1.5; stroke-dasharray: 5 5; }
+    .head { fill: #b9b7b2; }
+    .dot { fill: #1d1c1b; }
+    .note { fill: #f4f4f2; }
+    .high { fill: #fce8e6; } .high-t { font: 600 11px system-ui, sans-serif; fill: #b42318; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #141413; }
+      .card { fill: #1a1a19; stroke: #383734; }
+      .group { fill: #111110; stroke: #292826; }
+      .t, .m { fill: #f5f4f2; }
+      .s { fill: #a8a6a1; }
+      .h { fill: #8c8a85; }
+      .wire, .loop { stroke: #4a4945; } .head { fill: #4a4945; }
+      .dot { fill: #f5f4f2; }
+      .note { fill: #1a1a19; }
+      .high { fill: #3a1a17; } .high-t { fill: #f97066; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path class="head" d="M0 0L10 5L0 10z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="1200" height="550"/>
+
+  <text class="h" x="40" y="36">WHERE AGENTS ARE DEFINED</text>
+  <text class="h" x="380" y="36">YOUR PIPELINES</text>
+  <text class="h" x="760" y="36">MARSHAL</text>
+  <text class="h" x="1010" y="36">WHAT TEAMS SEE</text>
+
+  <!-- Sources -->
+  <rect class="card" x="40" y="70" width="280" height="200" rx="10"/>
+  <text class="t" x="60" y="100">Agent repositories</text>
+  <text class="s" x="60" y="128">Databricks Asset Bundles</text>
+  <text class="s" x="60" y="150">CloudFormation and CDK (Bedrock)</text>
+  <text class="s" x="60" y="172">Copilot Studio, Agentforce exports</text>
+  <text class="s" x="60" y="194">ADK config, ADL, Agent Spec, OASF</text>
+  <text class="s" x="60" y="216">Python agent code: LangGraph,</text>
+  <text class="s" x="60" y="238">CrewAI, OpenAI Agents SDK, ADK</text>
+
+  <rect class="card" x="40" y="300" width="280" height="90" rx="10"/>
+  <text class="t" x="60" y="330">Web designers</text>
+  <text class="s" x="60" y="354">Agents edited in Copilot Studio or</text>
+  <text class="s" x="60" y="374">Agentforce after they were shipped</text>
+
+  <!-- Pipelines -->
+  <rect class="card" x="380" y="70" width="260" height="80" rx="10"/>
+  <text class="t" x="400" y="100">Pull request</text>
+  <text class="m" x="400" y="128">marshal push --event proposed</text>
+
+  <rect class="card" x="380" y="180" width="260" height="80" rx="10"/>
+  <text class="t" x="400" y="210">Deploy</text>
+  <text class="m" x="400" y="238">marshal push --event shipped</text>
+
+  <rect class="card" x="380" y="300" width="260" height="90" rx="10"/>
+  <text class="t" x="400" y="330">Scheduled export</text>
+  <text class="m" x="400" y="356">marshal push --event observed</text>
+  <text class="s" x="400" y="376">you run it, with your credentials</text>
+
+  <text class="s" x="380" y="418">GitHub Actions · GitLab · Jenkins · Azure DevOps.</text>
+  <text class="s" x="380" y="438">Each push signs in with the pipeline's OIDC token: no stored secret.</text>
+
+  <!-- Marshal -->
+  <rect class="group" x="760" y="70" width="200" height="320" rx="12"/>
+  <rect class="card" x="780" y="96" width="160" height="92" rx="10"/>
+  <text class="t" x="796" y="126">Ingest API</text>
+  <text class="s" x="796" y="150">checks the pipeline's</text>
+  <text class="s" x="796" y="170">OIDC token and policy</text>
+  <rect class="card" x="780" y="236" width="160" height="134" rx="10"/>
+  <text class="t" x="796" y="266">Ledger</text>
+  <text class="s" x="796" y="290">versions, provenance</text>
+  <text class="s" x="796" y="310">drift, dependencies</text>
+  <text class="s" x="796" y="330">portability</text>
+  <text class="m" x="796" y="354">SQLite or Postgres</text>
+
+  <!-- Outputs -->
+  <rect class="card" x="1010" y="70" width="160" height="80" rx="10"/>
+  <text class="t" x="1026" y="100">PR comment</text>
+  <rect class="high" x="1026" y="114" width="40" height="20" rx="10"/>
+  <text class="high-t" x="1033" y="128">HIGH</text>
+  <text class="s" x="1072" y="128">changes first</text>
+
+  <rect class="card" x="1010" y="180" width="160" height="80" rx="10"/>
+  <text class="t" x="1026" y="210">Web view</text>
+  <text class="s" x="1026" y="236">behind your SSO</text>
+
+  <rect class="card" x="1010" y="300" width="160" height="90" rx="10"/>
+  <text class="t" x="1026" y="330">CLI and JSON API</text>
+  <text class="m" x="1026" y="356">diff · status</text>
+  <text class="m" x="1026" y="376">deps · port</text>
+
+  <!-- Wires -->
+  <path id="w1" class="wire" marker-end="url(#arrow)" d="M320 110H378"/>
+  <path id="w2" class="wire" marker-end="url(#arrow)" d="M320 220H378"/>
+  <path id="w3" class="wire" marker-end="url(#arrow)" d="M320 345H378"/>
+  <path id="w4" class="wire" marker-end="url(#arrow)" d="M640 110C700 110 720 142 778 142"/>
+  <path id="w5" class="wire" marker-end="url(#arrow)" d="M640 220C700 220 720 142 778 142"/>
+  <path id="w6" class="wire" marker-end="url(#arrow)" d="M640 345C710 345 710 142 778 142"/>
+  <path id="w7" class="wire" marker-end="url(#arrow)" d="M860 188V234"/>
+  <path id="w8" class="wire" marker-end="url(#arrow)" d="M940 303C980 303 970 110 1008 110"/>
+  <path id="w9" class="wire" marker-end="url(#arrow)" d="M940 303C980 303 970 220 1008 220"/>
+  <path id="w10" class="wire" marker-end="url(#arrow)" d="M940 303C980 303 970 345 1008 345"/>
+  <path id="w11" class="loop" marker-end="url(#arrow)" d="M1090 70C1090 50 510 50 510 68"/>
+
+  <!-- Moving records -->
+  <g class="dot">
+    <circle r="4.5" opacity="0"><animate attributeName="opacity" dur="7s" repeatCount="indefinite" calcMode="discrete" values="0;1;0" keyTimes="0;0.02;0.14"/><animateMotion dur="7s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.02;0.14;1"><mpath href="#w1" xlink:href="#w1"/></animateMotion></circle>
+    <circle r="4.5" opacity="0"><animate attributeName="opacity" dur="7s" repeatCount="indefinite" calcMode="discrete" values="0;1;0" keyTimes="0;0.02;0.14"/><animateMotion dur="7s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.02;0.14;1"><mpath href="#w2" xlink:href="#w2"/></animateMotion></circle>
+    <circle r="4.5" opacity="0"><animate attributeName="opacity" dur="7s" repeatCount="indefinite" calcMode="discrete" values="0;1;0" keyTimes="0;0.02;0.14"/><animateMotion dur="7s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.02;0.14;1"><mpath href="#w3" xlink:href="#w3"/></animateMotion></circle>
+    <circle r="4.5" opacity="0"><animate attributeName="opacity" dur="7s" repeatCount="indefinite" calcMode="discrete" values="0;1;0" keyTimes="0;0.16;0.34"/><animateMotion dur="7s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.16;0.34;1"><mpath href="#w4" xlink:href="#w4"/></animateMotion></circle>
+    <circle r="4.5" opacity="0"><animate attributeName="opacity" dur="7s" repeatCount="indefinite" calcMode="discrete" values="0;1;0" keyTimes="0;0.16;0.34"/><animateMotion dur="7s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.16;0.34;1"><mpath href="#w5" xlink:href="#w5"/></animateMotion></circle>
+    <circle r="4.5" opacity="0"><animate attributeName="opacity" dur="7s" repeatCount="indefinite" calcMode="discrete" values="0;1;0" keyTimes="0;0.16;0.34"/><animateMotion dur="7s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.16;0.34;1"><mpath href="#w6" xlink:href="#w6"/></animateMotion></circle>
+    <circle r="4.5" opacity="0"><animate attributeName="opacity" dur="7s" repeatCount="indefinite" calcMode="discrete" values="0;1;0" keyTimes="0;0.36;0.44"/><animateMotion dur="7s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.36;0.44;1"><mpath href="#w7" xlink:href="#w7"/></animateMotion></circle>
+    <circle r="4.5" opacity="0"><animate attributeName="opacity" dur="7s" repeatCount="indefinite" calcMode="discrete" values="0;1;0" keyTimes="0;0.46;0.62"/><animateMotion dur="7s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.46;0.62;1"><mpath href="#w8" xlink:href="#w8"/></animateMotion></circle>
+    <circle r="4.5" opacity="0"><animate attributeName="opacity" dur="7s" repeatCount="indefinite" calcMode="discrete" values="0;1;0" keyTimes="0;0.46;0.62"/><animateMotion dur="7s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.46;0.62;1"><mpath href="#w9" xlink:href="#w9"/></animateMotion></circle>
+    <circle r="4.5" opacity="0"><animate attributeName="opacity" dur="7s" repeatCount="indefinite" calcMode="discrete" values="0;1;0" keyTimes="0;0.46;0.62"/><animateMotion dur="7s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.46;0.62;1"><mpath href="#w10" xlink:href="#w10"/></animateMotion></circle>
+    <circle r="4.5" opacity="0"><animate attributeName="opacity" dur="7s" repeatCount="indefinite" calcMode="discrete" values="0;1;0" keyTimes="0;0.66;0.88"/><animateMotion dur="7s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.66;0.88;1"><mpath href="#w11" xlink:href="#w11"/></animateMotion></circle>
+  </g>
+
+  <!-- Network posture -->
+  <rect class="note" x="40" y="462" width="1130" height="56" rx="10"/>
+  <text class="t" x="60" y="496">Marshal never connects to an agent platform.</text>
+  <text class="s" x="420" y="496">Definitions arrive as files or as pushes from pipelines you run. It holds no platform credentials.</text>
+</svg>

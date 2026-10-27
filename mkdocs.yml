@@ -16,7 +16,6 @@ docs_dir: docs
 exclude_docs: |
   requirements.*
   overrides/
-  assets/demo.tape
   assets/social-card.svg
 
 theme:
@@ -77,6 +76,14 @@ nav:
   - Home: index.md
   - Getting started: getting-started.md
   - Live demo: https://marshal-ledger.github.io/marshal/demo/
+  - Guides:
+      - Inventory Copilot Studio agents: guides/copilot-studio-inventory.md
+      - Review agent changes in pull requests: guides/pull-request-review.md
+      - Track agents in code: guides/agents-in-code.md
+      - Detect drift: guides/drift-detection.md
+      - Convert ADK to Agent Spec: guides/convert-adk-to-agent-spec.md
+      - Agent inventory for audit: guides/audit-evidence.md
+  - How Marshal compares: comparison.md
   - Concepts:
       - Design: design.md
       - Ledger model: ledger-model.md

@@ -1,14 +1,20 @@
-/* Marshal's colors, as in the web view. */
+/* Marshal's colors: the neutral inks of the logo and the web view, light and dark. */
 :root {
-  --md-primary-fg-color: #5b5bd6;
-  --md-primary-fg-color--light: #7c7ce0;
-  --md-primary-fg-color--dark: #4747b8;
-  --md-accent-fg-color: #4747b8;
+  --md-primary-fg-color: #1d1c1b;
+  --md-primary-fg-color--light: #5e5c58;
+  --md-primary-fg-color--dark: #000;
+  --md-primary-bg-color: #fbfbfa;
+  --md-accent-fg-color: #5e5c58;
+  --md-typeset-a-color: #1d1c1b;
 }
 
 [data-md-color-scheme="slate"] {
-  --md-primary-fg-color: #8b8bf0;
-  --md-accent-fg-color: #a5a5f5;
+  --md-primary-fg-color: #f5f4f2;
+  --md-primary-fg-color--light: #c9c7c2;
+  --md-primary-fg-color--dark: #fff;
+  --md-primary-bg-color: #141413;
+  --md-accent-fg-color: #c9c7c2;
+  --md-typeset-a-color: #f5f4f2;
   --md-default-bg-color: #141413;
 }
 
@@ -16,6 +22,25 @@
   background-color: #1d1c1b;
   color: #f5f4f2;
 }
+
+[data-md-color-scheme="slate"] .md-header, [data-md-color-scheme="slate"] .md-tabs {
+  background-color: #111110;
+  border-bottom: 1px solid #292826;
+}
+
+.md-header .md-search__input { color: #f5f4f2; }
+.md-header .md-search__input::placeholder, .md-header .md-search__icon { color: #c9c7c2; }
+
+/* Neutral links need an underline to read as links. */
+.md-typeset a:not(.md-button):not(.headerlink) {
+  text-decoration: underline;
+  text-decoration-color: var(--md-default-fg-color--lighter);
+  text-underline-offset: 3px;
+}
+.md-typeset a:not(.md-button):not(.headerlink):hover { text-decoration-color: currentColor; }
+
+.md-typeset .md-button { border-radius: 8px; }
+.md-typeset .md-button--primary { color: var(--md-primary-bg-color); }
 
 .md-typeset img[src$=".gif"], .md-typeset img[src$=".png"] {
   border: 1px solid var(--md-default-fg-color--lightest);

@@ -3,3 +3,6 @@ contact_links:
   - name: Report a security vulnerability
     url: https://github.com/marshal-ledger/marshal/security/advisories/new
     about: Report vulnerabilities privately, never in a public issue.
+  - name: Ask a question or share an idea
+    url: https://github.com/marshal-ledger/marshal/discussions
+    about: Questions, ideas and "which platform next?" belong in Discussions.

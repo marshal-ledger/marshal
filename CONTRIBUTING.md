@@ -2,6 +2,8 @@
 
 Thanks for helping. The most useful contributions are corrections to the [capability matrix](src/marshal_ledger/capabilities/README.md), new public golden fixtures, and readers and writers for formats Marshal doesn't support yet.
 
+For questions and ideas, start a thread in [Discussions](https://github.com/marshal-ledger/marshal/discussions). Bugs and format requests go in issues.
+
 Marshal is licensed under the [Apache License 2.0](LICENSE). By contributing, you agree that your contributions are licensed under it too, as its section 5 describes.
 
 ## Development
@@ -59,3 +61,15 @@ Before 1.0, a minor release may change the ledger model, the ingest API or the c
 ## Standards for what is committed
 
 Everything in the repository is written for users and contributors. Keep personal notes and to-do lists out of commits.
+
+## Documentation site
+
+The site at [marshal-ledger.github.io/marshal](https://marshal-ledger.github.io/marshal/) is built from `docs/` by MkDocs and published, with a static snapshot of `marshal demo`, when `main` changes. A new page goes in the `nav` of `mkdocs.yml`; a test checks every page is listed.
+
+```console
+$ pip install --require-hashes -r docs/requirements.txt
+$ mkdocs serve
+```
+
+The web view walkthrough and screenshots in `docs/assets/` come from `scripts/capture_media.py`, which drives a demo store in Chrome with Playwright. Rerun it after changing how the web view looks.
+

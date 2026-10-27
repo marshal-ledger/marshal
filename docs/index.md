@@ -15,7 +15,7 @@ Marshal keeps one versioned record of every AI agent in an organization, whateve
 [Get started](getting-started.md){ .md-button }
 [GitHub](https://github.com/marshal-ledger/marshal){ .md-button }
 
-![A terminal session: marshal demo builds a ledger of 28 public agents, marshal status shows a Copilot Studio agent whose live definition drifted from what was shipped, and marshal diff ranks the change to the maker's credentials HIGH](assets/demo.gif)
+![A walk through the Marshal web view: the inventory of 28 public agents, a Copilot Studio agent in drift whose tool was switched to the maker's credentials, a proposed change that adds a refund function, and the agents that share an Apex action](assets/web-tour.gif)
 
 ## What it does
 
@@ -29,6 +29,12 @@ Marshal keeps one versioned record of every AI agent in an organization, whateve
 
 ![The Marshal web view: an inventory of 28 agents across Agentforce, Databricks, Bedrock, Copilot Studio and Google ADK, with one environment in drift](assets/web-inventory-light.png#only-light)
 ![The Marshal web view: an inventory of 28 agents across Agentforce, Databricks, Bedrock, Copilot Studio and Google ADK, with one environment in drift](assets/web-inventory-dark.png#only-dark)
+
+## How it runs
+
+![How Marshal runs: agent definitions in repositories and web designers reach your CI pipelines, which push proposed, shipped and observed events to Marshal's ingest API with their OIDC token. Marshal records them in the ledger, and teams see risk-ranked pull request comments, the web view and the CLI. Marshal never connects to an agent platform.](assets/architecture.svg)
+
+Pipelines you already run record each agent: a pull request records the proposed definition and gets a comment ranking its changes, a deploy records what was shipped, and an optional scheduled export records what is live in a web designer. See the [GitHub Action](github-action.md), [Jenkins and Azure DevOps](other-ci.md) and [Deployment](deployment.md).
 
 ## Try it in a minute
 
@@ -58,6 +64,8 @@ Or install it with `pip install 'marshal-ledger[server]'`. `marshal demo` downlo
 
 ## Where to next
 
+- Guides: [inventory Copilot Studio agents](guides/copilot-studio-inventory.md), [review agent changes in pull requests](guides/pull-request-review.md), [track agents in code](guides/agents-in-code.md), [detect drift](guides/drift-detection.md), [convert an ADK agent to Agent Spec](guides/convert-adk-to-agent-spec.md), and [an agent inventory for audit](guides/audit-evidence.md).
+- [How Marshal compares](comparison.md) with platform admin tools, observability, AI gateways, registries and governance platforms.
 - [Getting started](getting-started.md): read your own agents and record their history.
 - [Design](design.md): the problem, the architecture, and the security and network posture.
 - [GitHub Action](github-action.md), [Jenkins and Azure DevOps](other-ci.md): record agents from CI and comment on pull requests.
