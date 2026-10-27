@@ -266,7 +266,7 @@ def _table(headers: list[str], rows: list[list[str]], empty: str = "None", numer
 
 
 def create_web_app(store_path: str, settings: WebSettings) -> FastAPI:
-    app = FastAPI(title="Marshal web view", version=__version__, docs_url=None, redoc_url=None)
+    app = FastAPI(title="Marshal web view", version=__version__, docs_url=None, redoc_url=None, openapi_url=None)
 
     def user(request: Request) -> Optional[str]:
         value = request.headers.get(settings.user_header)

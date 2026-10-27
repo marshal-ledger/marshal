@@ -125,8 +125,9 @@ If you don't run an SSO proxy, turn the web view off (`web.enabled: false`) and 
 | Path | Serves |
 |---|---|
 | `/healthz` | `{"status": "ok"}`, for probes |
-| `/docs`, `/redoc`, `/openapi.json` | FastAPI's description of the ingest API. The `/docs` and `/redoc` pages load their scripts from `cdn.jsdelivr.net` in the viewer's browser. They expose no ledger data. Keep them off the runner-facing ingress by routing only `/v0/events` |
 | `/favicon.svg` | The logo |
+
+FastAPI's generated API pages (`/docs`, `/redoc`, `/openapi.json`) are turned off; the API is described in the [ingest API guide](ingest-server.md).
 
 ## Network posture
 

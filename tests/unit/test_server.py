@@ -53,6 +53,16 @@ def test_health(client):
     assert client.get("/healthz").json() == {"status": "ok"}
 
 
+@pytest.mark.parametrize("web", [False, True])
+def test_no_unauthenticated_api_docs(config, signer, web):
+    """FastAPI's docs pages would be unauthenticated and load scripts from a CDN."""
+    config.web.enabled = web
+    client = TestClient(create_app(config, key_resolver=signer.resolver))
+    for path in ("/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect"):
+        assert client.get(path).status_code == 404, path
+    assert client.get("/healthz").status_code == 200
+
+
 def test_missing_or_bad_token_is_401(client):
     assert client.post("/v0/events", json=body()).status_code == 401
     assert client.post("/v0/events", json=body(), headers=auth("junk")).status_code == 401

@@ -99,7 +99,9 @@ def may_ship(caller: Caller, policy: ShippedPolicy) -> bool:
 
 def create_app(config: ServerConfig, key_resolver: KeyResolver | None = None) -> FastAPI:
     verifier = Verifier(config.issuers, key_resolver)
-    app = FastAPI(title="Marshal ingest API", version=__version__)
+    # No /docs, /redoc or /openapi.json: they would be unauthenticated, and the docs pages load
+    # their scripts from a CDN. The API is described in docs/ingest-server.md.
+    app = FastAPI(title="Marshal ingest API", version=__version__, docs_url=None, redoc_url=None, openapi_url=None)
 
     def caller(authorization: Optional[str] = Header(default=None)) -> Caller:
         scheme, _, token = (authorization or "").partition(" ")

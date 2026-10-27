@@ -5,6 +5,7 @@ Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](
 ## 0.2.0 (unreleased)
 
 - The Helm chart runs on OpenShift's restricted SCC (empty `runAsUser` and `fsGroup` are left out), can add a Route and a NetworkPolicy, and the image runs as any UID in group 0. New [security review](docs/security-review.md) for deployment approvals, and notes on locked-down installs.
+- The server no longer serves FastAPI's unauthenticated `/docs`, `/redoc` and `/openapi.json` pages, which loaded scripts from a CDN.
 
 ## 0.1.0 (2026-10-26)
 
