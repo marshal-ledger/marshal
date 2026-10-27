@@ -20,3 +20,6 @@ tests/fixtures/.cache/
 
 # Local editor and assistant settings
 .claude/
+
+# Documentation site build
+site/

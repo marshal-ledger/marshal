@@ -1,0 +1,23 @@
+/* Marshal's colors, as in the web view. */
+:root {
+  --md-primary-fg-color: #5b5bd6;
+  --md-primary-fg-color--light: #7c7ce0;
+  --md-primary-fg-color--dark: #4747b8;
+  --md-accent-fg-color: #4747b8;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: #8b8bf0;
+  --md-accent-fg-color: #a5a5f5;
+  --md-default-bg-color: #141413;
+}
+
+.md-header, .md-tabs {
+  background-color: #1d1c1b;
+  color: #f5f4f2;
+}
+
+.md-typeset img[src$=".gif"], .md-typeset img[src$=".png"] {
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 8px;
+}

@@ -287,6 +287,12 @@ def _web(args: argparse.Namespace) -> int:
         from .web import WebSettings, create_web_app
     except ImportError:
         return _fail("the web view needs extra packages: pip install 'marshal-ledger[server]'")
+    if args.export:
+        from .web import export_snapshot
+
+        count = export_snapshot(args.db, args.export, password=_password(args))
+        print(f"Wrote {count} pages to {args.export}/", file=sys.stderr)
+        return 0
     loopback = args.host in ("127.0.0.1", "localhost", "::1")
     if not loopback and not args.user_header:
         return _fail("serving beyond this machine needs --user-header, set by your SSO proxy", 2)
@@ -596,6 +602,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     web.add_argument("--host", default="127.0.0.1")
     web.add_argument("--port", type=int, default=8090)
     web.add_argument("--user-header", help="require this header, set by an SSO proxy (needed beyond this machine)")
+    web.add_argument("--export", metavar="DIR", help="write the pages as static files to DIR instead of serving them")
     _add_db_arg(web)
     web.set_defaults(handler=_web)
 

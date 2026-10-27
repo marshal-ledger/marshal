@@ -115,4 +115,4 @@ web:
 
 The view is served by the same process: the inventory at `/`, agent pages, "who depends on this?", and a read-only JSON API under `/v0/agents`, `/v0/agent` and `/v0/deps`. It relies on the organization's SSO proxy (for example oauth2-proxy, Identity-Aware Proxy or Azure App Proxy) for sign-in. Requests without the user header are refused, so expose the view only through that proxy. Pages use no external resources.
 
-For a local look at a store, `marshal web --db marshal.sqlite` serves the view on `127.0.0.1` without sign-in. Serving beyond the local machine requires `--user-header`.
+For a local look at a store, `marshal web --db marshal.sqlite` serves the view on `127.0.0.1` without sign-in. Serving beyond the local machine requires `--user-header`. To share a store without running a server, `marshal web --db marshal.sqlite --export site/` writes its pages as static files; the [live demo](https://marshal-ledger.github.io/marshal/demo/) is made this way. A snapshot has no search or filters, and anyone who can open the files sees every page.

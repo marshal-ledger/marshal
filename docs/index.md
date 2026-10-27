@@ -1,0 +1,64 @@
+---
+title: Marshal, an agent ledger
+description: >-
+  Marshal is an open-source, vendor-neutral ledger for enterprise AI agents: one versioned record of every agent,
+  with risk-ranked diffs, drift and dependencies across Copilot Studio, Agentforce, Bedrock, Databricks and agent code.
+hide:
+  - navigation
+---
+
+# Marshal — an agent ledger
+
+Marshal keeps one versioned record of every AI agent in an organization, whatever platform it was built on. It reads the agent definitions teams already produce: Databricks bundles, Copilot Studio agents, Bedrock templates, Agentforce metadata, agent code and the open standards. For each agent it records what model it asks for, what tools and data it can reach, and who it acts as. Every value says where it came from, and nothing is guessed.
+
+[Try the live demo](https://marshal-ledger.github.io/marshal/demo/){ .md-button .md-button--primary }
+[Get started](getting-started.md){ .md-button }
+[GitHub](https://github.com/marshal-ledger/marshal){ .md-button }
+
+![A terminal session: marshal demo builds a ledger of 28 public agents, marshal status shows a Copilot Studio agent whose live definition drifted from what was shipped, and marshal diff ranks the change to the maker's credentials HIGH](assets/demo.gif)
+
+## What it does
+
+- **Inventory** of every agent across platforms, with versions, deployments, and each record's completeness.
+- **Risk-ranked review:** pull requests that change an agent get a comment that lists permission escalations, new write tools and model changes first.
+- **Drift and freshness:** compares what is live with what was shipped, and shows how recently each record was confirmed and by which channel.
+- **Dependencies:** "who uses this tool, this knowledge source, this permission?" across every platform.
+- **Translation** between formats, with a fidelity report computed by reading the result back.
+- **Portability scores** for moving an agent to another platform, from a community-maintained capability matrix.
+- **No shared secrets:** pipelines push records authenticated by their CI provider's OIDC token. Marshal never connects to agent platforms.
+
+![The Marshal web view: an inventory of 28 agents across Agentforce, Databricks, Bedrock, Copilot Studio and Google ADK, with one environment in drift](assets/web-inventory-light.png#only-light)
+![The Marshal web view: an inventory of 28 agents across Agentforce, Databricks, Bedrock, Copilot Studio and Google ADK, with one environment in drift](assets/web-inventory-dark.png#only-dark)
+
+## Try it in a minute
+
+```console
+$ uvx --from 'marshal-ledger[server]' marshal demo
+$ uvx --from 'marshal-ledger[server]' marshal web --db demo.sqlite
+```
+
+Or install it with `pip install 'marshal-ledger[server]'`. `marshal demo` downloads 28 public agent definitions from GitHub, each pinned to a commit, and records them with a short history: a proposed change, and a Copilot Studio agent that drifted after an edit in its web designer.
+
+![An agent page in the web view: the Copilot Studio agent's live definition differs from what was shipped, and three HIGH changes show its tool switched to the maker's credentials](assets/web-drift-light.png#only-light)
+![An agent page in the web view: the Copilot Studio agent's live definition differs from what was shipped, and three HIGH changes show its tool switched to the maker's credentials](assets/web-drift-dark.png#only-dark)
+
+## Formats
+
+| Source | Read | Write |
+|---|---|---|
+| [Databricks Asset Bundles](formats/databricks.md) (Genie spaces, agent apps) | ✓ | |
+| [AWS CloudFormation and CDK](formats/cloudformation.md) (Bedrock Agents, AgentCore) | ✓ | Bedrock Agents |
+| [Microsoft Copilot Studio](formats/copilot-studio.md) (agent workspaces, solutions) | ✓ | ✓ |
+| [Salesforce Agentforce](formats/agentforce.md) (Agent Script, legacy metadata) | ✓ | Agent Script |
+| [Google ADK Agent Config](formats/adk-config.md) | ✓ | ✓ |
+| [Vertex AI Agent Engine](formats/vertex-agent-engine.md) (saved API responses) | inventory | |
+| [Python agent code](formats/python.md) (OpenAI Agents SDK, LangChain/LangGraph, Google ADK, CrewAI, direct model API calls) | ✓ | |
+| [ADL](formats/adl.md), [Open Agent Spec](formats/agent-spec.md), [AGNTCY OASF](formats/oasf.md) | ✓ | ✓ |
+| [Marshal file](formats/marshal-file.md): a hand-written definition for agents no reader covers | ✓ | ✓ |
+
+## Where to next
+
+- [Getting started](getting-started.md): read your own agents and record their history.
+- [Design](design.md): the problem, the architecture, and the security and network posture.
+- [GitHub Action](github-action.md), [Jenkins and Azure DevOps](other-ci.md): record agents from CI and comment on pull requests.
+- [Deployment](deployment.md) and the [security review](security-review.md): run the ingest API and web view for a whole organization.

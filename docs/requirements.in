@@ -1,0 +1,4 @@
+# Tools that build the documentation site. Regenerate the locked file with:
+#   uv pip compile docs/requirements.in --generate-hashes --python-version 3.12 -o docs/requirements.txt
+mkdocs==1.6.1
+mkdocs-material==9.7.7

@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timezone
 
 import pytest
@@ -6,7 +7,7 @@ from fastapi.testclient import TestClient
 from marshal_ledger.model import AgentSpec, Channel, DeploymentEvent, Grant, Scope, Source, ToolUse, Value
 from marshal_ledger.readers.base import build_record
 from marshal_ledger.store import Store, StoreUnavailable
-from marshal_ledger.web import WebSettings, create_web_app
+from marshal_ledger.web import WebSettings, create_web_app, export_snapshot
 
 T0 = datetime(2026, 10, 1, tzinfo=timezone.utc)
 
@@ -113,3 +114,22 @@ def test_an_unreachable_store_is_503(db, monkeypatch):
     response = client.get("/")
     assert (response.status_code, response.headers["Retry-After"]) == (503, "5")
     assert "db.internal" not in response.text
+
+
+def test_static_snapshot_links_every_page_to_a_file(db, tmp_path):
+    out = tmp_path / "site"
+    count = export_snapshot(db, out)
+    files = {p.name for p in out.iterdir()}
+    assert count == len(files) - 1 and {"index.html", "deps.html", "favicon.svg"} <= files
+    for page in out.glob("*.html"):
+        text = page.read_text()
+        assert "<form" not in text and "A static snapshot" in text
+        assert "http" not in text.split("<main>")[0], "no external resources"
+        for href in re.findall(r'href="([^"]*)"', text):
+            assert (out / ("index.html" if href == "./" else href)).exists(), f"{page.name} links to {href}"
+    [agent] = [p for p in out.glob("agent-finance-invoice-*.html") if "-v" not in p.name.split("invoice")[1]]
+    assert "Changes from shipped v1" in agent.read_text()
+    deps = (out / "deps.html").read_text()
+    assert "tool/sap.update_po" in deps
+    [update_po] = re.findall(r'href="(deps-[^"]*update-po[^"]*)"', deps)
+    assert "finance/invoice" in (out / update_po).read_text()

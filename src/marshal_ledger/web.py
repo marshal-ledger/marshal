@@ -6,15 +6,22 @@ store is escaped. Pages: the inventory, an agent (environments, definition,
 changes against what is shipped, portability, history), and dependents of an
 entity. The same data is available as JSON under ``/v0/``.
 
+``export_snapshot`` writes the pages as static files, for publishing a sample
+ledger such as ``marshal demo`` without running a server.
+
 Authentication is delegated to the organization's SSO proxy: requests must
 carry the configured user header, which the proxy sets after sign-in.
 """
 
 from __future__ import annotations
 
+import asyncio
+import hashlib
 import html
+import re
+from pathlib import Path
 from typing import Any, Optional
-from urllib.parse import urlencode
+from urllib.parse import parse_qsl, urlencode, urlsplit
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, Response
@@ -138,6 +145,7 @@ dt { color:var(--fg-2); } dd { margin:0; min-width:0; overflow-wrap:anywhere; }
 .empty { color:var(--fg-2); font-size:13px; }
 .trunc { display:inline-block; max-width:190px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:bottom; }
 .limits { font-size:12px; color:var(--fg-2); line-height:1.6; }
+.snapshot { font-size:13px; color:var(--fg-2); background:var(--side); border:1px solid var(--line); border-radius:8px; padding:8px 12px; margin:0 0 20px; }
 .nowrap { white-space:nowrap; }
 @media (max-width: 900px) { .grid2 { grid-template-columns:1fr; } }
 @media (max-width: 760px) {
@@ -266,7 +274,14 @@ def _table(headers: list[str], rows: list[list[str]], empty: str = "None", numer
     return f'<div class="scroll"><table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table></div>'
 
 
-def create_web_app(store_path: str, settings: WebSettings, *, password: Optional[PasswordProvider] = None) -> FastAPI:
+_SNAPSHOT_NOTE = ('<p class="snapshot">A static snapshot of a Marshal ledger. Search, filters and dependency lookups '
+                  'work in <span class=mono>marshal web</span>.</p>')
+
+
+def create_web_app(store_path: str, settings: WebSettings, *, password: Optional[PasswordProvider] = None,
+                   snapshot: bool = False) -> FastAPI:
+    """The web view. ``snapshot`` renders pages for static files: no forms, and the
+    dependencies page lists every entity instead of asking for one."""
     app = FastAPI(title="Marshal web view", version=__version__, docs_url=None, redoc_url=None, openapi_url=None)
 
     @app.exception_handler(StoreUnavailable)
@@ -283,6 +298,9 @@ def create_web_app(store_path: str, settings: WebSettings, *, password: Optional
 
     def store() -> Store:
         return Store(store_path, password=password)
+
+    def page(title: str, body: str, who: Optional[str], active: str = "") -> HTMLResponse:
+        return _page(title, (_SNAPSHOT_NOTE if snapshot else "") + body, who, active)
 
     @app.get("/favicon.svg", include_in_schema=False)
     def favicon() -> Response:
@@ -330,12 +348,12 @@ def create_web_app(store_path: str, settings: WebSettings, *, password: Optional
         body = (
             '<div class="head"><div><h1>Agents</h1>'
             "<p class=sub>Every agent definition Marshal has recorded, and where each one runs.</p></div></div>"
-            + stats + filters
+            + stats + ("" if snapshot else filters)
             + _card("Inventory", _table(["Agent", "Platform", "Model", "Identity", "Tools", "Environments", "Complete"], rows,
                                         "No agents match.", numeric=(4,)),
                     f"{len(agents)} agent{'s' * (len(agents) != 1)}" + (" match" + "es" * (len(agents) == 1) if filtered else ""))
         )
-        return _page("Agents", body, who, "agents")
+        return page("Agents", body, who, "agents")
 
     @app.get("/agent", response_class=HTMLResponse)
     def agent(request: Request, id: str, v: str = "latest") -> HTMLResponse:
@@ -431,7 +449,7 @@ def create_web_app(store_path: str, settings: WebSettings, *, password: Optional
             _e(e.at.strftime("%Y-%m-%d %H:%M")), f'<span class="chip">{_e(e.event.value)}</span>', _e(e.environment),
             _agent_link_version(id, seq), _e(e.channel.value), _e(actor.repository if actor else ""),
         ] for e, seq, actor in reversed(history)])))
-        return _page(name, "".join(parts), who, "agents")
+        return page(name, "".join(parts), who, "agents")
 
     @app.get("/deps", response_class=HTMLResponse)
     def deps(request: Request, q: str = "", shipped: bool = False) -> HTMLResponse:
@@ -448,12 +466,30 @@ def create_web_app(store_path: str, settings: WebSettings, *, password: Optional
                 f'placeholder="Tool, knowledge source or grant target (glob)" value="{_e(q)}" aria-label="Entity"></label>'
                 f'<label class="check"><input type="checkbox" name="shipped" value="true"{" checked" if shipped else ""}> Shipped only</label>'
                 "<button>Find</button></form>")
+        if snapshot:
+            form = ""
+            if not q:
+                with store() as s:
+                    names = {e.ref: e.display_name for e, _ in s.entities() if e.display_name}
+                    referenced: dict[str, tuple[str, set[str]]] = {}
+                    for d in s.dependents("*"):
+                        referenced.setdefault(d.ref, (d.relation, set()))[1].add(d.agent)
+                listed = sorted(referenced.items(), key=lambda item: (-len(item[1][1]), item[0]))
+                form = _card("Referenced by agents", _table(["Entity", "Relation", "Agents"], [[
+                    f'<a href="deps?{urlencode({"q": ref})}" class="name">{_e(names.get(ref, ref))}</a>'
+                    + (f'<div class="id">{_e(ref)}</div>' if ref in names else ""),
+                    f'<span class="chip">{_e(relation)}</span>', str(len(agents)),
+                ] for ref, (relation, agents) in listed], "No agent references anything yet.", numeric=(2,)),
+                    f"{len(listed)} entit{'ies' if len(listed) != 1 else 'y'}")
+        intro = (f"Every agent that references <span class=mono>{_e(q)}</span>." if snapshot and q else
+                 "Every agent that uses a tool, reads a knowledge source or holds a grant." if snapshot else
+                 "Find every agent that uses a tool, reads a knowledge source or holds a grant. "
+                 "Use <span class=mono>*</span> as a wildcard.")
         body = ('<div class="head"><div><h1>Who depends on this?</h1>'
-                "<p class=sub>Find every agent that uses a tool, reads a knowledge source or holds a grant. "
-                "Use <span class=mono>*</span> as a wildcard.</p></div></div>" + form
+                f"<p class=sub>{intro}</p></div></div>" + form
                 + (_card("Dependents", _table(["Agent", "Version", "Where", "Relation", "Ref"], rows, "No agents reference it."),
                          f"{len(rows)} result{'s' * (len(rows) != 1)}") if q else ""))
-        return _page("Dependencies", body, who, "deps")
+        return page("Dependencies", body, who, "deps")
 
     @app.get("/v0/agents")
     def api_agents(request: Request) -> list[dict[str, Any]]:
@@ -488,3 +524,80 @@ def _agent_link_version(agent: str, seq: int) -> str:
 
 
 __all__ = ["WebSettings", "create_web_app"]
+
+
+def _snapshot_file(href: str) -> Optional[str]:
+    """The file a page link is saved as, or None for links that leave the web view."""
+    url = urlsplit(html.unescape(href))
+    if url.scheme or url.netloc or url.fragment:
+        return None
+    if url.path in ("", "./"):
+        return "index.html"
+    if url.path == "favicon.svg":
+        return url.path
+    if url.path not in ("agent", "deps"):
+        return None
+    if not url.query:
+        return f"{url.path}.html"
+    words = re.sub(r"[^a-z0-9]+", "-", " ".join(v for _, v in parse_qsl(url.query)).lower()).strip("-")[:60]
+    return f"{url.path}-{words}-{hashlib.sha256(url.query.encode()).hexdigest()[:8]}.html"
+
+
+async def _asgi_get(app: FastAPI, href: str) -> tuple[int, bytes]:
+    url = urlsplit(html.unescape(href))
+    path = "/" + url.path.removeprefix("./")
+    scope = {"type": "http", "asgi": {"version": "3.0"}, "http_version": "1.1", "method": "GET", "scheme": "http",
+             "path": path, "raw_path": path.encode(), "query_string": url.query.encode(), "root_path": "",
+             "headers": [], "client": ("127.0.0.1", 0), "server": ("snapshot", 80)}
+    status, body = 500, b""
+
+    async def receive() -> dict[str, Any]:
+        return {"type": "http.request", "body": b"", "more_body": False}
+
+    async def send(message: dict[str, Any]) -> None:
+        nonlocal status, body
+        if message["type"] == "http.response.start":
+            status = message["status"]
+        elif message["type"] == "http.response.body":
+            body += message.get("body", b"")
+
+    await app(scope, receive, send)
+    return status, body
+
+
+def export_snapshot(store_path: str, out_dir: str | Path, *, settings: Optional[WebSettings] = None,
+                    password: Optional[PasswordProvider] = None) -> int:
+    """Write every page reachable from the inventory as static HTML files; return the number written.
+
+    Links are rewritten to the saved files, so the result can be served by any static host."""
+    settings = (settings or WebSettings()).model_copy(update={"enabled": True, "allow_unauthenticated": True})
+    app = create_web_app(store_path, settings, password=password, snapshot=True)
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+
+    def link(match: re.Match[str]) -> str:
+        name = _snapshot_file(match[1])
+        return match[0] if name is None else f'href="{"./" if name == "index.html" else name}"'
+
+    async def crawl() -> int:
+        queue, seen, written = ["./", "deps"], {"index.html", "deps.html"}, 0
+        while queue:
+            href = queue.pop(0)
+            status, body = await _asgi_get(app, href)
+            if status != 200:
+                raise RuntimeError(f"{href} answered {status}")
+            name = _snapshot_file(href)
+            if name.endswith(".html"):
+                text = body.decode()
+                for target in re.findall(r'href="([^"]*)"', text):
+                    file = _snapshot_file(target)
+                    if file is not None and file not in seen:
+                        seen.add(file)
+                        queue.append(target)
+                (out / name).write_text(re.sub(r'href="([^"]*)"', link, text), encoding="utf-8")
+                written += 1
+            else:
+                (out / name).write_bytes(body)
+        return written
+
+    return asyncio.run(crawl())
