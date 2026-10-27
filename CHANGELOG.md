@@ -2,6 +2,8 @@
 
 Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](https://semver.org). Before 1.0, a minor release may change the ledger model, the ingest API or the command line; each such change is listed here.
 
+## 0.5.0 (unreleased)
+
 ## 0.4.0 (2026-10-27)
 
 - Risk ranking: a changed model ranks MED, and HIGH only when its provider changes, so routine upgrades no longer drown out escalations. Changed instructions rank MED instead of LOW, and HIGH when a removed line holds a word that usually states a limit (such as "never", "must not" or "approval"); the diff names the words. Diff changes carry a new optional `guardrails` field.
