@@ -43,6 +43,7 @@ For [Terraform](formats/terraform.md#in-a-pipeline), set `MARSHAL_ARTIFACTS` to 
 | `MARSHAL_PORTABILITY` | | Space-separated platforms to score portability to in the report, such as `bedrock copilot-studio` |
 | `MARSHAL_COMMENT` | `true` | Comment on merge requests, when `MARSHAL_GITLAB_TOKEN` is set |
 | `MARSHAL_VERSION` | the template's release | Marshal release installed from PyPI |
+| `MARSHAL_PACKAGE` | | What `pip` installs instead, such as a URL on an internal mirror |
 | `MARSHAL_PYTHON_IMAGE` | `python:3.12-slim` | Image the job runs in |
 
 The job installs Marshal from PyPI, so the runner needs PyPI or a mirror of it (see [Locked-down installs](deployment.md#locked-down-installs)). The report is printed in the job log and kept as the `marshal-report.md` artifact, which merge requests show as "Marshal report".
@@ -51,10 +52,12 @@ The job installs Marshal from PyPI, so the runner needs PyPI or a mirror of it (
 
 GitLab's job token can't write merge request comments, so commenting needs a token the project provides. Without one, the job records the event and keeps the report, and says that no comment was posted.
 
-1. In the project, create a project access token (**Settings → Access tokens**) with the **Reporter** role and the **api** scope.
-2. Add it as a CI/CD variable named `MARSHAL_GITLAB_TOKEN` (**Settings → CI/CD → Variables**), masked.
+1. Create a token with the **api** scope that can comment on the project's merge requests:
+   - **GitLab Self-Managed and Dedicated, or GitLab.com Premium and Ultimate:** a project access token (**Settings → Access tokens**) with the **Reporter** role.
+   - **GitLab.com Free**, where project access tokens [aren't available](https://docs.gitlab.com/user/project/settings/project_access_tokens/): a personal access token of a dedicated bot account that is a Reporter on the project. A personal token acts as its user on every project that user can reach, so don't use your own.
+2. Add it as a CI/CD variable named `MARSHAL_GITLAB_TOKEN` (**Settings → CI/CD → Variables**), masked, with an expiry date.
 
-Merge request pipelines usually run on unprotected branches, which can't read protected variables, so leave the variable unprotected. Anyone who can change the pipeline can then use the token with the Reporter role, so give it nothing more. The token is used only for the GitLab API of the instance running the pipeline (`CI_API_V4_URL`), and is never printed.
+Merge request pipelines usually run on unprotected branches, which can't read protected variables, so leave the variable unprotected. Anyone who can change the pipeline can then use the token, so give its user the Reporter role and nothing more. The token is used only for the GitLab API of the instance running the pipeline (`CI_API_V4_URL`), and is never printed.
 
 ## Configure the server
 
