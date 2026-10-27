@@ -2,7 +2,7 @@
 
 Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](https://semver.org). Before 1.0, a minor release may change the ledger model, the ingest API or the command line; each such change is listed here.
 
-## 0.2.0 (unreleased)
+## 0.2.0 (2026-10-26)
 
 - Postgres stores replace a lost connection and retry the read that found it; a write is never replayed, and the ingest API and web view answer `503` while the database is unreachable. A new `store_auth` setting (`--db-auth` on the command line) obtains the password at each connection, including Microsoft Entra ID tokens for Azure Database for PostgreSQL with the `azure` extra, which the image now includes. The chart can create a service account and add pod labels, for AKS workload identity. See [Running Marshal on Azure](docs/azure.md).
 - The Helm chart runs on OpenShift's restricted SCC (empty `runAsUser` and `fsGroup` are left out), can add a Route and a NetworkPolicy, and the image runs as any UID in group 0. New [security review](docs/security-review.md) for deployment approvals, and notes on locked-down installs.
