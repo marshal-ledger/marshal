@@ -40,13 +40,14 @@ The report is also added to the job summary and exposed as the `report` output.
 
 A typical comment:
 
+<!-- example: pr-comment-maker-credentials -->
 ```
-**finance/invoice_agent** (databricks) · v14 → v15 · 3 changes, 2 high risk
+**eval_testAgent** (copilot-studio) · v1 → v2 · 3 changes, 3 high risk
 
-HIGH  + tool tool/databricks.uc.function.main.finance.update_po (scope write, reversible unknown)
-HIGH  + grant store/databricks.postgres.main.invoices CAN_CONNECT_AND_CREATE (write)
-MED   - knowledge knowledge/databricks.uc.table.main.finance.vendor_faq_2023 (scope read)
-Completeness 82%
+HIGH  ~ permissions.identity: mixed → shared_credential
+HIGH  ~ extensions.copilot-studio.actions.SearchDocs.connection_mode: Invoker → Maker
+HIGH  ~ extensions.copilot-studio.actions.SearchDocs.credentials: end user → maker
+Completeness 38%
 ```
 
 Pull requests from forks don't receive OIDC tokens, so the action can't record events for them.

@@ -30,13 +30,24 @@ The converter doesn't estimate what survives. It writes the target document, rea
 
 Each non-lossless field carries a reason, either from the writer's declared loss table or from a note the writer made during the conversion.
 
+<!-- example: convert-invoice -->
 ```
 https://agents.acme.example/invoice-processor → agent-spec
   Fidelity: 15 lossless · 1 approximated · 23 dropped · 3 defaulted
-    ~ tools[tool/adl.invoice-processor.search_invoices].input_schema: … (Agent Spec marks a parameter optional only by a default; …)
+    ~ tools[tool/adl.invoice-processor.search_invoices].input_schema: {"properties":{"date_from":{"format":"date","type":"string"… → {"properties":{"date_from":{"format":"date","type":"string"… (Agent Spec marks a parameter optional only by a default; optional parameters without one read back as required)
     - tools[tool/adl.invoice-processor.search_invoices].scope (Agent Spec states a tool's effect only through a remote tool's HTTP method)
+    - tools[tool/adl.invoice-processor.search_invoices].reversible (Agent Spec has no reversibility field)
+    - tools[tool/adl.invoice-processor.match_purchase_order].scope (Agent Spec states a tool's effect only through a remote tool's HTTP method)
+    - tools[tool/adl.invoice-processor.match_purchase_order].reversible (Agent Spec has no reversibility field)
+    - permissions.identity (Agent Spec does not describe identity or permissions)
+    - permissions.principal (Agent Spec does not describe identity or permissions)
+    - permissions.grants[store/file./data/invoices/** read] (Agent Spec does not describe identity or permissions)
     - permissions.grants[store/file./data/audit/** read_write] (Agent Spec does not describe identity or permissions)
+    - permissions.grants[other/network.api.acme.example connect] (Agent Spec does not describe identity or permissions)
+    - permissions.grants[other/network.finance.acme.example connect] (Agent Spec does not describe identity or permissions)
     - extensions.adl.* (13 fields; adl-specific; no Agent Spec equivalent)
+    + tools[tool/adl.invoice-processor.search_invoices].requires_confirmation (Agent Spec defaults requires_confirmation to false)
+    + tools[tool/adl.invoice-processor.match_purchase_order].requires_confirmation (Agent Spec defaults requires_confirmation to false)
     + extensions.agent-spec.llm_config (Agent Spec requires an LLM config; one was built from the model fields)
 ```
 

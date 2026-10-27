@@ -40,16 +40,16 @@ $ marshal read triage.marshal.yaml
 ```console
 $ marshal collect path/to/bundle --target prod --event shipped
 $ marshal collect path/to/bundle --target prod --event proposed
-$ marshal diff finance/invoice_agent          # what is proposed against what is shipped, ranked by risk
-$ marshal status finance/invoice_agent        # shipped and live versions, drift, freshness
-$ marshal deps "*update_po" --shipped         # who depends on a tool, and where it is live
+$ marshal diff my-team/my_agent               # what is proposed against what is shipped, ranked by risk
+$ marshal status my-team/my_agent             # shipped and live versions, drift, freshness
+$ marshal deps "*my_tool" --shipped           # who depends on a tool, and where it is live
 ```
 
 ## Translate and assess portability
 
 ```console
 $ marshal convert path/to/agent.adl.yaml --to agent-spec
-$ marshal port finance/invoice_agent --to all
+$ marshal port my-team/my_agent --to all
 ```
 
 ## Put it in your pipelines

@@ -1,22 +1,24 @@
 # Portability
 
 ```console
-$ marshal port finance/invoice_agent --to copilot-studio
+$ marshal port cost-explorer-agent/agent_template/BillingAgent --to copilot-studio
 $ marshal port path/to/bundle --to all
 $ marshal collect . --target prod --event proposed --portability bedrock --portability copilot-studio
 ```
 
 `marshal port` reports what it would take to move an agent to another platform. The agent comes from the store (`AGENT[@selector]`) or from a path to read.
 
+<!-- example: port-billing -->
 ```
-agent_template/BillingAgent → Microsoft Copilot Studio
+cost-explorer-agent/agent_template/BillingAgent → Microsoft Copilot Studio
 
 Portability: 67 / 100
   Platform limitations (copilot-studio):
     ~ identity service_principal: other identities; give each connection the maker's credentials or the end user's
     ~ tool SavingsPlanAgent: other tools; expose the tool as an API and add it as a custom connector
+    ~ tool AWSBillingAgent: other tools; expose the tool as an API and add it as a custom connector
   Agent-specific issues:
-    ? tool SavingsPlanAgent: scope unknown in the source
+    ~ tool/bedrock.user_input: tools[tool/bedrock.user_input] dropped (Copilot Studio tools are connectors, flows, MCP connectors and agents; this tool needs a custom connector)
 Fidelity: 6 lossless · 13 dropped · 2 defaulted
 ```
 

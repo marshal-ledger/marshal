@@ -54,7 +54,7 @@ A version record ([`model.py`](../src/marshal_ledger/model.py)) holds:
 
 - display name, description, model and its parameters;
 - **instructions**: the system prompt text and its SHA-256 hash, or only the hash in hash-only mode;
-- tools, knowledge sources and permission grants, as references such as `tool/databricks.uc.function.main.finance.update_po`;
+- tools, knowledge sources and permission grants, as references such as `tool/powerplatform.shared_office365users.Manager_V2`;
 - **access rules**: principals allowed to use or manage the agent, as the definition names them. These can be user names, email addresses or group names, which may be personal data;
 - platform-specific fields under `extensions`, so a definition can be written back in its native format;
 - the source format, artifact path and position within it.

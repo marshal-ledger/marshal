@@ -204,7 +204,8 @@ def compare(
             )
         else:
             report.fields.append(FieldOutcome(path, Outcome.LOSSLESS))
-    for path in after.keys() - before.keys():
+    # In read-back order, so a report is the same on every run (a set difference is not).
+    for path in (p for p in after if p not in before):
         report.fields.append(FieldOutcome(path, Outcome.DEFAULTED, after=after[path], note=_note(path, notes)))
     return report
 

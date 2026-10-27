@@ -44,6 +44,8 @@ The record holds the runtime name and description, the execution role's identity
 
 ## Writing
 
+**Tested:** every loss in converting every fixture is explained, and the agent keeps its identity. The template hasn't yet been deployed to an AWS account.
+
 The writer emits one `AWS::Bedrock::Agent`:
 
 - **Role:** the `AgentResourceRoleArn` template parameter, unless the record's principal is a role ARN.

@@ -2,7 +2,7 @@
 # Build locally:
 #   pip install --require-hashes -r docs/requirements.txt
 #   mkdocs serve
-site_name: Marshal
+site_name: Marshal ledger
 site_description: >-
   Marshal is an open-source, vendor-neutral ledger for enterprise AI agents: one versioned record of every agent
   on Copilot Studio, Agentforce, Bedrock, Databricks, Google ADK and agent code, with risk-ranked diffs, drift and dependencies.
