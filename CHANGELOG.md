@@ -4,6 +4,8 @@ Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](
 
 ## 0.6.0 (unreleased)
 
+- Bedrock: a value equal to Bedrock's default (idle session timeout 600, agent collaboration `DISABLED`, orchestration type `DEFAULT`) is recorded as absent, so a Terraform plan and the state after apply give the same version, and so does a CloudFormation template whether it states the default or not. An agent whose template states one of these defaults gets a new version once.
+- The Terraform reader has been tested against a real plan and state: a public example planned and applied in an AWS account gave the same version from both.
 - The CloudFormation writer has been deployed to Amazon Bedrock: a written template deployed unchanged and the agent Bedrock stored matched the source. The writer now warns when the source doesn't say whether a function needs confirmation, since Bedrock then stores it as not needing one.
 - The Terraform reader warns when a value it needs comes through a `local`, which a plan doesn't record, and says what that leaves out, such as a role policy's permissions or a collaborator's link to its agent.
 - `marshal demo` adds a Bedrock agent read from a Terraform plan of a public example, for 29 agents.
