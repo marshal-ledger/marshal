@@ -133,3 +133,21 @@ def test_static_snapshot_links_every_page_to_a_file(db, tmp_path):
     assert "tool/sap.update_po" in deps
     [update_po] = re.findall(r'href="(deps-[^"]*update-po[^"]*)"', deps)
     assert "finance/invoice" in (out / update_po).read_text()
+
+
+def test_snapshot_pages_have_titles_descriptions_and_a_sitemap(db, tmp_path):
+    out = tmp_path / "site"
+    export_snapshot(db, out, site_url="https://example.com/demo")
+    index = (out / "index.html").read_text()
+    assert "<title>AI agent inventory · Marshal agent ledger</title>" in index
+    assert '<meta name=description content="An AI agent inventory of ' in index
+    sitemap = (out / "sitemap.xml").read_text()
+    locs = re.findall(r"<loc>([^<]*)</loc>", sitemap)
+    assert locs[:2] == ["https://example.com/demo/", "https://example.com/demo/deps.html"]
+    agents = [loc.rsplit("/", 1)[1] for loc in locs[2:]]
+    assert agents and all(name.startswith("agent-") and (out / name).exists() for name in agents)
+    assert len(agents) == len(set(agents))
+    page = (out / agents[0]).read_text()
+    assert " agent) · Marshal agent ledger</title>" in page and " on " in page.split("<meta name=description", 1)[1]
+    export_snapshot(db, tmp_path / "plain")
+    assert not (tmp_path / "plain" / "sitemap.xml").exists()

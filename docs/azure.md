@@ -1,3 +1,7 @@
+---
+title: "Run Marshal on Azure: AKS or Container Apps, PostgreSQL and Entra ID"
+---
+
 # Running Marshal on Azure
 
 This guide covers a shared Marshal deployment on Azure: the store on Azure Database for PostgreSQL flexible server, the ingest API and web view on AKS or Azure Container Apps, sign-in to the web view with Microsoft Entra ID, and secrets in Key Vault. Read [Deployment](deployment.md) and [Ingest API](ingest-server.md) first; this page adds only what is specific to Azure. Azure Pipelines push with their own OIDC tokens; see [Jenkins and Azure DevOps](other-ci.md#azure-devops).

@@ -1,3 +1,9 @@
+---
+title: "Marshal file: hand-written AI agent definitions"
+description: >-
+  Record agents that have no export or repository in a short YAML file, marked as attested rather than declared.
+---
+
 # Marshal file (hand-written definitions)
 
 Format id: `marshal-file`. A Marshal file is a YAML document, by convention named `*.marshal.yaml`, that describes one agent by hand. It's for agents that no reader covers: agents on an in-house platform, or in a vendor UI that has no export. A file is recognized by its `marshal: agent/v0` key.

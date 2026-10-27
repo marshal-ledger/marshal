@@ -1,3 +1,7 @@
+---
+title: "GitLab CI: record AI agents and comment on merge requests"
+---
+
 # GitLab CI
 
 GitLab pipelines record agent definitions the same way GitHub workflows do. A job reads the agent's artifacts, signs in to the [ingest API](ingest-server.md) with a short-lived ID token that GitLab issues, and records a `proposed` or `shipped` event. In merge request pipelines it also comments with the risk-ranked changes, and updates that comment on later pushes. No secret is stored for Marshal.

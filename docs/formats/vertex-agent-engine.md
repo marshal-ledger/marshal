@@ -1,3 +1,9 @@
+---
+title: "Vertex AI Agent Engine agent inventory"
+description: >-
+  How Marshal reads saved Vertex AI Agent Engine API responses to inventory deployed agents, without connecting to Google Cloud.
+---
+
 # Vertex AI Agent Engine
 
 Format id: `vertex-agent-engine`. Reads saved responses of the Agent Engine API (`reasoningEngines.get` or `reasoningEngines.list`, JSON) at inventory tier.

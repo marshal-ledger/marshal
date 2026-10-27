@@ -1,3 +1,9 @@
+---
+title: "Agent Definition Language (ADL): read and write"
+description: >-
+  How Marshal reads and writes ADL agent definitions, and what each conversion keeps and loses.
+---
+
 # Agent Definition Language (ADL)
 
 Format id: `adl`. Reads and writes [ADL](https://adl-spec.org) documents, one agent per YAML or JSON file, identified by an `adl_spec` key. The writer produces ADL 0.3 and validates against the published 0.3 schema in tests.

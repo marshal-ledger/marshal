@@ -177,7 +177,7 @@ def _e(value: Any) -> str:
     return html.escape("" if value is None else str(value))
 
 
-def _page(title: str, body: str, user: Optional[str], active: str = "") -> HTMLResponse:
+def _page(title: str, body: str, user: Optional[str], active: str = "", description: str = "") -> HTMLResponse:
     who = f'<div class="who" title="{_e(user)}">{_e(user)}</div>' if user else ""
     nav = "".join(
         f'<a href="{href}"{" class=on" if key == active else ""}>{_ICONS[key]}{label}</a>'
@@ -186,10 +186,28 @@ def _page(title: str, body: str, user: Optional[str], active: str = "") -> HTMLR
     return HTMLResponse(
         "<!doctype html><html lang=en><head><meta charset=utf-8>"
         '<meta name=viewport content="width=device-width,initial-scale=1">'
-        f'<title>{_e(title)} · Marshal</title><link rel=icon href="favicon.svg"><style>{_STYLE}</style></head><body><div class=shell>'
+        + (f'<meta name=description content="{_e(description)}">' if description else "")
+        + f'<title>{_e(title)} · Marshal agent ledger</title><link rel=icon href="favicon.svg"><style>{_STYLE}</style></head><body><div class=shell>'
         f'<aside class=side><a class=brand href="./">{_LOGO}Marshal</a><nav>{nav}</nav>{who}</aside>'
         f"<main>{body}</main></div></body></html>"
     )
+
+
+_PLATFORM_NAMES = {
+    "agentforce": "Agentforce", "bedrock": "Amazon Bedrock", "bedrock-agentcore": "Bedrock AgentCore",
+    "copilot-studio": "Copilot Studio", "databricks": "Databricks", "google-adk": "Google ADK", "adl": "ADL",
+    "agent-spec": "Open Agent Spec", "oasf": "OASF", "langgraph": "LangGraph", "langchain": "LangChain", "crewai": "CrewAI",
+    "openai-agents": "OpenAI Agents SDK",
+}
+
+
+def _platform_name(platform: str) -> str:
+    """The platform's name in page titles and descriptions."""
+    return _PLATFORM_NAMES.get(platform, platform)
+
+
+def _plural(n: int, noun: str) -> str:
+    return f"{n} {noun}{'s' * (n != 1)}"
 
 
 def _agent_link(agent: str, label: Optional[str] = None) -> str:
@@ -299,8 +317,8 @@ def create_web_app(store_path: str, settings: WebSettings, *, password: Optional
     def store() -> Store:
         return Store(store_path, password=password)
 
-    def page(title: str, body: str, who: Optional[str], active: str = "") -> HTMLResponse:
-        return _page(title, (_SNAPSHOT_NOTE if snapshot else "") + body, who, active)
+    def page(title: str, body: str, who: Optional[str], active: str = "", description: str = "") -> HTMLResponse:
+        return _page(title, (_SNAPSHOT_NOTE if snapshot else "") + body, who, active, description)
 
     @app.get("/favicon.svg", include_in_schema=False)
     def favicon() -> Response:
@@ -353,7 +371,9 @@ def create_web_app(store_path: str, settings: WebSettings, *, password: Optional
                                         "No agents match.", numeric=(4,)),
                     f"{len(agents)} agent{'s' * (len(agents) != 1)}" + (" match" + "es" * (len(agents) == 1) if filtered else ""))
         )
-        return page("Agents", body, who, "agents")
+        return page("AI agent inventory", body, who, "agents",
+                    f"An AI agent inventory of {_plural(len(agents), 'agent')}: each agent's model, tools, knowledge sources, "
+                    "grants and version history, recorded by Marshal agent ledger.")
 
     @app.get("/agent", response_class=HTMLResponse)
     def agent(request: Request, id: str, v: str = "latest") -> HTMLResponse:
@@ -449,7 +469,10 @@ def create_web_app(store_path: str, settings: WebSettings, *, password: Optional
             _e(e.at.strftime("%Y-%m-%d %H:%M")), f'<span class="chip">{_e(e.event.value)}</span>', _e(e.environment),
             _agent_link_version(id, seq), _e(e.channel.value), _e(actor.repository if actor else ""),
         ] for e, seq, actor in reversed(history)])))
-        return page(name, "".join(parts), who, "agents")
+        platform = _platform_name(record.platform)
+        return page(f"{name} ({platform} agent)", "".join(parts), who, "agents",
+                    f"{name} on {platform}: its model, {_plural(len(spec.tools), 'tool')}, knowledge sources, grants "
+                    "and version history, recorded by Marshal agent ledger.")
 
     @app.get("/deps", response_class=HTMLResponse)
     def deps(request: Request, q: str = "", shipped: bool = False) -> HTMLResponse:
@@ -578,10 +601,12 @@ async def _asgi_get(app: FastAPI, href: str) -> tuple[int, bytes]:
 
 
 def export_snapshot(store_path: str, out_dir: str | Path, *, settings: Optional[WebSettings] = None,
-                    password: Optional[PasswordProvider] = None) -> int:
+                    password: Optional[PasswordProvider] = None, site_url: Optional[str] = None) -> int:
     """Write every page reachable from the inventory as static HTML files; return the number written.
 
-    Links are rewritten to the saved files, so the result can be served by any static host."""
+    Links are rewritten to the saved files, so the result can be served by any static host.
+    With ``site_url``, the address the files will be served from, a ``sitemap.xml`` lists the
+    inventory, the dependencies page and each agent's latest version for search engines."""
     settings = (settings or WebSettings()).model_copy(update={"enabled": True, "allow_unauthenticated": True})
     app = create_web_app(store_path, settings, password=password, snapshot=True)
     out = Path(out_dir)
@@ -592,7 +617,7 @@ def export_snapshot(store_path: str, out_dir: str | Path, *, settings: Optional[
         return match[0] if name is None else f'href="{"./" if name == "index.html" else name}"'
 
     async def crawl() -> int:
-        queue, seen, written = ["./", "deps"], {"index.html", "deps.html"}, 0
+        queue, seen, written, listed = ["./", "deps"], {"index.html", "deps.html"}, 0, ["", "deps.html"]
         while queue:
             href = queue.pop(0)
             status, body = await _asgi_get(app, href)
@@ -608,8 +633,17 @@ def export_snapshot(store_path: str, out_dir: str | Path, *, settings: Optional[
                         queue.append(target)
                 (out / name).write_text(re.sub(r'href="([^"]*)"', link, text), encoding="utf-8")
                 written += 1
+                url = urlsplit(html.unescape(href))
+                if url.path == "agent" and [k for k, _ in parse_qsl(url.query)] == ["id"]:
+                    listed.append(name)
             else:
                 (out / name).write_bytes(body)
+        if site_url:
+            base = site_url.rstrip("/") + "/"
+            urls = "".join(f"<url><loc>{html.escape(base + name)}</loc></url>\n" for name in listed)
+            (out / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n'
+                                             f'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n{urls}</urlset>\n',
+                                             encoding="utf-8")
         return written
 
     return asyncio.run(crawl())

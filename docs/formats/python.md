@@ -1,3 +1,9 @@
+---
+title: "AI agent inventory from Python code: LangGraph, CrewAI, OpenAI Agents SDK and ADK"
+description: >-
+  How Marshal reads agents built with the OpenAI Agents SDK, LangChain and LangGraph, Google ADK and CrewAI by static analysis, without running the code.
+---
+
 # Agents in Python code
 
 Format id: `python`. Reads agents built with the OpenAI Agents SDK, LangChain and LangGraph prebuilt agents, Google ADK, and CrewAI, by static analysis.

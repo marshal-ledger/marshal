@@ -1,3 +1,9 @@
+---
+title: "Open Agent Specification (Agent Spec): read and write"
+description: >-
+  How Marshal reads and writes Open Agent Spec documents, validated against the published JSON Schema.
+---
+
 # Open Agent Specification (Agent Spec)
 
 Format id: `agent-spec`. Reads and writes [Agent Spec](https://github.com/oracle/agent-spec) documents (YAML or JSON) identified by `component_type`. The writer produces Agent Spec 26.3.1.

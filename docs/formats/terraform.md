@@ -1,3 +1,9 @@
+---
+title: "Bedrock agent inventory from Terraform plans and state"
+description: >-
+  How Marshal reads Bedrock Agents and AgentCore from Terraform plan and state JSON, for the aws and awscc providers, in CI before apply.
+---
+
 # Terraform: Bedrock Agents and AgentCore
 
 Format id: `terraform`. Reads the JSON that `terraform show -json` prints for a saved plan, or for the current state. Marshal never runs Terraform: the pipeline that already plans and applies produces the file. OpenTofu's `tofu show -json` output works the same way.

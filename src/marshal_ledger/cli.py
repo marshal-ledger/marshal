@@ -300,7 +300,7 @@ def _web(args: argparse.Namespace) -> int:
     if args.export:
         from .web import export_snapshot
 
-        count = export_snapshot(args.db, args.export, password=_password(args))
+        count = export_snapshot(args.db, args.export, password=_password(args), site_url=args.site_url)
         print(f"Wrote {count} pages to {args.export}/", file=sys.stderr)
         return 0
     loopback = args.host in ("127.0.0.1", "localhost", "::1")
@@ -633,6 +633,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     web.add_argument("--port", type=int, default=8090)
     web.add_argument("--user-header", help="require this header, set by an SSO proxy (needed beyond this machine)")
     web.add_argument("--export", metavar="DIR", help="write the pages as static files to DIR instead of serving them")
+    web.add_argument("--site-url", metavar="URL", help="with --export: the URL the files will be served from, to write a sitemap.xml")
     _add_db_arg(web)
     web.set_defaults(handler=_web)
 

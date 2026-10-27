@@ -1,3 +1,7 @@
+---
+title: "Security review: what Marshal stores and connects to"
+---
+
 # Security review
 
 This document is for the security, architecture and data-classification reviewers who approve a Marshal deployment. It covers what Marshal stores and where, what it never stores, how callers are authenticated, what it connects to, how releases are built and signed, and what Marshal doesn't do. Each statement links to the code or configuration that implements it. Where Marshal has no control for something, this document says so.

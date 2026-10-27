@@ -1,3 +1,7 @@
+---
+title: "Ingest API: record AI agents from CI with OIDC"
+---
+
 # Ingest API
 
 The ingest API is how pipelines write to a shared Marshal store. It authenticates each request with the CI provider's OIDC token, applies the ingestion policy, re-normalizes the records and writes them. It is the only component that holds store credentials. For the design rationale, see [Ingestion and authentication](design.md#ingestion-and-authentication).

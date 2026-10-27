@@ -1,3 +1,9 @@
+---
+title: "AGNTCY OASF agent records: read and write"
+description: >-
+  How Marshal reads and writes AGNTCY Open Agentic Schema Framework (OASF) records.
+---
+
 # Open Agentic Schema Framework (OASF)
 
 Format id: `oasf`. Reads and writes [AGNTCY OASF](https://docs.agntcy.org/oasf/) records (JSON or YAML) identified by `schema_version` and `name`. The writer produces OASF 1.1.0 for new records. When it re-writes an OASF record, it keeps that record's own schema version, because it copies the record's content as-is.

@@ -1,3 +1,9 @@
+---
+title: "Copilot Studio agent inventory from solutions and YAML"
+description: >-
+  How Marshal reads Microsoft Copilot Studio agents from exported solutions and workspace YAML, including whose credentials each tool uses, and writes workspace YAML.
+---
+
 # Microsoft Copilot Studio
 
 Format id: `copilot-studio`. Reads two layouts of the same definitions:

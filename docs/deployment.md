@@ -1,3 +1,7 @@
+---
+title: "Deploy Marshal: a self-hosted AI agent inventory"
+---
+
 # Deployment
 
 Marshal runs as one service: the ingest API that pipelines push to, and the read-only web view. It needs a store and, in a shared deployment, the organization's SSO proxy in front of the web view.
