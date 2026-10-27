@@ -19,14 +19,14 @@ Each release publishes a minimal image that runs as an unprivileged user:
 $ docker run -p 8080:8080 \
     -v ./marshal-server.yaml:/etc/marshal/marshal-server.yaml:ro \
     -e MARSHAL_STORE_URL=postgresql://marshal:...@db.internal:5432/marshal \
-    ghcr.io/marshal-ledger/marshal:0.7.0
+    ghcr.io/marshal-ledger/marshal:0.7.1
 ```
 
 To run from your own registry, mirror the release image, or build one from a release tag with the [`Dockerfile`](../Dockerfile):
 
 ```console
-$ git checkout v0.7.0
-$ docker build -t registry.example.com/marshal:0.7.0 .
+$ git checkout v0.7.1
+$ docker build -t registry.example.com/marshal:0.7.1 .
 ```
 
 The Helm chart uses the release image by default, tagged with the chart's `appVersion`. Each release also attaches the packaged chart.
@@ -38,7 +38,7 @@ The image runs as UID 10001 by default, and also as any other UID in group 0, wh
 Release images are built for `linux/amd64` and `linux/arm64`, carry an SPDX software bill of materials and SLSA build provenance, and are signed with Sigstore by the release workflow. To verify a signature before admitting an image:
 
 ```console
-$ cosign verify ghcr.io/marshal-ledger/marshal:0.7.0 \
+$ cosign verify ghcr.io/marshal-ledger/marshal:0.7.1 \
     --certificate-oidc-issuer https://token.actions.githubusercontent.com \
     --certificate-identity-regexp '^https://github.com/marshal-ledger/marshal/\.github/workflows/release\.yml@refs/tags/v'
 ```
@@ -48,15 +48,15 @@ The same identity works in admission policies such as Kyverno or Sigstore's poli
 Clusters that can't reach `ghcr.io` can pull through a registry proxy (Artifactory, Harbor, Nexus, or ECR and ACR pull-through caches), or use a copy in an internal registry. `cosign copy` copies the image with its signature:
 
 ```console
-$ cosign copy ghcr.io/marshal-ledger/marshal:0.7.0 registry.example.com/marshal:0.7.0
-$ cosign verify registry.example.com/marshal:0.7.0 \
+$ cosign copy ghcr.io/marshal-ledger/marshal:0.7.1 registry.example.com/marshal:0.7.1
+$ cosign verify registry.example.com/marshal:0.7.1 \
     --certificate-oidc-issuer https://token.actions.githubusercontent.com \
     --certificate-identity-regexp '^https://github.com/marshal-ledger/marshal/\.github/workflows/release\.yml@refs/tags/v'
 ```
 
-The copy keeps the image digest, so the signature still matches it. The SBOM and provenance are part of the image index, so they come along too; `docker buildx imagetools inspect registry.example.com/marshal:0.7.0 --format '{{json .SBOM}}'` shows them. A tool that copies only the image, such as `skopeo copy --all`, `oc image mirror` or `az acr import`, brings the SBOM and provenance but not the signature, which cosign keeps under a separate `sha256-<digest>.sig` tag. Copy that tag as well, or use `cosign copy`.
+The copy keeps the image digest, so the signature still matches it. The SBOM and provenance are part of the image index, so they come along too; `docker buildx imagetools inspect registry.example.com/marshal:0.7.1 --format '{{json .SBOM}}'` shows them. A tool that copies only the image, such as `skopeo copy --all`, `oc image mirror` or `az acr import`, brings the SBOM and provenance but not the signature, which cosign keeps under a separate `sha256-<digest>.sig` tag. Copy that tag as well, or use `cosign copy`.
 
-`cosign verify` needs Sigstore's trust root, which it downloads from `tuf-repo-cdn.sigstore.dev` even with `--offline`. Run verification on a host that can reach it, before or after copying, or give your admission controller a mirrored trust root as its documentation describes. Then set `image.repository` in the chart. You can also pin the digest the signature covers, for example `image.tag: 0.7.0@sha256:...`.
+`cosign verify` needs Sigstore's trust root, which it downloads from `tuf-repo-cdn.sigstore.dev` even with `--offline`. Run verification on a host that can reach it, before or after copying, or give your admission controller a mirrored trust root as its documentation describes. Then set `image.repository` in the chart. You can also pin the digest the signature covers, for example `image.tag: 0.7.1@sha256:...`.
 
 ## Kubernetes
 
@@ -109,7 +109,7 @@ On OpenShift, the router's namespace is selected with `policy-group.network.open
 
 Marshal installs without internet access once three things are in your own systems: the container image (see [Verify and mirror](#verify-and-mirror)), the Helm chart, and, for pipelines, the Python package.
 
-**Helm chart.** Each GitHub release attaches the packaged chart, `marshal-<chart version>.tgz` (`marshal-0.7.0.tgz` for release 0.7.0). Push it to an internal chart repository or OCI registry, for example `helm push marshal-0.7.0.tgz oci://registry.example.com/charts`, or install from a checkout of the release tag.
+**Helm chart.** Each GitHub release attaches the packaged chart, `marshal-<chart version>.tgz` (`marshal-0.7.1.tgz` for release 0.7.1). Push it to an internal chart repository or OCI registry, for example `helm push marshal-0.7.1.tgz oci://registry.example.com/charts`, or install from a checkout of the release tag.
 
 **Python package.** Pipelines that run `marshal push` install `marshal-ledger` from PyPI. To use an internal index such as Artifactory, Nexus or devpi, point pip at it with an environment variable or `pip.conf`:
 

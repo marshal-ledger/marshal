@@ -29,7 +29,7 @@ class FakeGitLab:
 
     def __call__(self, request):
         method, url = request.get_method(), request.full_url
-        self.calls.append((method, url, request.get_header("Private-token")))
+        self.calls.append((method, url, request.get_header("Authorization")))
         body = json.loads(request.data) if request.data else None
         if method == "GET":
             page = int(re.search(r"[?&]page=(\d+)", url).group(1))
@@ -55,7 +55,7 @@ def test_a_report_is_posted_once_then_updated():
                        opener=gitlab) == "updated"
     assert [n["body"] for n in gitlab.notes] == ["Looks good", report + " for `prod`"]
     assert all(call[1].startswith(f"{API}/projects/42/merge_requests/7/notes") for call in gitlab.calls)
-    assert {call[2] for call in gitlab.calls} == {"t0ken"}
+    assert {call[2] for call in gitlab.calls} == {"Bearer t0ken"}
 
 
 def test_the_existing_comment_is_found_on_a_later_page():

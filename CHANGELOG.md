@@ -2,7 +2,9 @@
 
 Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](https://semver.org). Before 1.0, a minor release may change the ledger model, the ingest API or the command line; each such change is listed here.
 
-## 0.8.0 (unreleased)
+## 0.7.1 (2026-10-27)
+
+- GitLab CI: `marshal comment` sends its token in the `Authorization: Bearer` header, which GitLab accepts for every kind of token. It used `PRIVATE-TOKEN`, which refuses OAuth tokens, so a merge request comment failed with 401 when the variable held one. Found by running the template on GitLab.com.
 
 ## 0.7.0 (2026-10-27)
 
