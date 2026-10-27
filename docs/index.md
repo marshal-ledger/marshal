@@ -54,6 +54,7 @@ Or install it with `pip install 'marshal-ledger[server]'`. `marshal demo` downlo
 |---|---|---|---|
 | [Databricks Asset Bundles](formats/databricks.md) (Genie spaces, agent apps) | ✓ | |  |
 | [AWS CloudFormation and CDK](formats/cloudformation.md) (Bedrock Agents, AgentCore) | ✓ | Bedrock Agents | cfn-lint |
+| [Terraform](formats/terraform.md) plan and state (Bedrock Agents, AgentCore; AWS and Cloud Control providers) | ✓ | | |
 | [Microsoft Copilot Studio](formats/copilot-studio.md) (agent workspaces, solutions) | ✓ | ✓ | published schema, partly |
 | [Salesforce Agentforce](formats/agentforce.md) (Agent Script, legacy metadata) | ✓ | Agent Script | round trip |
 | [Google ADK Agent Config](formats/adk-config.md) | ✓ | ✓ | published schema; loads in ADK |

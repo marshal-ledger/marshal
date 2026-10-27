@@ -39,6 +39,7 @@ Pipelines you already run record each agent: a pull request records the proposed
 |---|---|---|---|
 | Databricks Asset Bundles (Genie spaces, agent apps) | ✓ | |  |
 | AWS CloudFormation and CDK (Bedrock Agents, AgentCore) | ✓ | Bedrock Agents | cfn-lint |
+| Terraform plan and state (Bedrock Agents, AgentCore; AWS and Cloud Control providers) | ✓ | | |
 | Microsoft Copilot Studio (agent workspaces, solutions) | ✓ | ✓ | published schema, partly |
 | Salesforce Agentforce (Agent Script, legacy metadata) | ✓ | Agent Script | round trip |
 | Google ADK Agent Config | ✓ | ✓ | published schema; loads in ADK |

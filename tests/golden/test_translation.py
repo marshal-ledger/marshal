@@ -50,6 +50,8 @@ SOURCES = [
     ("salesforce-metadata", "salesforce-metadata/coral-cloud"),
     # Marshal files are hand-written, so there is no upstream; the example in the repo stands in.
     ("marshal-file", "examples/agents"),
+    # Plans generated from public Terraform examples, committed (see tests/fixtures/terraform/README.md).
+    ("terraform", "tests/fixtures/terraform"),
 ]
 # Formats whose writer reproduces the whole source, so a native round trip must be lossless.
 # A CloudFormation template also defines the agent's IAM roles and executors, which the
@@ -59,7 +61,7 @@ FULL = {"adl", "agent-spec", "oasf", "agentforce", "marshal-file"}
 
 
 def records(fmt, fixture):
-    path = ROOT / fixture if fixture.startswith("examples/") else CACHE / fixture
+    path = ROOT / fixture if fixture.startswith(("examples/", "tests/")) else CACHE / fixture
     if not path.exists():
         pytest.skip(f"fixture {fixture} not fetched; run python scripts/fetch_fixtures.py")
     if fixture == "python/crewai-template":

@@ -12,7 +12,7 @@ license-files = ["LICENSE"]
 authors = [{ name = "Marshal contributors" }]
 keywords = [
     "ai-agents", "agent-inventory", "agent-registry", "ai-governance", "governance", "audit", "drift-detection",
-    "copilot-studio", "agentforce", "bedrock", "bedrock-agents", "databricks", "google-adk", "vertex-ai",
+    "copilot-studio", "agentforce", "bedrock", "bedrock-agents", "terraform", "databricks", "google-adk", "vertex-ai",
     "langgraph", "langchain", "crewai", "openai-agents", "agent-spec", "oasf",
 ]
 dependencies = [
@@ -95,7 +95,7 @@ packages = ["src/marshal_ledger"]
 
 # The source archive carries what building and testing need; the site's images stay in the repository.
 [tool.hatch.build.targets.sdist]
-exclude = ["docs/assets/*.png", "docs/assets/*.gif", "site/"]
+exclude = ["docs/assets/*.png", "docs/assets/*.gif", "site/", "tests/fixtures/terraform/"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

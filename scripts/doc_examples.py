@@ -114,6 +114,22 @@ class Examples:
         dumped = yaml.safe_dump(excerpt, sort_keys=False, width=100, allow_unicode=True).rstrip("\n")
         return dumped + "\n# Abbreviated: three more tools, two more grants, the Bedrock extension block and the unknown fields."
 
+    def record_terraform(self) -> str:
+        """An abbreviated record of the Terraform plan fixture with an action group and a Lambda executor."""
+        path = ROOT / "tests" / "fixtures" / "terraform" / "acwwat-basic.plan.json"
+        record = READERS["terraform"]().read(path).records[0].model_dump(mode="json", by_alias=True, exclude_none=True)
+        spec = record["spec"]
+        tool = spec["tools"][1]
+        excerpt = {key: record[key] for key in ("agent", "platform", "source")}
+        excerpt["spec"] = {
+            "model": {"requested": spec["model"]["requested"]},
+            "tools": [{key: tool[key] for key in ("ref", "name", "scope")}],
+            "permissions": {key: spec["permissions"][key] for key in ("identity", "principal", "grants")},
+        }
+        excerpt["bindings"] = {"executors": dict(list(record["bindings"]["executors"].items())[1:])}
+        dumped = yaml.safe_dump(excerpt, sort_keys=False, width=100, allow_unicode=True).rstrip("\n")
+        return dumped + "\n# Abbreviated: the other tool, the instructions and the version."
+
     def pr_comment_maker_credentials(self) -> str:
         """The demo's Copilot Studio edit, proposed in a pull request instead of made in the web designer."""
         agent = self.fixture("maker", demo.DRIFTED)
