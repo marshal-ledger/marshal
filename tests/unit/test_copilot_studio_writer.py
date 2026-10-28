@@ -43,3 +43,24 @@ def test_multi_line_instructions_are_written_as_a_block(tmp_path):
     text = conversion(tmp_path).files["agent.mcs.yml"]
     assert "instructions: |" in text
     assert "  Never guess a forecast without calling the tool.\n" in text
+
+
+def test_a_url_is_a_sharepoint_source_only_when_its_host_is_on_sharepoint(tmp_path):
+    path = tmp_path / "sites.marshal.yaml"
+    path.write_text(AGENT + textwrap.dedent("""
+        knowledge:
+          - ref: knowledge/https://contoso.sharepoint.com/sites/hr
+            name: HR site
+          - ref: knowledge/https://example.com/docs?from=contoso.sharepoint.com
+            name: Public docs
+          - ref: knowledge/https://contoso.sharepoint.com.example.net/
+            name: Lookalike
+    """))
+    [record] = READERS["marshal-file"]().read(path).records
+    files = convert(record, "copilot-studio").files
+    kinds = {name: yaml.safe_load(text)["kind"] for name, text in files.items() if name.startswith("knowledge/")}
+    assert kinds == {
+        "knowledge/HrSite.mcs.yml": "SharePointSearchSource",
+        "knowledge/PublicDocs.mcs.yml": "PublicSiteSearchSource",
+        "knowledge/Lookalike.mcs.yml": "PublicSiteSearchSource",
+    }

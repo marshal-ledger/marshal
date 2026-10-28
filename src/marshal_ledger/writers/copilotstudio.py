@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import re
 from typing import Any
+from urllib.parse import urlsplit
 
 import yaml
 
@@ -186,7 +187,8 @@ class CopilotStudioWriter(Writer):
             identifier = item.ref.split("/", 1)[-1]
             title = item.name or identifier
             if identifier.startswith(("https://", "http://")):
-                kind = "SharePointSearchSource" if ".sharepoint.com" in identifier else "PublicSiteSearchSource"
+                host = (urlsplit(identifier).hostname or "").lower()
+                kind = "SharePointSearchSource" if host.endswith(".sharepoint.com") else "PublicSiteSearchSource"
                 files[f"knowledge/{_file_name(title)}.mcs.yml"] = _yaml({"kind": kind, "site": identifier}, title)
                 expected = "sharepoint" if kind == "SharePointSearchSource" else "public_website"
                 if item.type and item.type != expected:

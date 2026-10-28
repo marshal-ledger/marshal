@@ -6,6 +6,7 @@ Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](
 
 - The GitLab CI template has been tested on GitLab.com: shipped and proposed events, and one merge request comment updated on later pushes.
 - Web view: page titles name the agent and its platform, and each page has a description. `marshal web --export DIR --site-url URL` also writes a `sitemap.xml` listing the inventory, the dependencies page and each agent's latest version.
+- The Copilot Studio writer writes a knowledge URL as a SharePoint source only when its host is on `sharepoint.com`. It checked whether the URL contained `.sharepoint.com` anywhere, so a public site whose path or query mentioned it was written as SharePoint.
 - Documentation: page titles and descriptions say what each page covers, such as "Bedrock agent inventory from Terraform plans and state". The comparison page covers the cloud agent registries: AWS Agent Registry, Microsoft Agent 365, Google Cloud Agent Registry and MuleSoft Agent Fabric.
 
 ## 0.7.1 (2026-10-27)
