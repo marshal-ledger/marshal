@@ -2,6 +2,8 @@
 
 Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](https://semver.org). Before 1.0, a minor release may change the ledger model, the ingest API or the command line; each such change is listed here.
 
+## 0.9.0 (unreleased)
+
 ## 0.8.0 (2026-10-27)
 
 - The GitLab CI template has been tested on GitLab.com: shipped and proposed events, and one merge request comment updated on later pushes.
