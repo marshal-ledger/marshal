@@ -2,7 +2,7 @@
 
 Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](https://semver.org). Before 1.0, a minor release may change the ledger model, the ingest API or the command line; each such change is listed here.
 
-## 0.10.0 (unreleased)
+## 0.10.0 (2026-10-29)
 
 - Ingest server: `policy.shipped.by_environment` gives an environment, such as `prod`, its own rule for who may record `shipped` and `observed` events, so a pipeline trusted to record a deployment to test can no longer record one to prod. Environments without an entry keep the top-level rule, so existing configurations behave as before. A refused event's message names the environment. See [the ingest API](docs/ingest-server.md#configure).
 - Organization risk rules: the ingest server's configuration can add an organization's own rules to the built-in ratings, under `policy.risk`: approved models and providers, tools, knowledge sources and hosts matched by ref or by resolved target (such as `host:payments.acme.example`), identity modes, and field paths. Raising a rating needs only the rule; lowering one needs a `reason`, and a removed guardrail is never lowered. Each line a rule changed names it, with the built-in rating and the reason, in the API response (`builtin_severity`, `rule`, `reason`), the pull request comment and the web view. Only the server reads the rules; nothing a pipeline sends changes a rating. `marshal diff`, `collect` and `web` take `--risk-rules FILE` to try rules locally. See [Your own risk rules](docs/guides/risk-rules.md).
