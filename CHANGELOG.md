@@ -2,6 +2,8 @@
 
 Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](https://semver.org). Before 1.0, a minor release may change the ledger model, the ingest API or the command line; each such change is listed here.
 
+## 0.11.0 (unreleased)
+
 ## 0.10.0 (2026-10-29)
 
 - Ingest server: `policy.shipped.by_environment` gives an environment, such as `prod`, its own rule for who may record `shipped` and `observed` events, so a pipeline trusted to record a deployment to test can no longer record one to prod. Environments without an entry keep the top-level rule, so existing configurations behave as before. A refused event's message names the environment. See [the ingest API](docs/ingest-server.md#configure).
