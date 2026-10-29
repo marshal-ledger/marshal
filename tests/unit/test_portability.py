@@ -83,3 +83,11 @@ def test_an_agent_on_the_target_platform_is_current():
     assert "Already on Microsoft Copilot Studio" in report.text()
     assert report.to_dict()["current"] is True
     assert not assess(agent, "copilot-studio").current
+
+
+def test_a_rule_cut_at_a_comma_fails_to_load():
+    from marshal_ledger.portability import _rules
+
+    with pytest.raises(ValueError, match="quote text that contains a comma"):
+        _rules([{"pattern": "*", "level": "adapt", "label": "x", "advice": "do this", "or that": None}])
+

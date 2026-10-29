@@ -5,30 +5,30 @@ sources:
   - https://learn.microsoft.com/en-us/microsoft-copilot-studio/add-tools-custom-agent
   - https://learn.microsoft.com/en-us/microsoft-copilot-studio/knowledge-copilot-studio
 tools:
-  - {pattern: "tool/*.user_input", level: native, label: asking the user for input, advice: built into the platform's conversation handling}
-  - {pattern: "tool/salesforce.escalate", level: native, label: escalation to a human, advice: use the Escalate system topic}
-  - {pattern: "tool/powerplatform.*", level: native, label: Power Platform connectors and flows}
-  - {pattern: "tool/mcp.powerplatform.*", level: native, label: MCP connectors}
-  - {pattern: "tool/copilot-studio.*", level: native, label: built-in capabilities}
-  - {pattern: "tool/*web_search", level: native, label: web search, advice: enable web search in the agent's generative AI settings}
-  - {pattern: "tool/google.search", level: native, label: web search, advice: enable web search in the agent's generative AI settings}
-  - {pattern: "tool/*code_interpreter", level: native, label: code interpreter, advice: enable the code interpreter capability}
-  - {pattern: "tool/mcp.*", level: adapt, label: MCP servers, advice: add the server as an MCP connector}
-  - {pattern: "tool/openapi.*", level: adapt, label: OpenAPI operations, advice: import the OpenAPI definition as a custom connector}
-  - {pattern: "agent/*", level: adapt, label: other agents, advice: connect a Copilot Studio agent, or expose the agent as an API behind a custom connector}
-  - {pattern: "*", level: adapt, label: other tools, advice: expose the tool as an API and add it as a custom connector}
+  - {pattern: "tool/*.user_input", level: native, label: "asking the user for input", advice: "built into the platform's conversation handling"}
+  - {pattern: "tool/salesforce.escalate", level: native, label: "escalation to a human", advice: "use the Escalate system topic"}
+  - {pattern: "tool/powerplatform.*", level: native, label: "Power Platform connectors and flows"}
+  - {pattern: "tool/mcp.powerplatform.*", level: native, label: "MCP connectors"}
+  - {pattern: "tool/copilot-studio.*", level: native, label: "built-in capabilities"}
+  - {pattern: "tool/*web_search", level: native, label: "web search", advice: "enable web search in the agent's generative AI settings"}
+  - {pattern: "tool/google.search", level: native, label: "web search", advice: "enable web search in the agent's generative AI settings"}
+  - {pattern: "tool/*code_interpreter", level: native, label: "code interpreter", advice: "enable the code interpreter capability"}
+  - {pattern: "tool/mcp.*", level: adapt, label: "MCP servers", advice: "add the server as an MCP connector"}
+  - {pattern: "tool/openapi.*", level: adapt, label: "OpenAPI operations", advice: "import the OpenAPI definition as a custom connector"}
+  - {pattern: "agent/*", level: adapt, label: "other agents", advice: "connect a Copilot Studio agent, or expose the agent as an API behind a custom connector"}
+  - {pattern: "*", level: adapt, label: "other tools", advice: "expose the tool as an API and add it as a custom connector"}
 knowledge:
-  - {pattern: "knowledge/https://*", level: native, label: websites and SharePoint sites}
-  - {pattern: "knowledge/copilot-studio.*", level: native, label: uploaded files}
-  - {pattern: "*", level: adapt, label: other knowledge sources, advice: upload the documents, or connect the source through Dataverse, Azure AI Search or a Microsoft Graph connector}
+  - {pattern: "knowledge/https://*", level: native, label: "websites and SharePoint sites"}
+  - {pattern: "knowledge/copilot-studio.*", level: native, label: "uploaded files"}
+  - {pattern: "*", level: adapt, label: "other knowledge sources", advice: "upload the documents, or connect the source through Dataverse, Azure AI Search or a Microsoft Graph connector"}
 identity:
-  - {pattern: on_behalf_of_user, level: native, label: end-user credentials}
-  - {pattern: shared_credential, level: native, label: maker credentials}
-  - {pattern: mixed, level: native, label: maker and end-user credentials}
-  - {pattern: "*", level: adapt, label: other identities, advice: give each connection the maker's credentials or the end user's}
+  - {pattern: on_behalf_of_user, level: native, label: "end-user credentials"}
+  - {pattern: shared_credential, level: native, label: "maker credentials"}
+  - {pattern: mixed, level: native, label: "maker and end-user credentials"}
+  - {pattern: "*", level: adapt, label: "other identities", advice: "give each connection the maker's credentials or the end user's"}
 models:
-  - {pattern: azure-openai, level: native, label: OpenAI models}
-  - {pattern: openai, level: native, label: OpenAI models}
-  - {pattern: anthropic, level: native, label: Anthropic models}
-  - {pattern: "*", level: adapt, label: other models, advice: bring the model through Azure AI Foundry}
+  - {pattern: azure-openai, level: native, label: "OpenAI models"}
+  - {pattern: openai, level: native, label: "OpenAI models"}
+  - {pattern: anthropic, level: native, label: "Anthropic models"}
+  - {pattern: "*", level: adapt, label: "other models", advice: "bring the model through Azure AI Foundry"}
 confirmation: native
