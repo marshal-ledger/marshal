@@ -5,22 +5,22 @@ sources:
   - https://adk.dev/tools/
   - https://adk.dev/agents/models/
 tools:
-  - {pattern: "tool/*.user_input", level: native, label: asking the user for input, advice: built into the platform's conversation handling}
-  - {pattern: "tool/mcp.powerplatform.*", level: adapt, label: Power Platform MCP connectors, advice: these are Microsoft-hosted; connect an McpToolset to the MCP server directly}
-  - {pattern: "tool/salesforce.escalate", level: adapt, label: escalation to a human, advice: implement the hand-off as a tool}
-  - {pattern: "tool/python.*", level: native, label: Python function tools}
-  - {pattern: "tool/google.*", level: native, label: built-in tools}
-  - {pattern: "tool/*web_search", level: native, label: web search, advice: use the google_search built-in}
-  - {pattern: "tool/mcp.*", level: native, label: MCP servers}
-  - {pattern: "tool/openapi.*", level: native, label: OpenAPI operations}
-  - {pattern: "agent/*", level: native, label: sub-agents and agent tools}
-  - {pattern: "*", level: adapt, label: other tools, advice: wrap the tool as a Python function tool}
+  - {pattern: "tool/*.user_input", level: native, label: "asking the user for input", advice: "built into the platform's conversation handling"}
+  - {pattern: "tool/mcp.powerplatform.*", level: adapt, label: "Power Platform MCP connectors", advice: "these are Microsoft-hosted; connect an McpToolset to the MCP server directly"}
+  - {pattern: "tool/salesforce.escalate", level: adapt, label: "escalation to a human", advice: "implement the hand-off as a tool"}
+  - {pattern: "tool/python.*", level: native, label: "Python function tools"}
+  - {pattern: "tool/google.*", level: native, label: "built-in tools"}
+  - {pattern: "tool/*web_search", level: native, label: "web search", advice: "use the google_search built-in"}
+  - {pattern: "tool/mcp.*", level: native, label: "MCP servers"}
+  - {pattern: "tool/openapi.*", level: native, label: "OpenAPI operations"}
+  - {pattern: "agent/*", level: native, label: "sub-agents and agent tools"}
+  - {pattern: "*", level: adapt, label: "other tools", advice: "wrap the tool as a Python function tool"}
 knowledge:
-  - {pattern: "*", level: adapt, label: knowledge sources, advice: ground through Vertex AI Search or a retrieval tool}
+  - {pattern: "*", level: adapt, label: "knowledge sources", advice: "ground through Vertex AI Search or a retrieval tool"}
 identity:
-  - {pattern: service_principal, level: native, label: agent identity or a service account}
-  - {pattern: "*", level: adapt, label: user or shared credentials, advice: Agent Engine runs as the agent's identity; pass user context to tools explicitly}
+  - {pattern: service_principal, level: native, label: "agent identity or a service account"}
+  - {pattern: "*", level: adapt, label: "user or shared credentials", advice: "Agent Engine runs as the agent's identity; pass user context to tools explicitly"}
 models:
-  - {pattern: google, level: native, label: Gemini models}
-  - {pattern: "*", level: adapt, label: other models, advice: use LiteLLM in code; ADK Agent Config supports Gemini only}
+  - {pattern: google, level: native, label: "Gemini models"}
+  - {pattern: "*", level: adapt, label: "other models", advice: "use LiteLLM in code; ADK Agent Config supports Gemini only"}
 confirmation: adapt

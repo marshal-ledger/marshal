@@ -5,32 +5,32 @@ sources:
   - https://docs.aws.amazon.com/bedrock/latest/userguide/agents-action-create.html
   - https://docs.aws.amazon.com/bedrock/latest/userguide/models-supported.html
 tools:
-  - {pattern: "tool/*.user_input", level: native, label: asking the user for input, advice: built into the platform's conversation handling}
-  - {pattern: "tool/mcp.powerplatform.*", level: adapt, label: Power Platform MCP connectors, advice: these are Microsoft-hosted; connect to the MCP server directly from a Lambda executor}
-  - {pattern: "tool/salesforce.escalate", level: adapt, label: escalation to a human, advice: return control to the application to hand off}
-  - {pattern: "tool/bedrock.*", level: native, label: action groups and built-ins}
-  - {pattern: "tool/*code_interpreter", level: native, label: code interpreter, advice: add the AMAZON.CodeInterpreter action group}
-  - {pattern: "tool/google.code_execution", level: native, label: code interpreter, advice: add the AMAZON.CodeInterpreter action group}
-  - {pattern: "tool/openapi.*", level: adapt, label: OpenAPI operations, advice: add an action group with the OpenAPI schema and a Lambda executor}
-  - {pattern: "tool/http.*", level: adapt, label: HTTP APIs, advice: add an action group with a Lambda executor that calls the API}
-  - {pattern: "tool/mcp.*", level: adapt, label: MCP servers, advice: call the server from a Lambda executor, or host the agent on AgentCore with AgentCore Gateway}
-  - {pattern: "agent/*", level: adapt, label: other agents, advice: deploy the other agent on Bedrock and add it as a collaborator}
-  - {pattern: "*", level: adapt, label: other tools, advice: package the tool as a Lambda function behind an action group}
+  - {pattern: "tool/*.user_input", level: native, label: "asking the user for input", advice: "built into the platform's conversation handling"}
+  - {pattern: "tool/mcp.powerplatform.*", level: adapt, label: "Power Platform MCP connectors", advice: "these are Microsoft-hosted; connect to the MCP server directly from a Lambda executor"}
+  - {pattern: "tool/salesforce.escalate", level: adapt, label: "escalation to a human", advice: "return control to the application to hand off"}
+  - {pattern: "tool/bedrock.*", level: native, label: "action groups and built-ins"}
+  - {pattern: "tool/*code_interpreter", level: native, label: "code interpreter", advice: "add the AMAZON.CodeInterpreter action group"}
+  - {pattern: "tool/google.code_execution", level: native, label: "code interpreter", advice: "add the AMAZON.CodeInterpreter action group"}
+  - {pattern: "tool/openapi.*", level: adapt, label: "OpenAPI operations", advice: "add an action group with the OpenAPI schema and a Lambda executor"}
+  - {pattern: "tool/http.*", level: adapt, label: "HTTP APIs", advice: "add an action group with a Lambda executor that calls the API"}
+  - {pattern: "tool/mcp.*", level: adapt, label: "MCP servers", advice: "call the server from a Lambda executor, or host the agent on AgentCore with AgentCore Gateway"}
+  - {pattern: "agent/*", level: adapt, label: "other agents", advice: "deploy the other agent on Bedrock and add it as a collaborator"}
+  - {pattern: "*", level: adapt, label: "other tools", advice: "package the tool as a Lambda function behind an action group"}
 knowledge:
-  - {pattern: "knowledge/bedrock.knowledge_base.*", level: native, label: Bedrock knowledge bases}
-  - {pattern: "*", level: adapt, label: other knowledge sources, advice: ingest the data into a Bedrock knowledge base}
+  - {pattern: "knowledge/bedrock.knowledge_base.*", level: native, label: "Bedrock knowledge bases"}
+  - {pattern: "*", level: adapt, label: "other knowledge sources", advice: "ingest the data into a Bedrock knowledge base"}
 identity:
-  - {pattern: service_principal, level: native, label: the agent's IAM role}
-  - {pattern: "*", level: adapt, label: user or shared credentials, advice: the agent runs as its IAM role; pass user context to action groups explicitly}
+  - {pattern: service_principal, level: native, label: "the agent's IAM role"}
+  - {pattern: "*", level: adapt, label: "user or shared credentials", advice: "the agent runs as its IAM role; pass user context to action groups explicitly"}
 models:
-  - {pattern: anthropic, level: native, label: models served on Bedrock}
-  - {pattern: amazon, level: native, label: models served on Bedrock}
-  - {pattern: meta, level: native, label: models served on Bedrock}
-  - {pattern: mistral, level: native, label: models served on Bedrock}
-  - {pattern: cohere, level: native, label: models served on Bedrock}
-  - {pattern: deepseek, level: native, label: models served on Bedrock}
-  - {pattern: bedrock, level: native, label: models served on Bedrock}
-  - {pattern: openai, level: adapt, label: OpenAI models, advice: Bedrock serves OpenAI's open-weight models only; choose one, or another Bedrock model}
-  - {pattern: azure-openai, level: adapt, label: OpenAI models, advice: Bedrock serves OpenAI's open-weight models only; choose one, or another Bedrock model}
-  - {pattern: "*", level: none, label: models not served on Bedrock, advice: choose a model that Bedrock serves}
+  - {pattern: anthropic, level: native, label: "models served on Bedrock"}
+  - {pattern: amazon, level: native, label: "models served on Bedrock"}
+  - {pattern: meta, level: native, label: "models served on Bedrock"}
+  - {pattern: mistral, level: native, label: "models served on Bedrock"}
+  - {pattern: cohere, level: native, label: "models served on Bedrock"}
+  - {pattern: deepseek, level: native, label: "models served on Bedrock"}
+  - {pattern: bedrock, level: native, label: "models served on Bedrock"}
+  - {pattern: openai, level: adapt, label: "OpenAI models", advice: "Bedrock serves OpenAI's open-weight models only; choose one, or another Bedrock model"}
+  - {pattern: azure-openai, level: adapt, label: "OpenAI models", advice: "Bedrock serves OpenAI's open-weight models only; choose one, or another Bedrock model"}
+  - {pattern: "*", level: none, label: "models not served on Bedrock", advice: "choose a model that Bedrock serves"}
 confirmation: native
