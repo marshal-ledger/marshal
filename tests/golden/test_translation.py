@@ -102,6 +102,9 @@ def validate_copilot_studio(files):
 
 # cfn-lint rules for values the source lacks, which the writer reports as warnings instead of inventing.
 WARNED_LINT = {"E3033": "Bedrock requires instructions of at least"}
+# cfn-lint rules about the service, not the template. W3697 (cfn-lint 1.59) notes that Bedrock Agents has been
+# in maintenance mode since 2026-06-30; the writer targets Bedrock Agents, so every template it writes has it.
+SERVICE_LINT = {"W3697"}
 
 
 def validate_cloudformation(conversion):
@@ -111,6 +114,8 @@ def validate_cloudformation(conversion):
         return  # not installed (the lowest-dependency job); the dev extra has it
     problems = []
     for match in lint(conversion.text, config=ManualArgs(regions=["us-east-1"])):
+        if match.rule.id in SERVICE_LINT:
+            continue
         warned = WARNED_LINT.get(match.rule.id)
         if warned and any(w.startswith(warned) for w in conversion.warnings):
             continue
