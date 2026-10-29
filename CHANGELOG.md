@@ -4,6 +4,7 @@ Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](
 
 ## 0.10.0 (unreleased)
 
+- Ingest server: `policy.shipped.by_environment` gives an environment, such as `prod`, its own rule for who may record `shipped` and `observed` events, so a pipeline trusted to record a deployment to test can no longer record one to prod. Environments without an entry keep the top-level rule, so existing configurations behave as before. A refused event's message names the environment. See [the ingest API](docs/ingest-server.md#configure).
 - Documentation: a new guide, [Run an AI agent inventory across dev, test and prod](docs/guides/operating-model.md), covers where the server runs, which pipelines record which events in each environment, who may record what is live, who owns what, and the order to roll it out in.
 
 ## 0.9.0 (2026-10-29)
