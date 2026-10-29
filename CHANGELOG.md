@@ -9,7 +9,7 @@ Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](
 - `marshal convert --migrate` moves an agent to the target's platform: it keeps its id, so its history continues, and is recorded on the new platform.
 - `marshal port` scores moves to the AgentCore harness (`bedrock-agentcore`).
 - Risk ranking: a change to a harness's hooks, its gateway outbound auth or its MCP headers ranks HIGH, and a change to its allowed tools MED.
-
+- `marshal port` printed some advice and labels cut off at the first comma, such as Bedrock's advice for MCP servers, because the capability files left them unquoted. They are quoted, and a rule with an unknown key now fails to load.
 - Documentation: the homepage has a short video that follows a platform engineer from an audit question to an agent inventory and a pull request comment that flags a removed guardrail. The source archive leaves it out, as it does the site's images.
 - Tests: cfn-lint 1.59 warns on every `AWS::Bedrock::Agent` that Bedrock Agents is in maintenance mode (W3697). The CloudFormation writer's templates are still linted; that one note about the service is set aside, and the CloudFormation format page says so.
 

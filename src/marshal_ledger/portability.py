@@ -61,7 +61,15 @@ class Matrix:
         return Rule("*", "none", "unsupported")
 
 
+_RULE_KEYS = {"pattern", "level", "label", "advice"}
+
+
 def _rules(items: Any) -> list[Rule]:
+    for item in items or []:
+        if set(item) - _RULE_KEYS:
+            # An unquoted comma in a YAML flow mapping ends the value and starts a new key.
+            raise ValueError(f"capability rule {item.get('pattern')!r} has unknown keys {sorted(set(item) - _RULE_KEYS)}; "
+                             "quote text that contains a comma")
     return [Rule(str(i["pattern"]), str(i["level"]), str(i.get("label", "")), i.get("advice")) for i in items or []]
 
 
