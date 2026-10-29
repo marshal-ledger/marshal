@@ -57,7 +57,7 @@ WRITERS (one per format)          CAPABILITIES
 
 ## Formats and how each is verified
 
-The formats table on the [home page](index.md#formats) lists what Marshal reads and writes. Readers are tested against real, public definitions, mostly from the platforms' own sample repositories, pinned to a commit. (Vertex AI Agent Engine has no public exports; its reader is tested against the documented API response shape.) Writers are tested at one of these levels:
+The formats table on the [home page](index.md#formats) lists what Marshal reads and writes. Readers are tested against real, public definitions, mostly from the platforms' own sample repositories, pinned to a commit. (Vertex AI Agent Engine has no public exports; its reader is tested against the documented API response shape. AgentCore CLI projects in the current `harness.yaml` shape have no public examples yet; that shape is tested with the examples in the CLI's own guide, and the older `harness.json` shape against public projects.) Writers are tested at one of these levels:
 
 | Level | What the tests check |
 |---|---|

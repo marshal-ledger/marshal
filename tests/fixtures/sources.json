@@ -238,6 +238,57 @@
       ]
     },
     {
+      "id": "agentcore-cli/the-pulse",
+      "repo": "aws-samples/sample-AgentCore-Managed-Harness-News",
+      "commit": "b2384fcde17832117e8f11b598f264875178cf5a",
+      "root": "",
+      "files": [
+        "agentcore/agentcore.json",
+        "app/thepulse/harness.json",
+        "app/thepulse/system-prompt.md"
+      ]
+    },
+    {
+      "id": "agentcore-cli/3d-rams",
+      "repo": "Capitano00/3D-RAMS",
+      "commit": "c4e33fb128daa96fa9f1c433ca0ce9c795717096",
+      "root": "",
+      "files": [
+        "agentcore/agentcore.json",
+        "app/rams_annotation_harness/harness.json",
+        "app/rams_annotation_harness/system-prompt.md",
+        "app/rams_briefing_harness/harness.json",
+        "app/rams_briefing_harness/system-prompt.md",
+        "app/rams_city_data_harness/harness.json",
+        "app/rams_city_data_harness/system-prompt.md",
+        "app/rams_geospatial_harness/harness.json",
+        "app/rams_geospatial_harness/system-prompt.md",
+        "app/rams_hazard_harness/harness.json",
+        "app/rams_hazard_harness/system-prompt.md",
+        "app/rams_material_harness/harness.json",
+        "app/rams_material_harness/system-prompt.md",
+        "app/rams_open_web_harness/harness.json",
+        "app/rams_open_web_harness/system-prompt.md",
+        "app/rams_review_harness/harness.json",
+        "app/rams_review_harness/system-prompt.md",
+        "app/rams_supervisor_harness/harness.json",
+        "app/rams_supervisor_harness/system-prompt.md",
+        "app/rams_terrain_harness/harness.json",
+        "app/rams_terrain_harness/system-prompt.md"
+      ]
+    },
+    {
+      "id": "agentcore-cli/ppt-agent",
+      "repo": "aryankhanna2004/ppt-agent-agentcore",
+      "commit": "65bdc0bf6f772d40b7de69e78ff6b430b8e6ade2",
+      "root": "",
+      "files": [
+        "agentcore/agentcore.json",
+        "app/pptagent/harness.json",
+        "app/pptagent/system-prompt.md"
+      ]
+    },
+    {
       "id": "copilot-studio/all-the-things",
       "repo": "microsoft/vscode-copilotstudio",
       "commit": "16e4ece7a098a1fb01f9e42a7cb51d38af424ac4",

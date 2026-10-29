@@ -54,7 +54,7 @@ Action verbs map to scopes as follows: `Get`, `List`, `Describe`, `Retrieve`, `Q
 
 ## AgentCore harnesses
 
-A harness is AgentCore's declarative agent: AgentCore runs the agent loop, and the template states the model, system prompt and tools.
+A harness is AgentCore's declarative agent: AgentCore runs the agent loop, and the template states the model, system prompt and tools. Harnesses defined in [AgentCore CLI projects](agentcore-cli.md) and with Terraform's Cloud Control provider ([Terraform](terraform.md)) are translated into this resource and read with the same mapping.
 
 | Ledger field | Source | Provenance |
 |---|---|---|

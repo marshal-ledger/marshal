@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .adkconfig import AdkConfigReader
 from .adl import AdlReader
+from .agentcorecli import AgentCoreCliReader
 from .agentengine import AgentEngineReader
 from .agentforce import AgentforceReader
 from .agentspec import AgentSpecReader
@@ -33,6 +34,7 @@ READERS: dict[str, type[Reader]] = {
     AgentEngineReader.format: AgentEngineReader,
     SalesforceMetadataReader.format: SalesforceMetadataReader,
     MarshalFileReader.format: MarshalFileReader,
+    AgentCoreCliReader.format: AgentCoreCliReader,
     # Last: a directory of Python code is the least specific match.
     PythonAgentReader.format: PythonAgentReader,
 }

@@ -97,6 +97,7 @@ nav:
       - Databricks Asset Bundles: formats/databricks.md
       - AWS CloudFormation and CDK: formats/cloudformation.md
       - Terraform: formats/terraform.md
+      - AgentCore CLI projects: formats/agentcore-cli.md
       - Microsoft Copilot Studio: formats/copilot-studio.md
       - Salesforce Agentforce: formats/agentforce.md
       - Google ADK Agent Config: formats/adk-config.md

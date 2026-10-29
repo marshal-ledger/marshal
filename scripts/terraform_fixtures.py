@@ -6,7 +6,8 @@ read-only AWS lookups (the account id, an IAM managed policy, a Bedrock model's 
 the script answers them locally: LocalStack for STS and IAM, and a small stub for
 Bedrock's GetFoundationModel, which returns the ARN AWS publishes for the model id. No
 AWS account or credentials are involved. The examples' own files are not changed; a
-``marshal_override.tf`` sets the provider versions, fake credentials and local endpoints.
+``marshal_override.tf`` sets the provider versions, fake credentials and local endpoints,
+and ``marshal.auto.tfvars.json`` sets any variable an example leaves without a default.
 
     python scripts/terraform_fixtures.py            # needs Docker
     python scripts/terraform_fixtures.py --only acwwat-basic
@@ -55,6 +56,18 @@ SOURCES = [
         "license": "Apache-2.0",
         "providers": {"aws": "5.100.0", "archive": "2.8.1", "null": "3.3.2"},
         "examples": {"1_basic": "acwwat-basic", "2_knowledge_base": "acwwat-knowledge-base"},
+    },
+    {
+        "repo": "aws-samples/sample-sentinel-harness",
+        "commit": "98bff3c649978f0301eb7674b2350c16f60a7fcb",
+        "license": "MIT-0",
+        "providers": {"aws": "5.100.0", "awscc": "1.107.0"},
+        # The one variable without a default; the value is the placeholder the example's description gives.
+        "variables": {"harness_execution_role_arn": "arn:aws:iam::000000000000:role/sentinel-harness-exec"},
+        # Planned for the harness alone: the example's VPC security group has a description
+        # the AWS provider rejects, which fails a full plan.
+        "targets": ["awscc_bedrockagentcore_harness.triage"],
+        "examples": {"iac-terraform": "sentinel-harness"},
     },
 ]
 
@@ -186,8 +199,11 @@ def main() -> int:
                 checkout(source["repo"], source["commit"], repo_dir)
                 for example, name in wanted.items():
                     (repo_dir / example / "marshal_override.tf").write_text(override(source["providers"]))
+                    if source.get("variables"):
+                        (repo_dir / example / "marshal.auto.tfvars.json").write_text(json.dumps(source["variables"]))
                     for step in (["init", "-input=false", "-no-color"],
-                                 ["plan", "-input=false", "-no-color", "-refresh=false", "-out=tfplan"]):
+                                 ["plan", "-input=false", "-no-color", "-refresh=false", "-out=tfplan",
+                                  *(f"-target={t}" for t in source.get("targets") or [])]):
                         result = terraform(repo_dir, example, *step)
                         if result.returncode:
                             failed.append(name)

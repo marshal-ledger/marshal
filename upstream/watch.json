@@ -25,6 +25,14 @@
       "docs": "docs/formats/cloudformation.md"
     },
     {
+      "id": "agentcore-cli-harness",
+      "name": "AgentCore CLI harness schema",
+      "extractor": "zod_schema",
+      "repo": "aws/agentcore-cli",
+      "path": "src/projectSchemas/harness.ts",
+      "docs": "docs/formats/agentcore-cli.md"
+    },
+    {
       "id": "copilot-studio",
       "name": "Copilot Studio authoring schema",
       "extractor": "copilot_studio",

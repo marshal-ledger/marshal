@@ -44,7 +44,7 @@ from ..model import (
     ToolUse,
     Value,
 )
-from ..redact import redact
+from ..redact import REDACTED, redact
 from .python.frameworks import _HOSTED_RAW as _HOSTED_TOOLS
 from .base import DocumentReader, ReadOptions, ReadResult, build_record
 
@@ -126,6 +126,8 @@ class _Template:
     such as a Terraform plan, subclass it to name their own format and locations."""
 
     source_format = FORMAT
+    # Where a harness that names no execution role gets one, if the source's tooling creates it.
+    created_role: Optional[str] = None
 
     def __init__(self, data: dict[str, Any], artifact: str):
         self.data = data
@@ -141,6 +143,14 @@ class _Template:
     def path(self, logical: str, prop: str = "") -> str:
         """Where a resource, or one of its properties, is in the source: the basis of values read from it."""
         return f"Resources.{logical}" + (f".Properties.{prop}" if prop else "")
+
+    def detected_by(self, logical: str) -> str:
+        """How the reader recognized a resource as an agent, for the record's source."""
+        return f"resource type {self.resource_type(logical)}"
+
+    def extensions(self, logical: str) -> dict[str, Any]:
+        """Settings a source states that the CloudFormation resource has no property for."""
+        return {}
 
     def of_type(self, kind: str) -> dict[str, dict[str, Any]]:
         return {k: v for k, v in self.resources.items() if isinstance(v, dict) and v.get("Type") == kind}
@@ -607,7 +617,7 @@ class CloudFormationReader(DocumentReader):
         return build_record(
             agent=agent_id, platform=marshal.get("platform") or "bedrock",
             source=Source(format=template.source_format, artifact=template.artifact, locator=template.path(logical),
-                          detected_by=f"resource type {template.resource_type(logical)}", commit=options.commit,
+                          detected_by=template.detected_by(logical), commit=options.commit,
                           pipeline_run=options.pipeline_run),
             spec=spec, bindings=bindings,
         )
@@ -681,7 +691,7 @@ class CloudFormationReader(DocumentReader):
         return build_record(
             agent=self._marshal(template.resources[logical]).get("agent") or f"{stem}/{logical}", platform="bedrock-agentcore",
             source=Source(format=template.source_format, artifact=template.artifact, locator=template.path(logical),
-                          detected_by=f"resource type {template.resource_type(logical)}", commit=options.commit,
+                          detected_by=template.detected_by(logical), commit=options.commit,
                           pipeline_run=options.pipeline_run),
             spec=spec,
         )
@@ -734,7 +744,7 @@ class CloudFormationReader(DocumentReader):
                             scope, f"{tool['type']}, run by the model provider ({template.path(logical, f'Model.{kind}.AdditionalParams.tools')})")))
                         entity(EntityKind.TOOL, ref, str(tool["type"]))
             if additional:
-                settings["AdditionalParams"] = additional
+                settings["AdditionalParams"] = _scrub(additional)
             if settings or kind != "BedrockModelConfig":
                 extension["model_config"] = {"type": kind, **settings}
             if config.get("ApiKeyArn") is not None:
@@ -815,6 +825,9 @@ class CloudFormationReader(DocumentReader):
                 entity(EntityKind.TOOL, ref, builtin)
 
         self._identity(template, props.get("ExecutionRoleArn"), template.path(logical, "ExecutionRoleArn"), spec.permissions, extension)
+        if props.get("ExecutionRoleArn") is None and template.created_role:
+            spec.permissions.identity = Value[IdentityKind].derived(IdentityKind.SERVICE_PRINCIPAL, template.created_role)
+            spec.permissions.principal = Value[str].unknown(template.created_role)
         for key, label in (("Memory", "memory"), ("Hooks", "hooks"), ("Skills", "skills"), ("Environment", "environment"),
                            ("EnvironmentArtifact", "environment_artifact"), ("Truncation", "truncation"),
                            ("AuthorizerConfiguration", "authorizer"), ("MaxIterations", "max_iterations"),
@@ -825,6 +838,7 @@ class CloudFormationReader(DocumentReader):
             extension["environment_variables"] = sorted(props["EnvironmentVariables"])
         if conditions:
             extension["conditional"] = conditions
+        extension.update(template.extensions(logical))
         endpoints = [template.string(template.props(e).get("EndpointName")) or e for e, r in template.of_type(HARNESS_ENDPOINT).items()
                      if template.target((r.get("Properties") or {}).get("HarnessId")) == logical]
         if endpoints:
@@ -833,7 +847,7 @@ class CloudFormationReader(DocumentReader):
         return build_record(
             agent=agent_id, platform=marshal.get("platform") or "bedrock-agentcore",
             source=Source(format=template.source_format, artifact=template.artifact, locator=template.path(logical),
-                          detected_by=f"resource type {template.resource_type(logical)}", commit=options.commit,
+                          detected_by=template.detected_by(logical), commit=options.commit,
                           pipeline_run=options.pipeline_run),
             spec=spec, bindings=bindings,
         )
@@ -911,6 +925,20 @@ def _builtin_allowed(name: str, allowed: Any) -> Optional[str]:
         if hit:
             return f"AllowedTools allows it ({pattern})"
     return None
+
+
+# Model parameter names whose values can be credentials, such as a LiteLLM ``api_key`` or ``extra_headers``.
+_SECRET_PARAMETER = re.compile(r"key|token|secret|password|credential|auth|header", re.IGNORECASE)
+
+
+def _scrub(value: Any) -> Any:
+    """Free-form model parameters with credential-like values left out: a parameter whose name
+    suggests a credential keeps its name only, and other text goes through ``redact``."""
+    if isinstance(value, dict):
+        return {k: REDACTED if _SECRET_PARAMETER.search(str(k)) else _scrub(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_scrub(v) for v in value]
+    return redact(value)[0] if isinstance(value, str) else value
 
 
 def _json_schema(value: Any) -> Optional[dict[str, Any]]:

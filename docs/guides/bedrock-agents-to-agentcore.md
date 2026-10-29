@@ -126,10 +126,11 @@ Commit the harness template next to the Bedrock one, or in its place, and the [G
 
 ## Inventory harnesses
 
-Marshal also reads harnesses that teams write themselves, from CloudFormation and CDK output: the model and its provider, the system prompt, the tools (MCP servers, gateway tools, inline functions, the browser and the code interpreter), the execution role and its grants, memory, hooks and limits. A harness that doesn't restrict `AllowedTools` is recorded with its `shell` and `file_operations` tools, so an agent that can run commands shows up as one. See [CloudFormation](../formats/cloudformation.md#agentcore-harnesses).
+Marshal also reads harnesses that teams write themselves, from CloudFormation and CDK output, [AgentCore CLI projects](../formats/agentcore-cli.md) (`agentcore/agentcore.json` with `harness.yaml` or `harness.json`) and Terraform plans and state ([`awscc_bedrockagentcore_harness`](../formats/terraform.md)): the model and its provider, the system prompt, the tools (MCP servers, gateway tools, inline functions, the browser and the code interpreter), the execution role and its grants, memory, hooks and limits. A harness that doesn't restrict `AllowedTools` is recorded with its `shell` and `file_operations` tools, so an agent that can run commands shows up as one. See [CloudFormation](../formats/cloudformation.md#agentcore-harnesses).
 
 ## Limits
 
 - The writer hasn't been deployed to AgentCore yet. Its output passes cfn-lint against AWS's published harness schema.
 - It writes the harness, not its surroundings: the execution role, gateways, gateway targets and memory are referenced, not created.
-- AgentCore CLI projects (`agentcore/agentcore.json` and `harness.json`) aren't read yet. Read the CloudFormation that `cdk synth` produces from them.
+- AgentCore CLI projects and Terraform are read, not written: the writer produces CloudFormation. A harness converted from a CLI project that names a project memory gets a template parameter for the memory's ARN.
+- In a CLI project, a gateway is named by ARN, so its tools aren't listed one by one; gateways in the same CloudFormation template are. Terraform harnesses come from the Cloud Control provider (`awscc`) only; the AWS provider has no harness resource yet.

@@ -229,3 +229,92 @@ def test_a_plan_and_the_state_after_apply_give_the_same_version():
     [after] = read(applied).records
     assert after.version == planned.version
     assert "idle_session_ttl" not in after.spec.extensions["bedrock"]
+
+
+HARNESS_CLOUDFORMATION = textwrap.dedent(f"""
+    Resources:
+      Role:
+        Type: AWS::IAM::Role
+        Properties:
+          RoleName: triage-harness
+          Policies:
+            - PolicyDocument: {json.dumps(POLICY)}
+      Harness:
+        Type: AWS::BedrockAgentCore::Harness
+        Metadata:
+          io.github.marshal-ledger: {{agent: awscc_bedrockagentcore_harness.triage}}
+        Properties:
+          HarnessName: triage
+          ExecutionRoleArn: !GetAtt Role.Arn
+          Model:
+            BedrockModelConfig: {{ModelId: global.anthropic.claude-sonnet-4-6, Temperature: 0.1}}
+          SystemPrompt:
+            - Text: {INSTRUCTION}
+          Tools:
+            - Name: research
+              Type: remote_mcp
+              Config: {{RemoteMcp: {{Url: "https://mcp.example.com/mcp", Headers: {{X-Api-Key: "{FAKE}"}}}}}}
+            - Name: escalate
+              Type: inline_function
+              Config:
+                InlineFunction:
+                  Description: Hand the alert to an analyst.
+                  InputSchema: {{type: object, properties: {{alert_id: {{type: string}}}}}}
+          AllowedTools: ["@research", escalate]
+          MaxIterations: 15
+""")
+
+
+def harness_plan():
+    """A Cloud Control provider harness: nested attributes, unset optional ones null or known after apply."""
+    return plan([
+        resource("awscc_iam_role.harness", "awscc_iam_role",
+                 {"role_name": "triage-harness", "policies": [{"policy_name": "invoke", "policy_document": json.dumps(POLICY)}]},
+                 {"arn": True}),
+        resource("awscc_bedrockagentcore_harness.triage", "awscc_bedrockagentcore_harness", {
+            "harness_name": "triage",
+            "model": {"bedrock_model_config": {"model_id": "global.anthropic.claude-sonnet-4-6", "temperature": 0.1, "max_tokens": None}},
+            "system_prompt": [{"text": INSTRUCTION}],
+            "tools": [
+                {"name": "research", "type": "remote_mcp", "config": {
+                    "remote_mcp": {"url": "https://mcp.example.com/mcp", "headers": {"X-Api-Key": FAKE}},
+                    "agent_core_browser": None, "agent_core_gateway": None, "inline_function": None}},
+                {"name": "escalate", "type": "inline_function", "config": {"inline_function": {
+                    "description": "Hand the alert to an analyst.",
+                    "input_schema": json.dumps({"type": "object", "properties": {"alert_id": {"type": "string"}}})}}},
+            ],
+            "allowed_tools": ["@research", "escalate"],
+            "max_iterations": 15,
+            "tags": [{"key": "team", "value": "secops"}],
+        }, {"execution_role_arn": True, "arn": True, "memory": True, "skills": True,
+            "model": {"bedrock_model_config": {"top_p": True}, "gemini_model_config": True}}),
+    ], {
+        "awscc_bedrockagentcore_harness.triage": {
+            "execution_role_arn": {"references": ["awscc_iam_role.harness.arn", "awscc_iam_role.harness"]},
+            "model": {"references": ["var.model_id"]},
+        },
+    })
+
+
+def test_a_harness_maps_the_same_from_terraform_and_cloudformation():
+    [terraform] = read(harness_plan(), "harness.plan.json").records
+    [cloudformation] = CloudFormationReader().read_data(load_template(HARNESS_CLOUDFORMATION), "harness.yaml").records
+    assert (terraform.agent, terraform.platform) == ("awscc_bedrockagentcore_harness.triage", "bedrock-agentcore")
+    assert terraform.version == cloudformation.version
+    assert without_basis(terraform.spec.model_dump(mode="json")) == without_basis(cloudformation.spec.model_dump(mode="json"))
+    spec = terraform.spec
+    # top_p is optional and computed: known after apply, but set by nothing in the configuration.
+    assert spec.model.parameters == {"temperature": 0.1}
+    assert spec.model.requested.basis == "awscc_bedrockagentcore_harness.triage.model.bedrock_model_config.model_id"
+    assert spec.permissions.principal.value == "triage-harness"
+    tools = {t.name: t for t in spec.tools}
+    assert tools["escalate"].input_schema == {"type": "object", "properties": {"alert_id": {"type": "string"}}}
+    # AllowedTools names neither default tool.
+    assert set(tools) == {"research", "escalate"}
+
+
+def test_harness_header_values_are_never_copied():
+    result = read(harness_plan(), "harness.plan.json")
+    [record] = result.records
+    assert FAKE not in record.model_dump_json()
+    assert record.spec.extensions["bedrock-agentcore"]["mcp_headers"] == {"research": ["X-Api-Key"]}
