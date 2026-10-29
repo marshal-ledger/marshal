@@ -2,6 +2,8 @@
 
 Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](https://semver.org). Before 1.0, a minor release may change the ledger model, the ingest API or the command line; each such change is listed here.
 
+## 0.10.0 (unreleased)
+
 ## 0.9.0 (2026-10-29)
 
 - AgentCore harnesses: the CloudFormation reader reads `AWS::BedrockAgentCore::Harness` in full: the model and its provider, the system prompt, and the tools, including each tool of a gateway defined in the same template with the Lambda that runs it, and tools the model provider runs, such as OpenAI's web search. A harness whose `AllowedTools` doesn't restrict them is recorded with the default `shell` and `file_operations` tools, so an agent that can run commands shows as one. MCP header and environment variable values are never copied, only their names.
