@@ -131,6 +131,23 @@ class Examples:
         dumped = yaml.safe_dump(excerpt, sort_keys=False, width=100, allow_unicode=True).rstrip("\n")
         return dumped + "\n# Abbreviated: the other tool, the instructions and the version."
 
+    def record_agentcore_cli(self) -> str:
+        """An abbreviated record of the public AgentCore CLI project The Pulse."""
+        record = READERS["agentcore-cli"]().read(CACHE / "agentcore-cli/the-pulse").records[0]
+        record = record.model_dump(mode="json", by_alias=True, exclude_none=True)
+        spec = record["spec"]
+        excerpt = {key: record[key] for key in ("agent", "platform", "source")}
+        excerpt["spec"] = {
+            "model": {"requested": spec["model"]["requested"]},
+            "instructions": {key: spec["instructions"][key] for key in ("provenance", "basis")},
+            "tools": [{key: tool[key] for key in ("ref", "name", "scope")} for tool in spec["tools"]],
+            "permissions": {"identity": spec["permissions"]["identity"]},
+            "extensions": {"bedrock-agentcore": {key: spec["extensions"]["bedrock-agentcore"][key]
+                                                 for key in ("memory", "max_iterations", "timeout_seconds")}},
+        }
+        dumped = yaml.safe_dump(excerpt, sort_keys=False, width=100, allow_unicode=True).rstrip("\n")
+        return dumped + "\n# Abbreviated: the instructions' text and hash, and the version."
+
     def convert_hr_to_agentcore(self) -> str:
         """The public Bedrock HR assistant, moved to an AgentCore harness."""
         template = CACHE / "cloudformation/bedrock-agents/hr-assistant/cfn/hr-resources.yml"

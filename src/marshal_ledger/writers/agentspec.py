@@ -150,6 +150,10 @@ class AgentSpecWriter(Writer):
                 notes[f"tools[{use.ref}].input_schema"] = (
                     "Agent Spec marks a parameter optional only by a default; optional parameters without one read back as required"
                 )
+            if keywords := sorted(set(use.input_schema or {}) - {"type", "properties", "required"}):
+                notes[f"tools[{use.ref}].input_schema"] = (
+                    f"Agent Spec lists inputs as properties; the schema's own {', '.join(keywords)} is not kept"
+                )
         if use.output_schema is not None and not (use.output_schema.get("properties")):
             # Agent Spec names every output; a bare return schema becomes one output called "result".
             tool["outputs"] = [{"title": "result", **use.output_schema}]

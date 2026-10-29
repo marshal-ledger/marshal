@@ -21,6 +21,7 @@ import ast
 import io
 import json
 import os
+import re
 import subprocess
 import sys
 import urllib.request
@@ -189,6 +190,15 @@ def adk_config(source: dict[str, Any]) -> list[str]:
     return sorted(surface)
 
 
+def zod_schema(source: dict[str, Any]) -> list[str]:
+    """Field names and enum values of the zod schemas in a TypeScript file, such as the AgentCore CLI's harness schema."""
+    text = _raw(source["repo"], source["path"]).decode("utf-8")
+    surface = {f"field {name}" for name in re.findall(r"^\s*([A-Za-z][A-Za-z0-9]*):\s*(?:z\.|[A-Z]\w*Schema)", text, re.M)}
+    for name, values in re.findall(r"export const (\w+) = z\s*\.enum\(\[([^\]]*)\]", text):
+        surface |= {f"{name} {value}" for value in re.findall(r"[\"']([^\"']+)[\"']", values)}
+    return sorted(surface)
+
+
 def pypi_minor(source: dict[str, Any]) -> list[str]:
     surface = []
     for package in source["packages"]:
@@ -199,7 +209,7 @@ def pypi_minor(source: dict[str, Any]) -> list[str]:
 
 EXTRACTORS: dict[str, Callable[[dict[str, Any]], list[str]]] = {
     f.__name__: f for f in (databricks_bundle, cloudformation, copilot_studio, agent_script, adl, agent_spec, oasf,
-                            adk_config, pypi_minor)
+                            adk_config, zod_schema, pypi_minor)
 }
 
 

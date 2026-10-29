@@ -222,6 +222,10 @@ def _function_parameters(schema: Any, base: str, notes: dict[str, str]) -> dict[
     out = {}
     for name, prop in (schema.get("properties") or {}).items():
         kind = prop.get("type") if isinstance(prop, dict) else None
+        if isinstance(kind, list):  # a union such as ["string", "null"]: Bedrock has one type and no null
+            types = [t for t in kind if t != "null"]
+            kind = types[0] if len(types) == 1 else None
+            notes[f"{base}.input_schema"] = "Bedrock function parameters have a single type; a nullable type was written without null"
         if kind not in _JSON_TYPES:
             notes[f"{base}.input_schema"] = "Bedrock function parameters are flat and typed string, number, integer, boolean or array"
             kind = "string"

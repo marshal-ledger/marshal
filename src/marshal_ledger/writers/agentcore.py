@@ -154,7 +154,8 @@ class AgentCoreHarnessWriter(Writer):
                 if _conditional(ext[label]):
                     notes[path] = "depends on a condition in the source template; set it before deploying"
                 else:
-                    props[key] = deployable(ext[label], path)
+                    value = _memory(ext[label], path, parameters, notes) if label == "memory" else ext[label]
+                    props[key] = deployable(value, path)
         if "environment_variables" in ext:
             notes[f"extensions.{_PLATFORM}.environment_variables"] = "environment variable values are not recorded; set them before deploying"
         if "gateways" in ext:
@@ -349,6 +350,29 @@ class AgentCoreHarnessWriter(Writer):
             notes[f"extensions.{_PLATFORM}.allowed_tools"] = (
                 "written so the harness gets the default shell and file tools only where the source has them")
         return tools, written_allowed, tool_refs
+
+
+def _memory(value: Any, path: str, parameters: dict[str, Any], notes: dict[str, str]) -> Any:
+    """Memory settings with the AgentCore CLI's project references turned into what CloudFormation takes:
+    a memory named in the project becomes an ARN parameter."""
+    config = value.get("AgentCoreMemoryConfiguration") if isinstance(value, dict) else None
+    if not isinstance(config, dict):
+        return value
+    config = dict(config)
+    reasons = []
+    if "Name" in config:
+        name = config.pop("Name")
+        if "Arn" not in config:
+            parameter = _logical(f"{name}MemoryArn")
+            parameters[parameter] = {"Type": "String", "Description": f"ARN of the AgentCore memory {name}"}
+            config["Arn"] = {"Ref": parameter}
+        reasons.append("the AgentCore CLI names a project memory, which it resolves at deploy; the template takes its ARN as a parameter")
+    if isinstance(config.get("RetrievalConfig"), dict) and {"TopK", "RelevanceScore"} & set(config["RetrievalConfig"]):
+        del config["RetrievalConfig"]
+        reasons.append("the AgentCore CLI's retrieval setting applies to every namespace of a project memory; set it per strategy before deploying")
+    if reasons:
+        notes[path] = "; ".join(reasons)
+    return {**value, "AgentCoreMemoryConfiguration": config}
 
 
 def _conditional(value: Any) -> bool:

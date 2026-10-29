@@ -30,6 +30,7 @@ $ marshal read path/to/databricks/bundle --target prod
 $ marshal read path/to/cloned-copilot-studio-agent
 $ marshal read path/to/cdk.out
 $ marshal read plan.json                  # Terraform: terraform show -json of a saved plan or of state
+$ marshal read path/to/agentcore-project  # AgentCore CLI: agentcore/agentcore.json and its harnesses
 $ marshal read path/to/agent/repo          # Python code: OpenAI Agents SDK, LangChain, ADK, CrewAI, or direct API calls
 ```
 

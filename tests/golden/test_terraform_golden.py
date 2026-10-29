@@ -84,3 +84,18 @@ def test_links_lost_through_locals_are_reported():
 
 def test_plans_without_locals_in_the_way_read_without_warnings():
     assert warnings("acwwat-basic") == []
+
+
+def test_cloud_control_harness():
+    [harness] = records("sentinel-harness").values()
+    spec = harness.spec
+    assert (harness.agent, harness.platform, spec.display_name.value) == (
+        "awscc_bedrockagentcore_harness.triage", "bedrock-agentcore", "sentinel_triage")
+    assert spec.model.requested.value == "global.anthropic.claude-sonnet-4-6"
+    # Optional parameters the example leaves unset aren't recorded, though the provider marks them unknown.
+    assert spec.model.parameters == {"temperature": 0, "max_tokens": 4096}
+    assert spec.instructions.text.startswith("You are a SecOps alert-triage agent.")
+    assert spec.permissions.principal.value == "arn:aws:iam::000000000000:role/sentinel-harness-exec"
+    assert {t.ref for t in spec.tools} == {"tool/bedrock-agentcore.shell", "tool/bedrock-agentcore.file_operations"}
+    assert spec.extensions["bedrock-agentcore"]["max_iterations"] == 15
+    assert warnings("sentinel-harness") == []

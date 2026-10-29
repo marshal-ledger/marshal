@@ -48,7 +48,8 @@ Pipelines you already run record each agent: a pull request records the proposed
 |---|---|---|---|
 | Databricks Asset Bundles (Genie spaces, agent apps) | ✓ | |  |
 | AWS CloudFormation and CDK (Bedrock Agents, AgentCore harnesses and runtimes) | ✓ | Bedrock Agents, AgentCore harness | cfn-lint; Bedrock Agents deployed |
-| Terraform plan and state (Bedrock Agents, AgentCore; AWS and Cloud Control providers) | ✓ | | |
+| Terraform plan and state (Bedrock Agents, AgentCore harnesses and runtimes; AWS and Cloud Control providers) | ✓ | | |
+| AgentCore CLI projects (AgentCore harnesses) | ✓ | | |
 | Microsoft Copilot Studio (agent workspaces, solutions) | ✓ | ✓ | published schema, partly |
 | Salesforce Agentforce (Agent Script, legacy metadata) | ✓ | Agent Script | round trip |
 | Google ADK Agent Config | ✓ | ✓ | published schema; loads in ADK |
@@ -96,7 +97,7 @@ The documentation is published at [marshal-ledger.github.io/marshal](https://mar
 - [Design](docs/design.md): the problem, architecture, security and network posture, roadmap
 - [Ledger model v0](docs/ledger-model.md): records, provenance, version hashing, the version store, risk ranking, freshness
 - [Conversion and fidelity](docs/conversion.md) and [Portability](docs/portability.md)
-- Formats: [Databricks](docs/formats/databricks.md), [CloudFormation](docs/formats/cloudformation.md), [Copilot Studio](docs/formats/copilot-studio.md), [Agentforce](docs/formats/agentforce.md), [ADK Agent Config](docs/formats/adk-config.md), [Vertex AI Agent Engine](docs/formats/vertex-agent-engine.md), [Python agent code](docs/formats/python.md), [ADL](docs/formats/adl.md), [Agent Spec](docs/formats/agent-spec.md), [OASF](docs/formats/oasf.md), [Marshal file](docs/formats/marshal-file.md)
+- Formats: [Databricks](docs/formats/databricks.md), [CloudFormation](docs/formats/cloudformation.md), [Terraform](docs/formats/terraform.md), [AgentCore CLI](docs/formats/agentcore-cli.md), [Copilot Studio](docs/formats/copilot-studio.md), [Agentforce](docs/formats/agentforce.md), [ADK Agent Config](docs/formats/adk-config.md), [Vertex AI Agent Engine](docs/formats/vertex-agent-engine.md), [Python agent code](docs/formats/python.md), [ADL](docs/formats/adl.md), [Agent Spec](docs/formats/agent-spec.md), [OASF](docs/formats/oasf.md), [Marshal file](docs/formats/marshal-file.md)
 - [Platform exportability](docs/platform-exportability.md): what each closed platform exposes
 - [Ingest API](docs/ingest-server.md), [GitHub Action](docs/github-action.md), [GitLab CI](docs/gitlab-ci.md), [Jenkins and Azure DevOps](docs/other-ci.md) and [Deployment](docs/deployment.md)
 - [Security review](docs/security-review.md): what is stored, authentication, network, supply chain, retention and audit, for security reviewers

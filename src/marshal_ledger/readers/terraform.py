@@ -1,4 +1,4 @@
-"""Reader for Terraform plans and state: Bedrock Agents and AgentCore runtimes.
+"""Reader for Terraform plans and state: Bedrock Agents, AgentCore runtimes and harnesses.
 
 Reads the JSON that ``terraform show -json`` prints for a saved plan (what a pipeline is
 about to apply) or for the current state. Marshal never runs Terraform: the pipeline that
@@ -10,7 +10,8 @@ and the Cloud Control provider (``awscc_bedrock_agent``, shaped like CloudFormat
 Both are translated into the CloudFormation form of the same resources, together with
 the IAM roles, policies and Lambda functions they refer to, and read by the
 CloudFormation reader's Bedrock mapping, so an agent maps the same way whichever tool
-defines it.
+defines it. AgentCore runtimes come from either provider, and AgentCore harnesses from
+the Cloud Control provider (``awscc_bedrockagentcore_harness``).
 
 A value Terraform knows only after apply is followed through the plan's configuration
 to the resource it refers to, across module inputs and outputs, the way CloudFormation's
@@ -39,13 +40,14 @@ from .cloudformation import (
     ROLE,
     RUNTIME,
     RUNTIME_ENDPOINT,
+    HARNESS,
     CloudFormationReader,
     _Template,
 )
 
 FORMAT = "terraform"
 AGENT_TYPES = {"aws_bedrockagent_agent", "awscc_bedrock_agent", "aws_bedrockagentcore_agent_runtime",
-               "awscc_bedrockagentcore_runtime"}
+               "awscc_bedrockagentcore_runtime", "awscc_bedrockagentcore_harness"}
 UNKNOWN = "${known after apply}"  # a nested reference no expression explains
 SENSITIVE = "${sensitive}"
 
@@ -58,7 +60,8 @@ _SINGLE = {
     "code_configuration", "code", "request_header_configuration", "knowledge_base_configuration",
 }
 # Maps whose keys are names the user chose, kept as written.
-_MAPS = {"parameters", "environment_variables", "tags", "additional_model_request_fields"}
+_MAPS = {"parameters", "environment_variables", "tags", "additional_model_request_fields", "headers", "custom_parameters",
+         "retrieval_config"}
 # Property names whose CloudFormation spelling isn't plain PascalCase.
 _SPELLING = {"idle_session_ttl_in_seconds": "IdleSessionTTLInSeconds", "custom_jwt_authorizer": "CustomJWTAuthorizer"}
 
@@ -72,19 +75,25 @@ _RUNTIME_ATTRIBUTES = [
     "agent_runtime_name", "description", "role_arn", "agent_runtime_artifact", "network_configuration",
     "authorizer_configuration", "lifecycle_configuration", "environment_variables", "protocol_configuration",
 ]
+_HARNESS_ATTRIBUTES = [
+    "harness_name", "model", "system_prompt", "tools", "allowed_tools", "execution_role_arn", "memory", "skills",
+    "environment", "environment_artifact", "environment_variables", "truncation", "authorizer_configuration",
+    "max_iterations", "max_tokens", "timeout_seconds",
+]
 # Attributes that name a resource, so a known value can be matched to the resource it names.
 _IDENTIFIERS = ("arn", "id", "name", "agent_id", "agent_arn", "agent_alias_arn", "agent_alias_id", "function_name",
                 "knowledge_base_id", "knowledge_base_arn", "agent_runtime_id", "agent_runtime_arn", "role_name")
 # Attributes whose value names another resource. Only these are linked back to a resource
 # in the plan when the value is already known, as in state JSON.
 _LINKED = {"agent_resource_role_arn", "role", "role_arn", "role_name", "lambda", "knowledge_base_id", "alias_arn",
-           "agent_id", "agent_runtime_id", "policy_arn"}
+           "agent_id", "agent_runtime_id", "policy_arn", "execution_role_arn"}
 # What is left out when an attribute's value comes through a local, by attribute.
 _LOCAL_CONSEQUENCES = {
     "role": "so this policy's permissions aren't linked to a role",
     "role_name": "so this policy's permissions aren't linked to a role",
     "agent_resource_role_arn": "so the agent's role, and its permissions, aren't linked",
     "role_arn": "so the role, and its permissions, aren't linked",
+    "execution_role_arn": "so the role, and its permissions, aren't linked",
     "alias_arn": "so this collaborator isn't linked to its agent",
     "agent_id": "so this isn't linked to its agent",
     "agent_runtime_id": "so this isn't linked to its runtime",
@@ -266,8 +275,15 @@ class _TerraformTemplate(_Template):
             # no resource is an optional attribute left unset (or one routed through a local, which a
             # plan doesn't record), so it is treated as absent rather than guessed.
             if inherited:
-                # One expression covers the whole object, so which reference fills this field is unknown.
-                return UNKNOWN
+                # One expression covers the whole object, so which reference fills this field is unknown,
+                # unless no reference in it can be: then the provider computes the field, as for an optional
+                # attribute the configuration leaves unset (the Cloud Control provider marks those unknown).
+                references = expression.get("references") if isinstance(expression, dict) else None
+                seen: list[str] = []
+                if references and (any(r.startswith("data.") for r in references)
+                                   or self.plan.resolve(instance.module, references, locals_seen=seen) or seen):
+                    return UNKNOWN
+                return None
             references = expression.get("references") if isinstance(expression, dict) else None
             locals_seen: list[str] = []
             found = self.plan.resolve(instance.module, references, locals_seen=locals_seen) if references else None
@@ -394,6 +410,17 @@ class _TerraformTemplate(_Template):
             if target := self._ref(endpoint, "agent_runtime_id"):
                 props["AgentRuntimeId"] = {"Ref": target}
             self._add(endpoint, RUNTIME_ENDPOINT, props)
+
+        for harness in plan.of_type("awscc_bedrockagentcore_harness"):
+            props = self._props(harness, _HARNESS_ATTRIBUTES)
+            for tool in props.get("Tools") or []:
+                function = ((tool.get("Config") or {}).get("InlineFunction") or {}) if isinstance(tool, dict) else {}
+                if isinstance(function.get("InputSchema"), str):  # the Cloud Control provider gives it as JSON text
+                    try:
+                        function["InputSchema"] = json.loads(function["InputSchema"])
+                    except ValueError:
+                        pass
+            self._add(harness, HARNESS, props, {"agent": agent_id(harness.address)})
         return self._translated
 
     def _attached(self, agent: _Instance) -> dict[str, Any]:

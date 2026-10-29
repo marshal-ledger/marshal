@@ -10,12 +10,13 @@ Each file is `terraform show -json` of a saved plan of a public Terraform exampl
 | `aws-ia-agent-with-knowledge-base` | same, `examples/agent-with-knowledge-base` | Apache-2.0 |
 | `acwwat-basic` | [acwwat/terraform-amazon-bedrock-agent-example](https://github.com/acwwat/terraform-amazon-bedrock-agent-example) `1_basic` | Apache-2.0 |
 | `acwwat-knowledge-base` | same, `2_knowledge_base` | Apache-2.0 |
+| `sentinel-harness` | [aws-samples/sample-sentinel-harness](https://github.com/aws-samples/sample-sentinel-harness) `iac-terraform`, planned for its harness alone (`-target`), since its VPC security group has a description the AWS provider rejects | MIT-0 |
 
 The script pins each repository to a commit, and pins Terraform and every provider version. A plan makes a few read-only AWS lookups, so the script answers them locally:
 
 - **STS and IAM** (the account id, the `AWSLambdaBasicExecutionRole` managed policy) by [LocalStack](https://github.com/localstack/localstack). The account id is LocalStack's `000000000000`.
 - **Bedrock's GetFoundationModel** by a small stub that returns the ARN AWS publishes for the model id, `arn:aws:bedrock:us-east-1::foundation-model/<model id>`.
 
-No AWS account or credentials are involved. The examples' own files are not changed; the script adds a `marshal_override.tf` with the provider versions, fake credentials and the local endpoints. The plan's `timestamp` is removed, since it is the only value that changes between runs.
+No AWS account or credentials are involved. The examples' own files are not changed; the script adds a `marshal_override.tf` with the provider versions, fake credentials and the local endpoints, and a `marshal.auto.tfvars.json` for a variable an example leaves without a default (the sentinel example's execution role ARN, set to the placeholder its description gives). The plan's `timestamp` is removed, since it is the only value that changes between runs.
 
 The examples' content, such as instructions and OpenAPI schemas, is used under the licenses above.
