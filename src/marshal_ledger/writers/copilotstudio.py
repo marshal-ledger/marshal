@@ -47,6 +47,7 @@ class CopilotStudioWriter(Writer):
     format = FORMAT
     suffix = ".copilot-studio"
     reader_format = FORMAT
+    platform = FORMAT
     multi_file = True
     LOSSES = {
         "tools[*]": "Copilot Studio tools are connectors, flows, MCP connectors and agents; this tool needs a custom connector",

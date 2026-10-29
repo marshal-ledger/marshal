@@ -55,6 +55,7 @@ class AgentforceWriter(Writer):
     format = FORMAT
     suffix = ".agent"
     reader_format = FORMAT
+    platform = FORMAT
     LOSSES = {
         "tools[*]": "Agentforce actions target Flows, Apex classes, prompt templates and standard actions",
         "tools[*].scope": "Agent Script actions don't declare a scope",

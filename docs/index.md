@@ -69,7 +69,7 @@ Or install it with `pip install 'marshal-ledger[server]'`. `marshal demo` downlo
 | Source | Read | Write | Writer tested by |
 |---|---|---|---|
 | [Databricks Asset Bundles](formats/databricks.md) (Genie spaces, agent apps) | ✓ | |  |
-| [AWS CloudFormation and CDK](formats/cloudformation.md) (Bedrock Agents, AgentCore) | ✓ | Bedrock Agents | cfn-lint; deployed to Bedrock |
+| [AWS CloudFormation and CDK](formats/cloudformation.md) (Bedrock Agents, AgentCore harnesses and runtimes) | ✓ | Bedrock Agents, AgentCore harness | cfn-lint; Bedrock Agents deployed |
 | [Terraform](formats/terraform.md) plan and state (Bedrock Agents, AgentCore; AWS and Cloud Control providers) | ✓ | | |
 | [Microsoft Copilot Studio](formats/copilot-studio.md) (agent workspaces, solutions) | ✓ | ✓ | published schema, partly |
 | [Salesforce Agentforce](formats/agentforce.md) (Agent Script, legacy metadata) | ✓ | Agent Script | round trip |
@@ -83,7 +83,7 @@ Readers are tested against real, public definitions, pinned to a commit. Only th
 
 ## Where to next
 
-- Guides: [inventory Copilot Studio agents](guides/copilot-studio-inventory.md), [review agent changes in pull requests](guides/pull-request-review.md), [track agents in code](guides/agents-in-code.md), [detect drift](guides/drift-detection.md), [convert an ADK agent to Agent Spec](guides/convert-adk-to-agent-spec.md), and [an agent inventory for audit](guides/audit-evidence.md).
+- Guides: [inventory Copilot Studio agents](guides/copilot-studio-inventory.md), [review agent changes in pull requests](guides/pull-request-review.md), [track agents in code](guides/agents-in-code.md), [detect drift](guides/drift-detection.md), [convert an ADK agent to Agent Spec](guides/convert-adk-to-agent-spec.md), [move Bedrock agents to the AgentCore harness](guides/bedrock-agents-to-agentcore.md), and [an agent inventory for audit](guides/audit-evidence.md).
 - [How Marshal compares](comparison.md) with cloud agent registries, platform admin tools, observability, AI gateways and governance platforms.
 - [Getting started](getting-started.md): read your own agents and record their history.
 - [Design](design.md): the problem, the architecture, and the security and network posture.

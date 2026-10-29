@@ -30,12 +30,21 @@ class ConversionError(ValueError):
     pass
 
 
-def convert(record: AgentVersion, target: str) -> Conversion:
-    """Write ``record`` in the ``target`` format and measure what survived."""
+def convert(record: AgentVersion, target: str, migrate: bool = False) -> Conversion:
+    """Write ``record`` in the ``target`` format and measure what survived.
+
+    By default the written agent keeps its platform, so reading it back gives the same agent.
+    With ``migrate``, it moves to the target's platform: it keeps its id, so its history
+    continues, and is recorded on the platform it will run on.
+    """
     writer_cls = WRITERS.get(target)
     if writer_cls is None:
         raise ConversionError(f"no writer for {target!r}; writers: {', '.join(sorted(WRITERS))}")
     writer = writer_cls()
+    if migrate:
+        if writer.platform is None:
+            raise ConversionError(f"{target} is an open format, not a platform to migrate to")
+        record = record.model_copy(update={"platform": writer.platform})
     written = writer.write(record)
     reader = READERS[writer.reader_format]()
     filename = record.agent.rsplit("/", 1)[-1].split(":")[-1] or "agent"

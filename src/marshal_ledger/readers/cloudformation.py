@@ -1,8 +1,11 @@
-"""Reader for AWS CloudFormation templates and CDK output: Bedrock Agents and AgentCore runtimes.
+"""Reader for AWS CloudFormation templates and CDK output: Bedrock Agents and AgentCore.
 
 Reads ``AWS::Bedrock::Agent`` resources in full (instructions, model, action
-groups, knowledge bases, guardrails, collaborators) and
-``AWS::BedrockAgentCore::Runtime`` resources at inventory level, since an
+groups, knowledge bases, guardrails, collaborators), AgentCore harnesses
+(``AWS::BedrockAgentCore::Harness``: model, system prompt, tools, including
+the tools of AgentCore gateways defined in the same template, and the
+default shell and file tools that ``AllowedTools`` doesn't restrict) in full,
+and ``AWS::BedrockAgentCore::Runtime`` resources at inventory level, since an
 AgentCore runtime hosts agent code whose model and tools are not in the
 template. IAM roles defined in the same template are resolved:
 
@@ -42,6 +45,7 @@ from ..model import (
     Value,
 )
 from ..redact import redact
+from .python.frameworks import _HOSTED_RAW as _HOSTED_TOOLS
 from .base import DocumentReader, ReadOptions, ReadResult, build_record
 
 FORMAT = "cloudformation"
@@ -50,14 +54,27 @@ ALIAS = "AWS::Bedrock::AgentAlias"
 KNOWLEDGE_BASE = "AWS::Bedrock::KnowledgeBase"
 RUNTIME = "AWS::BedrockAgentCore::Runtime"
 RUNTIME_ENDPOINT = "AWS::BedrockAgentCore::RuntimeEndpoint"
+HARNESS = "AWS::BedrockAgentCore::Harness"
+HARNESS_ENDPOINT = "AWS::BedrockAgentCore::HarnessEndpoint"
+GATEWAY = "AWS::BedrockAgentCore::Gateway"
+GATEWAY_TARGET = "AWS::BedrockAgentCore::GatewayTarget"
 ROLE = "AWS::IAM::Role"
 POLICY = "AWS::IAM::Policy"
 FUNCTION = "AWS::Lambda::Function"
-_AGENT_TYPES = {AGENT, RUNTIME}
+_AGENT_TYPES = {AGENT, RUNTIME, HARNESS}
 _READ_METHODS = {"get", "head", "options"}
 _BUILTIN_GROUPS = {
     "AMAZON.UserInput": ("tool/bedrock.user_input", Scope.READ, "asks the user for input"),
     "AMAZON.CodeInterpreter": ("tool/bedrock.code_interpreter", Scope.EXECUTE, "runs generated code"),
+}
+# Harness model configurations, and the provider each implies where the model id doesn't name one.
+_HARNESS_MODELS = {"BedrockModelConfig": None, "OpenAiModelConfig": "openai", "GeminiModelConfig": "google",
+                   "LiteLlmModelConfig": None}
+_HARNESS_PARAMETERS = {"Temperature": "temperature", "TopP": "top_p", "TopK": "top_k", "MaxTokens": "max_tokens"}
+# Tools every harness session has unless AllowedTools restricts them (AgentCore developer guide, "Tools").
+HARNESS_BUILTINS = {
+    "shell": (Scope.EXECUTE, "runs bash commands in the session's microVM"),
+    "file_operations": (Scope.WRITE, "views, creates and edits files in the session's filesystem"),
 }
 _MODEL_VENDORS = re.compile(r"(?:^|[./:])(anthropic|amazon|meta|mistral|cohere|ai21|deepseek|writer|openai|qwen|stability)\.")
 
@@ -372,7 +389,7 @@ class CloudFormationReader(DocumentReader):
         return self.read_template(_Template(data, artifact), options)
 
     def read_template(self, template: _Template, options: ReadOptions | None = None) -> ReadResult:
-        """Records for the Bedrock agents and AgentCore runtimes in a template, or in another
+        """Records for the Bedrock agents and AgentCore runtimes and harnesses in a template, or in another
         source translated into one (see :mod:`marshal_ledger.readers.terraform`)."""
         options = options or ReadOptions()
         artifact = template.artifact
@@ -393,6 +410,8 @@ class CloudFormationReader(DocumentReader):
             result.records.append(self._agent(template, logical, agent_ids, alias_agents, options, result, entities))
         for logical in sorted(template.of_type(RUNTIME)):
             result.records.append(self._runtime(template, logical, stem, options, result, entities))
+        for logical in sorted(template.of_type(HARNESS)):
+            result.records.append(self._harness(template, logical, stem, options, result, entities))
         result.entities = sorted(entities.values(), key=lambda e: e.ref)
         return result
 
@@ -666,3 +685,245 @@ class CloudFormationReader(DocumentReader):
                           pipeline_run=options.pipeline_run),
             spec=spec,
         )
+
+    # -- AgentCore harnesses -----------------------------------------------
+
+    def _harness(self, template, logical, stem, options, result, entities):
+        props = template.props(logical)
+        marshal = self._marshal(template.resources[logical])
+        agent_id = marshal.get("agent") or f"{stem}/{logical}"
+        tool_refs: dict[str, str] = marshal.get("tool_refs") or {}
+        local = f"tool/bedrock-agentcore.{agent_id.replace('/', '.')}"
+        spec = AgentSpec()
+        extension: dict[str, Any] = {"resource_type": HARNESS}
+        bindings: dict[str, Any] = {}
+
+        def entity(kind: EntityKind, ref: str, display: Optional[str] = None) -> None:
+            entities.setdefault(ref, Entity(ref=ref, kind=kind, platform="bedrock-agentcore",
+                                            identifier=ref.split("/", 1)[1], display_name=display))
+
+        spec.display_name = self._value(template, props.get("HarnessName"), template.path(logical, "HarnessName"))
+
+        model = props.get("Model") or {}
+        kind = next((k for k in _HARNESS_MODELS if isinstance(model.get(k), dict)), None)
+        if kind:
+            config = model[kind]
+            requested = self._value(template, config.get("ModelId"), template.path(logical, f"Model.{kind}.ModelId"))
+            spec.model.requested = requested
+            if _HARNESS_MODELS[kind]:
+                spec.model.provider = Value[str].derived(_HARNESS_MODELS[kind], f"model configured with {kind}")
+            elif requested.is_known and (vendor := _provider(str(requested.value))):
+                spec.model.provider = Value[str].derived(vendor, f"model id {requested.value}")
+            for key, name in _HARNESS_PARAMETERS.items():
+                if config.get(key) is not None:
+                    spec.model.parameters[name] = template.resolve(config[key])
+            settings = {k: template.resolve(v) for k, v in config.items()
+                        if k not in ("ModelId", "ApiKeyArn", *_HARNESS_PARAMETERS)}
+            additional = dict(settings.pop("AdditionalParams", None) or {})
+            if "guardrailConfig" in additional:
+                # A Bedrock guardrail applied to every model call, as the Converse API's guardrailConfig.
+                extension["guardrail"] = additional.pop("guardrailConfig")
+            if isinstance(additional.get("tools"), list):
+                # Tools the model provider runs itself, such as OpenAI's web search.
+                extension["model_tools"] = additional.pop("tools")
+                for tool in extension["model_tools"]:
+                    hosted = _HOSTED_TOOLS.get(tool.get("type")) if isinstance(tool, dict) else None
+                    if hosted:
+                        ref, scope = hosted
+                        spec.tools.append(ToolUse(ref=ref, name=str(tool["type"]), scope=Value[Scope].derived(
+                            scope, f"{tool['type']}, run by the model provider ({template.path(logical, f'Model.{kind}.AdditionalParams.tools')})")))
+                        entity(EntityKind.TOOL, ref, str(tool["type"]))
+            if additional:
+                settings["AdditionalParams"] = additional
+            if settings or kind != "BedrockModelConfig":
+                extension["model_config"] = {"type": kind, **settings}
+            if config.get("ApiKeyArn") is not None:
+                # A reference to a secret, bound to an account like the role.
+                bindings["model_api_key"] = template.resolve(config["ApiKeyArn"])
+        else:
+            spec.model.requested = Value[str].unknown(f"{template.path(logical, 'Model')} names no model configuration")
+
+        blocks = [template.string(b.get("Text")) for b in props.get("SystemPrompt") or [] if isinstance(b, dict)]
+        where = template.path(logical, "SystemPrompt")
+        if blocks and all(isinstance(b, str) and "${" not in b for b in blocks):
+            text, count = redact("\n".join(blocks))
+            if count:
+                result.warnings.append(f"{template.artifact}: {logical}: redacted {count} credential-like value(s)")
+            spec.instructions = Instructions(hash=sha256_text(text), text=None if options.hash_only else text,
+                                             provenance=Provenance.DECLARED, basis=where)
+        elif blocks:
+            spec.instructions = Instructions(basis=f"{where} is set at deploy time")
+        else:
+            spec.instructions = Instructions(basis=f"{where} is not set")
+
+        conditions: dict[str, str] = {}
+        for tool in template.items(props.get("Tools"), "Tools", conditions):
+            tool_type = template.string(tool.get("Type")) or "unknown"
+            name = template.string(tool.get("Name")) or tool_type
+            config = tool.get("Config") or {}
+            uses: list[ToolUse] = []
+            if tool_type == "remote_mcp":
+                remote = config.get("RemoteMcp") or {}
+                url = template.string(remote.get("Url"))
+                ref = f"tool/mcp.{url}" if url and "${" not in url else f"{local}.{name}"
+                uses = [ToolUse(ref=ref, name=name)]
+                if remote.get("Headers"):
+                    # Header values can hold tokens in plain text: only their names are recorded.
+                    extension.setdefault("mcp_headers", {})[name] = sorted(remote["Headers"])
+            elif tool_type == "agentcore_gateway":
+                gateway = config.get("AgentCoreGateway") or {}
+                uses = self._gateway_tools(template, gateway.get("GatewayArn"), name, local, stem, bindings, result)
+                in_stack = template.target(gateway.get("GatewayArn"))
+                if in_stack and template.resource_type(in_stack) == GATEWAY:
+                    # The gateway's tools are listed one by one; this keeps which harness tool reaches them.
+                    extension.setdefault("gateways", {})[name] = f"tool/bedrock-agentcore.gateway.{stem.replace('/', '.')}.{in_stack}"
+                if gateway.get("OutboundAuth") is not None:
+                    extension.setdefault("gateway_auth", {})[name] = template.resolve(gateway["OutboundAuth"])
+            elif tool_type == "agentcore_browser":
+                uses = [ToolUse(ref="tool/bedrock-agentcore.browser", name=name,
+                                scope=Value[Scope].derived(Scope.EXECUTE, "AgentCore Browser operates a web browser"))]
+                arn = (config.get("AgentCoreBrowser") or {}).get("BrowserArn")
+                if arn is not None:
+                    extension.setdefault("browsers", {})[name] = template.resolve(arn)
+            elif tool_type == "agentcore_code_interpreter":
+                uses = [ToolUse(ref="tool/bedrock-agentcore.code_interpreter", name=name,
+                                scope=Value[Scope].derived(Scope.EXECUTE, "AgentCore Code Interpreter runs generated code"))]
+                arn = (config.get("AgentCoreCodeInterpreter") or {}).get("CodeInterpreterArn")
+                if arn is not None:
+                    extension.setdefault("code_interpreters", {})[name] = template.resolve(arn)
+            elif tool_type == "inline_function":
+                function = config.get("InlineFunction") or {}
+                schema = template.resolve(function.get("InputSchema"))
+                uses = [ToolUse(ref=f"{local}.{name}", name=name, description=template.string(function.get("Description")),
+                                input_schema=schema if isinstance(schema, dict) else None)]
+            else:
+                uses = [ToolUse(ref=f"{local}.{name}", name=name)]
+                result.warnings.append(f"{template.artifact}: {logical}: tool {name} has type {tool_type}, which Marshal doesn't know")
+            for use in uses:
+                use.ref = tool_refs.get(use.name or name, use.ref) if len(uses) == 1 else use.ref
+                spec.tools.append(use)
+                entity(EntityKind.TOOL, use.ref, use.name)
+
+        allowed = template.resolve(props["AllowedTools"]) if props.get("AllowedTools") is not None else None
+        if allowed is not None:
+            extension["allowed_tools"] = allowed
+        for builtin, (scope, rule) in HARNESS_BUILTINS.items():
+            basis = _builtin_allowed(builtin, allowed)
+            if basis:
+                ref = f"tool/bedrock-agentcore.{builtin}"
+                spec.tools.append(ToolUse(ref=ref, name=builtin, scope=Value[Scope].derived(scope, f"{rule}; {basis}")))
+                entity(EntityKind.TOOL, ref, builtin)
+
+        self._identity(template, props.get("ExecutionRoleArn"), template.path(logical, "ExecutionRoleArn"), spec.permissions, extension)
+        for key, label in (("Memory", "memory"), ("Hooks", "hooks"), ("Skills", "skills"), ("Environment", "environment"),
+                           ("EnvironmentArtifact", "environment_artifact"), ("Truncation", "truncation"),
+                           ("AuthorizerConfiguration", "authorizer"), ("MaxIterations", "max_iterations"),
+                           ("MaxTokens", "max_tokens"), ("TimeoutSeconds", "timeout_seconds")):
+            if props.get(key) is not None:
+                extension[label] = template.resolve(props[key])
+        if props.get("EnvironmentVariables"):
+            extension["environment_variables"] = sorted(props["EnvironmentVariables"])
+        if conditions:
+            extension["conditional"] = conditions
+        endpoints = [template.string(template.props(e).get("EndpointName")) or e for e, r in template.of_type(HARNESS_ENDPOINT).items()
+                     if template.target((r.get("Properties") or {}).get("HarnessId")) == logical]
+        if endpoints:
+            extension["endpoints"] = sorted(endpoints)
+        spec.extensions["bedrock-agentcore"] = extension
+        return build_record(
+            agent=agent_id, platform=marshal.get("platform") or "bedrock-agentcore",
+            source=Source(format=template.source_format, artifact=template.artifact, locator=template.path(logical),
+                          detected_by=f"resource type {template.resource_type(logical)}", commit=options.commit,
+                          pipeline_run=options.pipeline_run),
+            spec=spec, bindings=bindings,
+        )
+
+    def _gateway_tools(self, template: _Template, arn: Any, name: str, local: str, stem: str,
+                       bindings: dict[str, Any], result: ReadResult) -> list[ToolUse]:
+        """The tools a harness reaches through an AgentCore gateway: each target's tools when the
+        gateway is defined in the template, else one tool standing for the whole gateway."""
+        gateway = template.target(arn)
+        if gateway is None or template.resource_type(gateway) != GATEWAY:
+            resolved = template.string(arn) or ""
+            if match := re.fullmatch(r"\$\{import:([^}]+)\}", resolved):
+                return [ToolUse(ref=f"tool/bedrock-agentcore.gateway.import:{match.group(1)}", name=name)]
+            if resolved.startswith("arn:") and "${" not in resolved:
+                return [ToolUse(ref=f"tool/bedrock-agentcore.gateway.{resolved}", name=name)]
+            return [ToolUse(ref=f"{local}.{name}", name=name)]
+        base = f"tool/bedrock-agentcore.gateway.{stem.replace('/', '.')}.{gateway}"
+        tools: list[ToolUse] = []
+        for logical, resource in sorted(template.of_type(GATEWAY_TARGET).items()):
+            props = resource.get("Properties") or {}
+            if template.target(props.get("GatewayIdentifier")) != gateway:
+                continue
+            target = template.string(props.get("Name")) or logical
+            target_ref = f"{base}.{target}"
+            mcp = (props.get("TargetConfiguration") or {}).get("Mcp") or {}
+            if isinstance(mcp.get("Lambda"), dict):
+                executor = {"Lambda": mcp["Lambda"].get("LambdaArn")}
+                scope = self._executor_scope(template, executor)
+                function = self._executor(template, executor)
+                inline = (mcp["Lambda"].get("ToolSchema") or {}).get("InlinePayload")
+                found = []
+                for definition in inline if isinstance(inline, list) else []:
+                    found.append(ToolUse(ref=f"{target_ref}.{definition.get('Name')}", name=definition.get("Name"),
+                                         description=template.string(definition.get("Description")),
+                                         input_schema=_json_schema(template.resolve(definition.get("InputSchema"))),
+                                         output_schema=_json_schema(template.resolve(definition.get("OutputSchema")))))
+                if not found:
+                    found = [ToolUse(ref=target_ref, name=target, description=template.string(props.get("Description")))]
+                    result.warnings.append(f"{template.artifact}: {logical}: tool schema is not inline and was not read")
+                for use in found:
+                    if scope:
+                        use.scope = scope
+                    if function:
+                        bindings.setdefault("executors", {})[use.ref] = function
+                tools += found
+            elif isinstance(mcp.get("McpServer"), dict) and template.string(mcp["McpServer"].get("Endpoint")):
+                tools.append(ToolUse(ref=f"tool/mcp.{template.string(mcp['McpServer']['Endpoint'])}", name=target,
+                                     description=template.string(props.get("Description"))))
+            elif isinstance((mcp.get("OpenApiSchema") or {}).get("InlinePayload"), str):
+                parsed = _openapi_tools(template.string(mcp["OpenApiSchema"]["InlinePayload"]) or "", target_ref)
+                if parsed is None:
+                    result.warnings.append(f"{template.artifact}: {logical}: OpenAPI payload not parsed")
+                tools += parsed or [ToolUse(ref=target_ref, name=target)]
+            else:
+                tools.append(ToolUse(ref=target_ref, name=target, description=template.string(props.get("Description"))))
+        return tools or [ToolUse(ref=base, name=name)]
+
+
+def _builtin_allowed(name: str, allowed: Any) -> Optional[str]:
+    """Why a harness default tool is available, or None when AllowedTools leaves it out."""
+    if allowed is None:
+        return "AllowedTools is not set, so every session has it"
+    if not isinstance(allowed, list) or not all(isinstance(p, str) for p in allowed) or any("${" in p for p in allowed):
+        return "AllowedTools is set at deploy time"
+
+    def glob(pattern: str, text: str) -> bool:
+        return re.fullmatch(".*".join(re.escape(part) for part in pattern.split("*")), text) is not None
+
+    for pattern in allowed:
+        if pattern.startswith("@"):
+            server, _, tool = pattern[1:].partition("/")
+            hit = glob(server, "builtin") and (not tool or glob(tool, name))
+        else:
+            hit = glob(pattern, name)
+        if hit:
+            return f"AllowedTools allows it ({pattern})"
+    return None
+
+
+def _json_schema(value: Any) -> Optional[dict[str, Any]]:
+    """A gateway tool schema, written with CloudFormation's capitalized keys, as JSON Schema."""
+    if not isinstance(value, dict):
+        return None
+    out: dict[str, Any] = {}
+    for key, item in value.items():
+        name = key[:1].lower() + key[1:]
+        if name == "properties" and isinstance(item, dict):
+            out[name] = {k: _json_schema(v) or v for k, v in item.items()}
+        elif name == "items":
+            out[name] = _json_schema(item) or item
+        else:
+            out[name] = item
+    return out

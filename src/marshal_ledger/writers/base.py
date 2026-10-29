@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Optional
 
 import yaml
 
@@ -39,6 +39,9 @@ class Writer(ABC):
     Round-trip tests fail on any loss that isn't declared here or noted by the writer."""
     MECHANICS: ClassVar[tuple[str, ...]] = ()
     """Path patterns for format mechanics (such as a format version) left out of fidelity reports."""
+    platform: ClassVar[Optional[str]] = None
+    """The platform an agent written in this format runs on, for a migration (``marshal convert
+    --migrate``). None for open formats, which describe an agent without running it."""
 
     @abstractmethod
     def write(self, record: AgentVersion) -> Written:

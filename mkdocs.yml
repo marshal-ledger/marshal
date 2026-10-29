@@ -83,6 +83,7 @@ nav:
       - Track agents in code: guides/agents-in-code.md
       - Detect drift: guides/drift-detection.md
       - Convert ADK to Agent Spec: guides/convert-adk-to-agent-spec.md
+      - Bedrock Agents to AgentCore: guides/bedrock-agents-to-agentcore.md
       - Agent inventory for audit: guides/audit-evidence.md
   - How Marshal compares: comparison.md
   - Concepts:

@@ -43,6 +43,7 @@ class CloudFormationWriter(Writer):
     format = FORMAT
     suffix = ".template.yaml"
     reader_format = FORMAT
+    platform = "bedrock"
     LOSSES = {
         "permissions.grants[*]": "IAM permissions live on the agent's role, which this writer references but does not create",
         "permissions.access[*]": "who may invoke the agent is governed by IAM policies outside the agent resource",

@@ -50,7 +50,7 @@ def _rank(scope: Optional[str]) -> int:
     return _SCOPE_RANK.get(str(scope), _SCOPE_RANK["unknown"])
 
 
-# Platform-specific fields that control who the agent acts as or who may use it.
+# Platform-specific fields that control who the agent acts as, who may use it, or what checks its actions.
 SENSITIVE_EXTENSION_KEYS: dict[str, Severity] = {
     "connection_mode": Severity.HIGH,
     "credentials": Severity.HIGH,
@@ -60,6 +60,10 @@ SENSITIVE_EXTENSION_KEYS: dict[str, Severity] = {
     "user_api_scopes": Severity.HIGH,
     "authorizer": Severity.HIGH,
     "managed_policies": Severity.HIGH,
+    "gateway_auth": Severity.HIGH,
+    "mcp_headers": Severity.HIGH,
+    "hooks": Severity.HIGH,
+    "allowed_tools": Severity.MEDIUM,
     "guardrail": Severity.MEDIUM,
     "security": Severity.MEDIUM,
     "permissions": Severity.MEDIUM,

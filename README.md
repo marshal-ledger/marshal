@@ -47,7 +47,7 @@ Pipelines you already run record each agent: a pull request records the proposed
 | Source | Read | Write | Writer tested by |
 |---|---|---|---|
 | Databricks Asset Bundles (Genie spaces, agent apps) | ✓ | |  |
-| AWS CloudFormation and CDK (Bedrock Agents, AgentCore) | ✓ | Bedrock Agents | cfn-lint; deployed to Bedrock |
+| AWS CloudFormation and CDK (Bedrock Agents, AgentCore harnesses and runtimes) | ✓ | Bedrock Agents, AgentCore harness | cfn-lint; Bedrock Agents deployed |
 | Terraform plan and state (Bedrock Agents, AgentCore; AWS and Cloud Control providers) | ✓ | | |
 | Microsoft Copilot Studio (agent workspaces, solutions) | ✓ | ✓ | published schema, partly |
 | Salesforce Agentforce (Agent Script, legacy metadata) | ✓ | Agent Script | round trip |
@@ -91,7 +91,7 @@ $ marshal web                                        # browse the store
 The documentation is published at [marshal-ledger.github.io/marshal](https://marshal-ledger.github.io/marshal/).
 
 - [Getting started](docs/getting-started.md)
-- Guides: [Copilot Studio inventory](docs/guides/copilot-studio-inventory.md), [pull request review](docs/guides/pull-request-review.md), [agents in code](docs/guides/agents-in-code.md), [drift](docs/guides/drift-detection.md), [ADK to Agent Spec](docs/guides/convert-adk-to-agent-spec.md), [audit evidence](docs/guides/audit-evidence.md)
+- Guides: [Copilot Studio inventory](docs/guides/copilot-studio-inventory.md), [pull request review](docs/guides/pull-request-review.md), [agents in code](docs/guides/agents-in-code.md), [drift](docs/guides/drift-detection.md), [ADK to Agent Spec](docs/guides/convert-adk-to-agent-spec.md), [Bedrock Agents to AgentCore](docs/guides/bedrock-agents-to-agentcore.md), [audit evidence](docs/guides/audit-evidence.md)
 - [How Marshal compares](docs/comparison.md) with cloud agent registries, platform admin tools, observability, AI gateways and governance platforms
 - [Design](docs/design.md): the problem, architecture, security and network posture, roadmap
 - [Ledger model v0](docs/ledger-model.md): records, provenance, version hashing, the version store, risk ranking, freshness

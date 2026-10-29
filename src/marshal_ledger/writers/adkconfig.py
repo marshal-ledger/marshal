@@ -23,6 +23,7 @@ class AdkConfigWriter(Writer):
     format = FORMAT
     suffix = ".adk"
     reader_format = FORMAT
+    platform = "google-adk"
     multi_file = True
     LOSSES = {
         "tools[*]": "ADK Agent Config tools are built-ins, Python functions and MCP toolsets",

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from .adkconfig import AdkConfigWriter
 from .adl import AdlWriter
+from .agentcore import AgentCoreHarnessWriter
 from .agentforce import AgentforceWriter
 from .agentspec import AgentSpecWriter
 from .base import Writer, Written
@@ -17,6 +18,7 @@ WRITERS: dict[str, type[Writer]] = {
     AgentSpecWriter.format: AgentSpecWriter,
     OasfWriter.format: OasfWriter,
     CloudFormationWriter.format: CloudFormationWriter,
+    AgentCoreHarnessWriter.format: AgentCoreHarnessWriter,
     CopilotStudioWriter.format: CopilotStudioWriter,
     AgentforceWriter.format: AgentforceWriter,
     AdkConfigWriter.format: AdkConfigWriter,

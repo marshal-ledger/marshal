@@ -202,6 +202,42 @@
       ]
     },
     {
+      "id": "cloudformation/agentcore-harness",
+      "repo": "awslabs/agentcore-samples",
+      "commit": "34e039f36afd8a37e646c0dc9ea2ee7532b5417f",
+      "root": "01-features/01-harness/01-advanced-examples/06-async-step-function",
+      "files": [
+        "cloudformation.yaml"
+      ]
+    },
+    {
+      "id": "cloudformation/agentcore-harness-websearch",
+      "repo": "dgallitelli/agentcore-websearch-gateway-demo",
+      "commit": "9eda64ba9725799bc51baae6a5ce50dd89408aef",
+      "root": "",
+      "files": [
+        "template.yaml"
+      ]
+    },
+    {
+      "id": "cloudformation/agentcore-harness-hoop",
+      "repo": "hoophq/hoop",
+      "commit": "40634b726805f2457128aa3ad4f30e7dd256152a",
+      "root": "deploy/agentcore/http",
+      "files": [
+        "template.yaml"
+      ]
+    },
+    {
+      "id": "cloudformation/agentcore-harness-paperclip",
+      "repo": "paperclipai/paperclip",
+      "commit": "af8439a70b7ad38d378ded7aee29f6b0176a77ec",
+      "root": "packages/paperclip-runner/infra",
+      "files": [
+        "aws-agentcore-paperclip.yaml"
+      ]
+    },
+    {
       "id": "copilot-studio/all-the-things",
       "repo": "microsoft/vscode-copilotstudio",
       "commit": "16e4ece7a098a1fb01f9e42a7cb51d38af424ac4",
