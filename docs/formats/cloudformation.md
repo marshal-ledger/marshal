@@ -55,7 +55,7 @@ The record holds the runtime name and description, the execution role's identity
 
 ## Writing
 
-**Tested:** every loss in converting every fixture is explained, the agent keeps its identity, and every written template passes [cfn-lint](https://github.com/aws-cloudformation/cfn-lint), AWS's CloudFormation linter. The one exception is an instruction shorter than Bedrock's 40-character minimum, which the writer reports as a warning rather than padding.
+**Tested:** every loss in converting every fixture is explained, the agent keeps its identity, and every written template passes [cfn-lint](https://github.com/aws-cloudformation/cfn-lint), AWS's CloudFormation linter. The one exception is an instruction shorter than Bedrock's 40-character minimum, which the writer reports as a warning rather than padding. Since cfn-lint 1.59, every template also gets a warning (W3697) that Bedrock Agents has been in maintenance mode since 2026-06-30; it is about the service, not the template, so the tests set it aside.
 
 **Deployed:** on 2026-10-27, a template the writer produced, for an agent with three functions (one requiring confirmation) and a role, deployed unchanged to Amazon Bedrock in `us-east-1` with Amazon Nova Lite. The agent was prepared, and the name, model, instructions, functions, parameters and confirmation settings Bedrock stored matched the source. A function whose confirmation the source doesn't state is stored as not needing confirmation, so the writer warns about each one.
 

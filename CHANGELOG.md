@@ -5,6 +5,7 @@ Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](
 ## 0.9.0 (unreleased)
 
 - Documentation: the homepage has a short video that follows a platform engineer from an audit question to an agent inventory and a pull request comment that flags a removed guardrail. The source archive leaves it out, as it does the site's images.
+- Tests: cfn-lint 1.59 warns on every `AWS::Bedrock::Agent` that Bedrock Agents has been in maintenance mode since 2026-06-30 (W3697). The CloudFormation writer's templates are still linted; that one note about the service is set aside, and the CloudFormation format page says so.
 
 ## 0.8.0 (2026-10-27)
 
