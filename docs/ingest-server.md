@@ -35,6 +35,8 @@ See [`examples/marshal-server.yaml`](../examples/marshal-server.yaml).
 | `policy.shipped.protected_refs` | Accept any ref the provider reports as protected (GitLab) |
 | `policy.shipped.protected_environments` | Accept any environment the provider reports as protected (GitLab) |
 | `policy.shipped.workflows` | Glob patterns of caller workflows that may record `shipped` events: a Jenkins job URL, an Azure DevOps subject, a GitHub workflow ref or a GitLab CI config ref |
+| `policy.risk.approved_models` | Approved model `providers` and `models` (globs); a change to any other is raised to `raise_to` (default `HIGH`). See [Your own risk rules](guides/risk-rules.md) |
+| `policy.risk.rules` | Your organization's rules: each a `name`, a `match` (categories, kinds, paths, refs, targets, identity) and `raise_to`, or `lower_to` with a required `reason`. Added to the built-in ratings; the API response, comment and web view name the rule on each line it changed |
 
 `repositories` is required because a public provider signs tokens for every repository it hosts. The issuer alone proves only that a token came from GitHub, not from your organization. The same holds within an organization: a Jenkins controller signs tokens for every job, and an Azure DevOps organization for every pipeline.
 

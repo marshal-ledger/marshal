@@ -17,7 +17,7 @@ from .freshness import FreshnessPolicy
 from .model import AgentSpec, Channel, DeploymentEvent
 from .readers import READERS, ReadOptions, ReadResult, detect
 from .report import markdown, text
-from .risk import rank
+from .risk import RiskRules, load_rules, rank
 from .service import AgentReport, ingest
 from .store import Store, StoreError, StoreUnavailable
 
@@ -103,11 +103,22 @@ def _emit(reports: list[AgentReport], args: argparse.Namespace) -> None:
         Path(args.report).write_text(markdown(reports), encoding="utf-8")
 
 
+def _risk_rules(args: argparse.Namespace) -> RiskRules | None:
+    """Rules from --risk-rules, for an operator to try them locally. The ingest server reads its own."""
+    if not getattr(args, "risk_rules", None):
+        return None
+    try:
+        return load_rules(yaml.safe_load(Path(args.risk_rules).read_text(encoding="utf-8")))
+    except (OSError, ValueError, yaml.YAMLError) as exc:
+        raise ValueError(f"risk rules in {args.risk_rules}: {exc}") from exc
+
+
 def _collect(args: argparse.Namespace) -> int:
     environment = args.environment or args.target
     if not environment:
         return _fail("--environment is required when no --target is given", 2)
     try:
+        risk = _risk_rules(args)
         result = _run_reader(args)
     except ValueError as exc:
         return _fail(str(exc))
@@ -122,6 +133,7 @@ def _collect(args: argparse.Namespace) -> int:
             environment=environment,
             hash_only=args.hash_only,
             channel=Channel(args.channel),
+            risk=risk,
         )
     if args.portability:
         _add_portability(reports, result.records, args.portability)
@@ -297,10 +309,14 @@ def _web(args: argparse.Namespace) -> int:
         from .web import WebSettings, create_web_app
     except ImportError:
         return _fail("the web view needs extra packages: pip install 'marshal-ledger[server]'")
+    try:
+        risk = _risk_rules(args)
+    except ValueError as exc:
+        return _fail(str(exc))
     if args.export:
         from .web import export_snapshot
 
-        count = export_snapshot(args.db, args.export, password=_password(args), site_url=args.site_url)
+        count = export_snapshot(args.db, args.export, password=_password(args), site_url=args.site_url, risk=risk)
         print(f"Wrote {count} pages to {args.export}/", file=sys.stderr)
         return 0
     loopback = args.host in ("127.0.0.1", "localhost", "::1")
@@ -309,7 +325,7 @@ def _web(args: argparse.Namespace) -> int:
     settings = WebSettings(enabled=True, user_header=args.user_header or "X-Forwarded-Email",
                            allow_unauthenticated=loopback and not args.user_header)
     print(f"Marshal web view on http://{args.host}:{args.port}/", file=sys.stderr)
-    uvicorn.run(create_web_app(args.db, settings, password=_password(args)), host=args.host, port=args.port, log_level="warning")
+    uvicorn.run(create_web_app(args.db, settings, password=_password(args), risk=risk), host=args.host, port=args.port, log_level="warning")
     return 0
 
 
@@ -381,6 +397,11 @@ def _split(ref: str) -> tuple[str, str | None]:
 
 def _diff(args: argparse.Namespace) -> int:
     agent, selector = _split(args.old)
+    try:
+        risk = _risk_rules(args)
+    except ValueError as exc:
+        return _fail(str(exc))
+    old_record = None
     with _open_store(args) as store:
         try:
             if args.new is None:
@@ -389,19 +410,19 @@ def _diff(args: argparse.Namespace) -> int:
                 base_selector = f"shipped:{args.environment}" if args.environment else "shipped"
                 try:
                     old = store.resolve(agent, base_selector)
-                    old_spec, old_label = old.record.spec, old.label
+                    old_record, old_spec, old_label = old.record, old.record.spec, old.label
                 except StoreError:
                     old_spec, old_label = AgentSpec(), "(nothing shipped)"
             else:
                 new_agent, new_selector = _split(args.new)
                 old = store.resolve(agent, selector or "latest")
                 new = store.resolve(new_agent, new_selector or "latest")
-                old_spec, old_label = old.record.spec, old.label
+                old_record, old_spec, old_label = old.record, old.record.spec, old.label
                 if new_agent != agent:
                     old_label = f"{agent}@{old.label}"
         except StoreError as exc:
             return _fail(str(exc))
-    changes = rank(diff_specs(old_spec, new.record.spec))
+    changes = rank(diff_specs(old_spec, new.record.spec), risk, before=old_record, after=new.record)
     if args.output == "json":
         json.dump(
             {
@@ -523,6 +544,12 @@ def _add_read_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--commit", help="source commit to record")
 
 
+def _add_risk_rules_arg(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--risk-rules", metavar="FILE",
+                        help="also rate changes by these organization rules: a server configuration file, or the "
+                        "contents of its policy.risk. For trying rules locally; the ingest server reads its own")
+
+
 def _add_db_arg(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--db",
@@ -560,6 +587,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     add_event_args(collect)
     collect.add_argument("--channel", choices=[Channel.MANUAL.value, Channel.SCHEDULED.value], default=Channel.MANUAL.value,
                          help="how this collection runs: by a person (default) or by a scheduled export job")
+    _add_risk_rules_arg(collect)
     _add_db_arg(collect)
     collect.set_defaults(handler=_collect)
 
@@ -637,6 +665,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     web.add_argument("--user-header", help="require this header, set by an SSO proxy (needed beyond this machine)")
     web.add_argument("--export", metavar="DIR", help="write the pages as static files to DIR instead of serving them")
     web.add_argument("--site-url", metavar="URL", help="with --export: the URL the files will be served from, to write a sitemap.xml")
+    _add_risk_rules_arg(web)
     _add_db_arg(web)
     web.set_defaults(handler=_web)
 
@@ -669,6 +698,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     diff.add_argument("new", metavar="AGENT[@SELECTOR]", nargs="?")
     diff.add_argument("--environment", help="with one argument: compare against what is shipped here")
     diff.add_argument("--output", choices=["text", "json"], default="text")
+    _add_risk_rules_arg(diff)
     _add_db_arg(diff)
     diff.set_defaults(handler=_diff)
 

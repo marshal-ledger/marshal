@@ -7,7 +7,7 @@ re-normalized here, so a store holds the same result whichever client sent it.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from datetime import datetime
 from typing import Any, Iterable, Optional
 
@@ -16,7 +16,7 @@ from .hashing import sha256_text, spec_digest
 from .model import AgentSpec, AgentVersion, Channel, DeploymentEvent, Entity, Provenance
 from .quality import score
 from .redact import redact
-from .risk import RankedChange, rank
+from .risk import RankedChange, RiskRules, rank
 from .store import Actor, Store, StoreError
 
 
@@ -49,9 +49,10 @@ class AgentReport:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "AgentReport":
-        data = dict(data)
-        changes = [RankedChange.from_dict(c) for c in data.pop("changes", [])]
-        return cls(**data, changes=changes)
+        changes = [RankedChange.from_dict(c) for c in data.get("changes", [])]
+        # Unknown keys are skipped, so a client can read a newer server's reports.
+        known = {f.name for f in fields(cls)} - {"changes"}
+        return cls(**{k: v for k, v in data.items() if k in known}, changes=changes)
 
 
 def normalize(record: AgentVersion, *, hash_only: bool = False) -> tuple[AgentVersion, int]:
@@ -88,18 +89,19 @@ def ingest(
     hash_only: bool = False,
     at: datetime | None = None,
     channel: Channel = Channel.MANUAL,
+    risk: RiskRules | None = None,
 ) -> list[AgentReport]:
     """Normalize and record ``records``, and report each one's changes against what
-    was last shipped to ``environment``."""
+    was last shipped to ``environment``, rated by the built-in rules and ``risk``."""
     normalized = [normalize(r, hash_only=hash_only) for r in records]
 
-    baselines: dict[str, tuple[Optional[str], AgentSpec]] = {}
+    baselines: dict[str, tuple[Optional[str], Optional[AgentVersion]]] = {}
     for record, _ in normalized:
         try:
             shipped = store.resolve(record.agent, f"shipped:{environment}")
-            baselines[record.agent] = (shipped.label, shipped.record.spec)
+            baselines[record.agent] = (shipped.label, shipped.record)
         except StoreError:
-            baselines[record.agent] = (None, AgentSpec())
+            baselines[record.agent] = (None, None)
 
     recorded = store.record(
         [r for r, _ in normalized], event=event, environment=environment, entities=entities, at=at, actor=actor,
@@ -108,7 +110,8 @@ def ingest(
 
     reports = []
     for (record, redactions), result in zip(normalized, recorded):
-        baseline_label, baseline_spec = baselines[record.agent]
+        baseline_label, baseline = baselines[record.agent]
+        baseline_spec = baseline.spec if baseline is not None else AgentSpec()
         reports.append(
             AgentReport(
                 agent=record.agent,
@@ -120,7 +123,7 @@ def ingest(
                 new_version=result.new_version,
                 baseline=baseline_label,
                 completeness=record.quality.completeness,
-                changes=rank(diff_specs(baseline_spec, record.spec)),
+                changes=rank(diff_specs(baseline_spec, record.spec), risk, before=baseline, after=record),
                 redactions=redactions,
                 channel=channel.value,
                 drift=event is DeploymentEvent.OBSERVED and baseline_label is not None and baseline_label != result.version.label,

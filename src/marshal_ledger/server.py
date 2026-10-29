@@ -25,6 +25,7 @@ from . import __version__
 from .dbauth import password_provider
 from .model import AgentVersion, Channel, DeploymentEvent, Entity
 from .oidc import Caller, IssuerConfig, KeyResolver, RepositoryNotAllowed, TokenError, Verifier
+from .risk import RiskRules
 from .service import ingest
 from .store import Actor, OwnershipError, Store, StoreUnavailable
 from .web import WebSettings, create_web_app
@@ -56,6 +57,8 @@ class Policy(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     shipped: ShippedPolicy = Field(default_factory=ShippedPolicy)
+    risk: RiskRules = Field(default_factory=RiskRules)
+    """The organization's risk rules, added to the built-in ratings. Only the server reads them."""
 
 
 class ServerConfig(BaseModel):
@@ -174,11 +177,12 @@ def create_app(config: ServerConfig, key_resolver: KeyResolver | None = None) ->
                     actor=actor,
                     hash_only=config.hash_only,
                     channel=channel,
+                    risk=config.policy.risk,
                 )
             except OwnershipError as exc:
                 raise HTTPException(403, f"agent ownership: {exc}") from exc
         return {"reports": [r.to_dict() for r in reports]}
 
     if config.web.enabled:
-        app.mount("/", create_web_app(config.store, config.web, password=password))
+        app.mount("/", create_web_app(config.store, config.web, password=password, risk=config.policy.risk))
     return app

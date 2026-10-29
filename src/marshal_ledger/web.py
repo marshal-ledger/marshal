@@ -29,9 +29,9 @@ from pydantic import BaseModel, ConfigDict
 
 from . import __version__
 from .dbauth import PasswordProvider
-from .diff import diff_specs
+from .diff import describe, diff_specs
 from .model import AgentVersion
-from .risk import rank
+from .risk import RiskRules, rank
 from .store import Store, StoreError, StoreUnavailable
 
 
@@ -297,9 +297,10 @@ _SNAPSHOT_NOTE = ('<p class="snapshot">A static snapshot of a Marshal ledger. Se
 
 
 def create_web_app(store_path: str, settings: WebSettings, *, password: Optional[PasswordProvider] = None,
-                   snapshot: bool = False) -> FastAPI:
+                   snapshot: bool = False, risk: Optional[RiskRules] = None) -> FastAPI:
     """The web view. ``snapshot`` renders pages for static files: no forms, and the
-    dependencies page lists every entity instead of asking for one."""
+    dependencies page lists every entity instead of asking for one. ``risk`` is the
+    organization's risk rules, as the ingest server applies them."""
     app = FastAPI(title="Marshal web view", version=__version__, docs_url=None, redoc_url=None, openapi_url=None)
 
     @app.exception_handler(StoreUnavailable)
@@ -410,9 +411,10 @@ def create_web_app(store_path: str, settings: WebSettings, *, password: Optional
         ]
 
         if shipped is not None and shipped.record.version != record.version:
-            changes = rank(diff_specs(shipped.record.spec, spec))
+            changes = rank(diff_specs(shipped.record.spec, spec), risk, before=shipped.record, after=record)
             parts.append(_card(f"Changes from shipped {shipped.label}", _table(["Risk", "Change"], [[
-                _badge(c.severity.label, c.severity.label), f'<span class=mono>{_e(c.line()[6:])}</span>',
+                _badge(c.severity.label, c.severity.label), f'<span class=mono>{_e(describe(c.change))}</span>'
+                + (f'<div class="muted">{_e(c.note)}</div>' if c.note else ""),
             ] for c in changes], "No changes."), f"{len(changes)} change{'s' * (len(changes) != 1)}"))
 
         environments = _table(["Environment", "Shipped", "Live", "Confirmed", "State"], [[
@@ -601,14 +603,15 @@ async def _asgi_get(app: FastAPI, href: str) -> tuple[int, bytes]:
 
 
 def export_snapshot(store_path: str, out_dir: str | Path, *, settings: Optional[WebSettings] = None,
-                    password: Optional[PasswordProvider] = None, site_url: Optional[str] = None) -> int:
+                    password: Optional[PasswordProvider] = None, site_url: Optional[str] = None,
+                    risk: Optional[RiskRules] = None) -> int:
     """Write every page reachable from the inventory as static HTML files; return the number written.
 
     Links are rewritten to the saved files, so the result can be served by any static host.
     With ``site_url``, the address the files will be served from, a ``sitemap.xml`` lists the
     inventory, the dependencies page and each agent's latest version for search engines."""
     settings = (settings or WebSettings()).model_copy(update={"enabled": True, "allow_unauthenticated": True})
-    app = create_web_app(store_path, settings, password=password, snapshot=True)
+    app = create_web_app(store_path, settings, password=password, snapshot=True, risk=risk)
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
 

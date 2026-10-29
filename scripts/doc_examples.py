@@ -186,6 +186,22 @@ class Examples:
         run("collect", agent, "--db", db, "--event", "proposed", "--environment", "prod", "--report", report)
         return comment(report)
 
+    def pr_comment_org_rules(self) -> str:
+        """The HR assistant change above, plus a new approved model and a longer session, rated with the
+        organization rules in examples/marshal-server.yaml."""
+        agent = self.fixture("hr-rules", "cloudformation/bedrock-agents/hr-assistant")
+        template = agent / "cfn" / "hr-resources.yml"
+        db = self.work / "hr-rules.sqlite"
+        run("collect", agent, "--db", db, "--event", "shipped", "--environment", "prod")
+        edit(template, "              - bedrock:Retrieve\n              - s3:GetObject\n",
+             "              - bedrock:Retrieve\n              - s3:GetObject\n              - dynamodb:UpdateItem\n")
+        edit(template, 'FoundationModel: "amazon.titan-text-premier-v1:0"', 'FoundationModel: "amazon.nova-pro-v1:0"')
+        edit(template, "IdleSessionTTLInSeconds: 900", "IdleSessionTTLInSeconds: 3600")
+        report = self.work / "hr-rules.md"
+        run("collect", agent, "--db", db, "--event", "proposed", "--environment", "prod", "--report", report,
+            "--risk-rules", ROOT / "examples" / "marshal-server.yaml")
+        return comment(report)
+
 
 def comment(report: Path) -> str:
     """The body of a pull request comment, without its marker and heading."""
