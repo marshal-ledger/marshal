@@ -13,7 +13,8 @@ One Marshal release reads every variant below at the same time, so teams on diff
 |---|---|---|---|
 | [Databricks Asset Bundles](databricks.md) | `databricks.yml` bundles with Genie spaces and agent apps | The bundle schema of the Databricks CLI | Not written |
 | [AWS CloudFormation and CDK](cloudformation.md) | `AWS::Bedrock::Agent` (Bedrock Agents Classic), `AWS::BedrockAgentCore::Harness` and its gateways, `AWS::BedrockAgentCore::Runtime`; YAML, JSON and `cdk.out` templates | CloudFormation resource types are unversioned; mapped from AWS's published resource schemas | `AWS::Bedrock::Agent` or `AWS::BedrockAgentCore::Harness` |
-| [Terraform](terraform.md) | `terraform show -json` of a saved plan or of state, and OpenTofu's equivalent; Bedrock agents from the AWS provider (`aws_bedrockagent_agent`) or the Cloud Control provider (`awscc_bedrock_agent`), and AgentCore runtimes | Tested with Terraform 1.13.4 | Not written |
+| [Terraform](terraform.md) | `terraform show -json` of a saved plan or of state, and OpenTofu's equivalent; Bedrock agents from the AWS provider (`aws_bedrockagent_agent`) or the Cloud Control provider (`awscc_bedrock_agent`), AgentCore harnesses (`awscc_bedrockagentcore_harness`) and runtimes | Tested with Terraform 1.13.4 | Not written |
+| [AgentCore CLI projects](agentcore-cli.md) | `agentcore/agentcore.json` and each harness's `harness.yaml` (project schema version 2) or `harness.json` (version 1), with `system-prompt.md`; both give the same version | The AgentCore CLI's harness schema | Not written; the `agentcore-harness` writer writes the same harness as CloudFormation |
 | [Copilot Studio](copilot-studio.md) | Workspaces from the Visual Studio Code extension (`.mcs.yml` files), and solutions exported with `pac solution export`, zipped or unpacked | Microsoft's published authoring schema, pinned to a commit | A workspace |
 | [Agentforce](agentforce.md) | Agent Script (`.agent` files), and legacy Agent Builder metadata (`Bot`, `GenAiPlannerBundle`, `GenAiPlugin`, `GenAiFunction`); an agent keeps its id when it moves from one to the other | Agent Script as in Salesforce's published examples (forcedotcom/sf-skills) | Agent Script |
 | [Google ADK Agent Config](adk-config.md) | `root_agent.yaml` and the sub-agent configs it references | Google's published `AgentConfig.json` schema; written configs load in ADK 2.13 | An Agent Config |
@@ -24,7 +25,7 @@ One Marshal release reads every variant below at the same time, so teams on diff
 | [AGNTCY OASF](oasf.md) | Records with a `schema_version` | Any `schema_version` | OASF 1.1.0 for a new record; a re-written OASF record keeps its own schema version |
 | [Marshal file](marshal-file.md) | Hand-written definitions, for agents no reader covers | One version | A Marshal file |
 
-Not read: Copilot Studio's Dataverse source control layout and agents that exist only in managed solutions, raw Terraform `.tf` files and providers other than AWS, and AgentCore CLI projects (read the CloudFormation that `cdk synth` produces). See [how each format is verified](../design.md#formats-and-how-each-is-verified) for how each writer is tested.
+Not read: Copilot Studio's Dataverse source control layout and agents that exist only in managed solutions, raw Terraform `.tf` files and providers other than AWS, and the runtimes and other resources of AgentCore CLI projects (only their harnesses are read). See [how each format is verified](../design.md#formats-and-how-each-is-verified) for how each writer is tested.
 
 ## A variant Marshal doesn't know
 
