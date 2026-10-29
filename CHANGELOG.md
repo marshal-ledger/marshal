@@ -4,6 +4,8 @@ Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](
 
 ## 0.9.0 (unreleased)
 
+- Tests: cfn-lint 1.59 warns on every `AWS::Bedrock::Agent` that Bedrock Agents has been in maintenance mode since 2026-06-30 (W3697). The CloudFormation writer's templates are still linted; that one note about the service is set aside, and the CloudFormation format page says so.
+
 ## 0.8.0 (2026-10-27)
 
 - The GitLab CI template has been tested on GitLab.com: shipped and proposed events, and one merge request comment updated on later pushes.
