@@ -15,6 +15,13 @@ Marshal is an open-source AI agent inventory. It keeps one versioned record of e
 [Get started](getting-started.md){ .md-button }
 [GitHub](https://github.com/marshal-ledger/marshal){ .md-button }
 
+<video class="marshal-video" controls preload="none" poster="assets/marshal-short-poster.png" aria-label="A short video: a platform engineer is asked which AI agents her company runs, finds them spread across four platforms with uneven controls, and uses Marshal to build the inventory and catch a change that removes a guardrail before it ships">
+  <source src="assets/marshal-short.mp4" type="video/mp4">
+</video>
+
+A short story (1:44): Maya, a fictional platform engineer, has to tell her security team which AI agents her company runs. The survey figures cite their sources on screen, and the Marshal screens are real output. Music: "Bossa Nova Cafe Morning Breeze" by alex-morgan, under the [Pixabay Content License](https://pixabay.com/service/license-summary/).
+{ .marshal-video-caption }
+
 ![A walk through the Marshal web view: the inventory of 29 public agents, a Copilot Studio agent in drift whose tool was switched to the maker's credentials, a proposed change that adds a refund function, and the agents that share an Apex action](assets/web-tour.gif)
 
 ## What it does
