@@ -1,6 +1,8 @@
 import json
 import textwrap
 
+import pytest
+
 from marshal_ledger.cli import main
 
 BUNDLE = """
@@ -115,3 +117,43 @@ def test_db_auth_needs_postgres_and_reports_an_unreachable_store(tmp_path, capsy
     assert "only to a postgresql:// store" in capsys.readouterr().err
     code, _, err = run(capsys, "ls", "--db", "postgresql://marshal@127.0.0.1:1/marshal?connect_timeout=2")
     assert code == 1 and "cannot connect to the Postgres store" in err
+
+
+def test_risk_rules_flag_lets_an_operator_try_rules_locally(tmp_path, capsys):
+    bundle = tmp_path / "bundle"
+    bundle.mkdir()
+    (bundle / "databricks.yml").write_text(textwrap.dedent(BUNDLE))
+    db = str(tmp_path / "ledger.sqlite")
+    run(capsys, "collect", str(bundle), "--target", "prod", "--event", "shipped", "--db", db)
+    (bundle / "databricks.yml").write_text(textwrap.dedent(BUNDLE).replace("main.support.faq", "main.support.kb"))
+    rules = tmp_path / "marshal-server.yaml"
+    rules.write_text(textwrap.dedent("""
+        store: ledger.sqlite
+        issuers: []
+        policy:
+          risk:
+            rules:
+              - name: support-data
+                match: {refs: ["knowledge/databricks.uc.table.main.support.*"]}
+                raise_to: HIGH
+                reason: customer data
+    """))
+    code, out, _ = run(capsys, "collect", str(bundle), "--target", "prod", "--event", "proposed", "--db", db,
+                       "--risk-rules", str(rules))
+    assert code == 0
+    assert "HIGH  + knowledge knowledge/databricks.uc.table.main.support.kb (scope read)  " \
+           "[raised from LOW by org rule support-data: customer data]" in out
+
+    code, out, _ = run(capsys, "diff", "support/support_agent", "--db", db)
+    assert "LOW   + knowledge knowledge/databricks.uc.table.main.support.kb (scope read)" in out
+    assert "org rule" not in out, "without the flag, the built-in ratings"
+    code, out, _ = run(capsys, "diff", "support/support_agent", "--db", db, "--risk-rules", str(rules), "--output", "json")
+    added = [c for c in json.loads(out)["changes"] if c["path"].endswith("main.support.kb")][0]
+    assert (added["severity"], added["rule"]) == ("HIGH", "support-data")
+
+    rules.write_text("rules: [{name: quiet, match: {categories: [model]}, lower_to: LOW}]\n")
+    code, _, err = run(capsys, "diff", "support/support_agent", "--db", db, "--risk-rules", str(rules))
+    assert code == 1 and "needs a reason" in err
+
+    with pytest.raises(SystemExit):
+        main(["push", str(bundle), "--target", "prod", "--event", "proposed", "--url", "https://x", "--risk-rules", str(rules)])

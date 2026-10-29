@@ -84,7 +84,7 @@ Readers are tested against real, public definitions, pinned to a commit. Only th
 
 ## Where to next
 
-- Guides: [run an agent inventory across dev, test and prod](guides/operating-model.md), [inventory Copilot Studio agents](guides/copilot-studio-inventory.md), [review agent changes in pull requests](guides/pull-request-review.md), [track agents in code](guides/agents-in-code.md), [detect drift](guides/drift-detection.md), [convert an ADK agent to Agent Spec](guides/convert-adk-to-agent-spec.md), [move Bedrock agents to the AgentCore harness](guides/bedrock-agents-to-agentcore.md), and [an agent inventory for audit](guides/audit-evidence.md).
+- Guides: [run an agent inventory across dev, test and prod](guides/operating-model.md), [inventory Copilot Studio agents](guides/copilot-studio-inventory.md), [review agent changes in pull requests](guides/pull-request-review.md), [set your own risk rules](guides/risk-rules.md), [track agents in code](guides/agents-in-code.md), [detect drift](guides/drift-detection.md), [convert an ADK agent to Agent Spec](guides/convert-adk-to-agent-spec.md), [move Bedrock agents to the AgentCore harness](guides/bedrock-agents-to-agentcore.md), and [an agent inventory for audit](guides/audit-evidence.md).
 - [How Marshal compares](comparison.md) with cloud agent registries, platform admin tools, observability, AI gateways and governance platforms.
 - [Getting started](getting-started.md): read your own agents and record their history.
 - [Design](design.md): the problem, the architecture, and the security and network posture.

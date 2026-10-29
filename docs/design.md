@@ -207,6 +207,8 @@ Completeness 38%
 
 The rules are listed in [Risk ranking](ledger-model.md#risk-ranking). A tool whose scope is unknown ranks as a write.
 
+These built-in rules are a floor. An organization adds its own in the ingest server's configuration: approved models and providers, sensitive tools, knowledge sources and hosts (matched by ref or by resolved target), identity modes, and field paths. A rule may raise a rating freely; lowering one needs a reason, which the report prints on that line, and a removed guardrail is never lowered. Every line a rule changed names the rule, in the API response, the comment and the web view. The rules are read only by the server, never from a request or a record, so the team whose change is rated can't change how it is rated. Local commands use the built-in ratings unless an operator passes `--risk-rules` to try a rules file. See [Your own risk rules](guides/risk-rules.md).
+
 ## Quality and portability scores
 
 **Completeness.** How much of the record is declared or derived versus `unknown`, weighted by importance (permissions and write tools count more than descriptions).
@@ -233,7 +235,7 @@ Fidelity: 5 lossless · 13 dropped · 2 defaulted
 | Capability | What it does |
 |---|---|
 | **Inventory** | Every agent, version and deployment, from every supported format |
-| **Risk-ranked diff** | Normalized diff between versions, sorted by severity, posted as a pull request comment |
+| **Risk-ranked diff** | Normalized diff between versions, sorted by severity, posted as a pull request comment; the organization can add its own rules on the server |
 | **Drift and freshness** | What is live against what was shipped, and how recently each record was confirmed, by which channel |
 | **Conversion** | Between supported formats, with a fidelity report computed by readback |
 | **Portability scores** | Per target, split into platform limitations and agent-specific issues |
@@ -245,7 +247,7 @@ It runs as a CLI with a local SQLite store, or as a service (ingest API and read
 ## Next
 
 - **More documented equivalents,** where vendors document what a connector or action calls
-- **Policy checks:** rules such as "write-scope or irreversible tools need approval" or "models must be on an approved list," the same on every platform
+- **Policy checks:** rules such as "write-scope or irreversible tools need approval" that fail a pipeline, the same on every platform. Organization risk rules already rate such changes; checks would block them
 - **Import tests for more writers,** such as Copilot Studio and Agentforce
 - **Forking with lineage:** copy another team's agent into your platform's format and track the upstream
 - **Agent bill of materials:** everything a version depended on

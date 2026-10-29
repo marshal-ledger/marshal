@@ -28,6 +28,8 @@ Completeness 73%
 
 Changes are ranked by what they let the agent do. Identity changes, new write or admin grants, new tools whose scope is write or unknown, a new model provider, and instructions that lose a line stating a limit (such as "never" or "approval") are HIGH. New read or execute grants, new execute tools, principal changes, other instruction changes, a new model from the same provider and guardrail settings are MED. Removals, read-only additions and descriptions are LOW. The full rules are in [Risk ranking](../ledger-model.md#risk-ranking).
 
+Your organization can add its own rules on the Marshal server, such as approved models or an API that moves money. A line a rule changed names it: `[raised from LOW by org rule conversation-retention: changes how long conversations are kept]`. Agent teams can't change the rules from their pipelines. See [Your own risk rules](risk-rules.md).
+
 ## Set it up on GitHub
 
 Add the [GitHub Action](../github-action.md) to the workflow that deploys the agent: `proposed` on pull requests, `shipped` after the deploy succeeds.

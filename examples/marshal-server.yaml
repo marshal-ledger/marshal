@@ -31,3 +31,39 @@ policy:
         environments:
           - prod          # GitHub environments with required reviewers
         protected_environments: true   # GitLab protected environments
+
+  # Your organization's risk rules, added to Marshal's built-in ratings. Only this
+  # file sets them: nothing an agent team sends can change how its changes are rated.
+  # See docs/guides/risk-rules.md.
+  risk:
+    approved_models:
+      providers: [anthropic, amazon]
+      models: ["anthropic.claude-*", "claude-*", "amazon.nova-*"]
+      raise_to: HIGH        # a change to any other model or provider
+
+    rules:
+      - name: payments-api
+        match:
+          targets: ["host:payments.acme.example"]
+        raise_to: HIGH
+        reason: moves money
+
+      - name: shared-credential-tools
+        match:
+          identity: [shared_credential]
+          categories: [tools]
+          kinds: [added]
+        raise_to: HIGH
+        reason: every user acts with the author's access
+
+      - name: conversation-retention
+        match:
+          paths: ["extensions.bedrock.idle_session_ttl", "extensions.bedrock-agentcore.memory*"]
+        raise_to: MED
+        reason: changes how long conversations are kept
+
+      - name: approved-model-upgrades
+        match:
+          paths: ["model.requested", "model.resolved"]
+        lower_to: LOW
+        reason: switching between approved models is routine here

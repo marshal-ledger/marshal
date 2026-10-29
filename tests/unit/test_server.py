@@ -1,11 +1,14 @@
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
 from conftest import AZURE_DEVOPS, GITHUB, GITLAB, JENKINS, without_password
 from marshal_ledger.hashing import sha256_text
-from marshal_ledger.model import AgentSpec, Instructions, Provenance, Source, ToolUse
+from marshal_ledger.model import AgentSpec, Instructions, Provenance, Scope, Source, ToolUse, Value
 from marshal_ledger.oidc import IssuerConfig
 from marshal_ledger.readers.base import build_record
+from marshal_ledger.risk import RiskRules
 from marshal_ledger.server import ServerConfig, create_app
 from marshal_ledger.store import Store, StoreUnavailable
 from marshal_ledger.web import WebSettings
@@ -373,3 +376,86 @@ def test_store_auth_supplies_the_postgres_password(config, signer, ledger_locati
     assert client.post("/v0/events", json=body(), headers=auth(signer.github())).status_code == 200
     page = client.get("/v0/agents", headers={"X-Forwarded-Email": "ana@acme.example"})
     assert [a["agent"] for a in page.json()] == ["finance/invoice"]
+
+
+RULES = {"rules": [{"name": "erp", "match": {"refs": ["tool/sap.*"]}, "raise_to": "HIGH", "reason": "system of record"},
+                   {"name": "routine-instructions", "match": {"categories": ["instructions"]}, "lower_to": "LOW",
+                    "reason": "prompt edits are reviewed in the agent repo"}]}
+
+
+def read_only(proposed):
+    for tool in proposed.spec.tools:
+        tool.scope, tool.reversible = Value[Scope].declared(Scope.READ), Value[bool].declared(True)
+    return proposed
+
+
+def ruled_client(config, signer):
+    config.policy.risk = RiskRules.model_validate(RULES)
+    return TestClient(create_app(config, key_resolver=signer.resolver))
+
+
+def test_org_rules_rate_changes_and_are_named_in_the_response(config, signer):
+    client = ruled_client(config, signer)
+    client.post("/v0/events", json=body("shipped"), headers=auth(signer.github()))
+    proposed = read_only(record(tools=["tool/sap.read_po"]))
+    text = "Reconcile invoices quickly."
+    proposed.spec.instructions = Instructions(hash=sha256_text(text), text=text, provenance=Provenance.DECLARED)
+    response = client.post("/v0/events", json=body("proposed", records=[proposed]),
+                           headers=auth(signer.github(ref="refs/pull/3/merge")))
+    changes = {c["path"]: c for c in response.json()["reports"][0]["changes"]}
+    assert {k: changes["tool tool/sap.read_po"][k] for k in ("severity", "builtin_severity", "rule", "reason")} == {
+        "severity": "HIGH", "builtin_severity": "LOW", "rule": "erp", "reason": "system of record"}
+    assert changes["instructions"]["severity"] == "LOW"
+    assert changes["instructions"]["reason"] == "prompt edits are reviewed in the agent repo"
+
+
+def test_the_web_view_served_with_the_api_uses_the_org_rules(config, signer):
+    config.web = WebSettings(enabled=True)
+    client = ruled_client(config, signer)
+    client.post("/v0/events", json=body("shipped"), headers=auth(signer.github()))
+    client.post("/v0/events", json=body("proposed", records=[read_only(record(tools=["tool/sap.read_po"]))]),
+                headers=auth(signer.github(ref="refs/pull/3/merge")))
+    page = client.get("/agent", params={"id": "finance/invoice"}, headers={"X-Forwarded-Email": "a@acme.example"}).text
+    assert "org rule erp: system of record" in page
+
+
+@pytest.mark.parametrize("extra", [
+    {"risk": RULES},
+    {"rules": RULES["rules"]},
+    {"policy": {"risk": RULES}},
+])
+def test_clients_cannot_send_ratings_or_rules(client, signer, extra):
+    response = client.post("/v0/events", json=body() | extra, headers=auth(signer.github()))
+    assert response.status_code == 422
+
+
+def test_ratings_in_a_record_are_ignored(client, signer):
+    """A record is the agent team's own data; nothing in it changes how the server rates it."""
+    client.post("/v0/events", json=body("shipped"), headers=auth(signer.github()))
+    sent = record(tools=["tool/sap.update_po"])
+    sent.spec.extensions["marshal"] = {"risk": {"rules": [{"name": "quiet", "match": {"categories": ["tools"]},
+                                                           "lower_to": "LOW", "reason": "trust us"}]},
+                                       "severity": "LOW"}
+    response = client.post("/v0/events", json=body("proposed", records=[sent]),
+                           headers=auth(signer.github(ref="refs/pull/3/merge")))
+    changes = {c["path"]: c for c in response.json()["reports"][0]["changes"]}
+    assert changes["tool tool/sap.update_po"]["severity"] == "HIGH"
+    assert "rule" not in changes["tool tool/sap.update_po"]
+
+
+def test_the_example_configuration_loads():
+    config = ServerConfig.load(Path(__file__).resolve().parents[2] / "examples" / "marshal-server.yaml")
+    assert config.policy.risk.approved_models is not None and config.policy.risk.rules
+
+
+def test_rules_without_a_reason_to_lower_stop_the_server_loading(tmp_path):
+    path = tmp_path / "marshal-server.yaml"
+    path.write_text(
+        "store: ledger.sqlite\n"
+        "issuers: [{issuer: 'https://token.actions.githubusercontent.com', provider: github, repositories: ['acme/*']}]\n"
+        "policy:\n"
+        "  risk:\n"
+        "    rules: [{name: quiet, match: {categories: [model]}, lower_to: LOW}]\n"
+    )
+    with pytest.raises(ValueError, match="needs a reason"):
+        ServerConfig.load(path)
