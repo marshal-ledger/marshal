@@ -11,7 +11,7 @@ Every reader's output can be written by every writer:
 
 | Readers | Writers |
 |---|---|
-| `adl`, `agent-spec`, `oasf`, `cloudformation`, `copilot-studio`, `agentforce`, `adk-config`, `databricks-asset-bundle`, `python`, `marshal-file` | `adl`, `agent-spec`, `oasf`, `cloudformation`, `copilot-studio`, `agentforce`, `adk-config`, `marshal-file` |
+| `adl`, `agent-spec`, `oasf`, `cloudformation`, `copilot-studio`, `agentforce`, `adk-config`, `databricks-asset-bundle`, `python`, `marshal-file` | `adl`, `agent-spec`, `oasf`, `cloudformation`, `agentcore-harness`, `copilot-studio`, `agentforce`, `adk-config`, `marshal-file` |
 
 Copilot Studio and ADK Agent Config definitions are written as files in a folder, so converting to them needs `--out`.
 
@@ -54,6 +54,8 @@ https://agents.acme.example/invoice-processor → agent-spec
 ## Identity across formats
 
 A converted agent keeps its ledger identity: its agent id, its platform, and its tool and knowledge refs. Where the target format can't name these itself, the writer records them in a Marshal extension block under the `io.github.marshal-ledger` key: ADL `extensions`, Agent Spec `metadata`, or OASF `annotations`. That way a document converted from Databricks to ADL reads back as the same Databricks agent. Native documents that already carry their own identity get no Marshal block.
+
+To move an agent to another platform rather than measure a conversion, pass `--migrate`: the written agent keeps its id, so its history continues in the ledger, and is recorded on the target's platform, such as a Bedrock agent moved to the [AgentCore harness](guides/bedrock-agents-to-agentcore.md). It applies to the platform formats (`cloudformation`, `agentcore-harness`, `copilot-studio`, `agentforce`, `adk-config`), not to open formats.
 
 ## Testing guarantees
 

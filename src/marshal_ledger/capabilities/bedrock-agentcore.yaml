@@ -1,0 +1,41 @@
+platform: bedrock-agentcore
+display_name: Amazon Bedrock AgentCore harness
+writer: agentcore-harness
+sources:
+  - https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/harness.html
+  - https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/harness-tools.html
+  - https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/harness-models.html
+  - https://docs.aws.amazon.com/bedrock/latest/userguide/agents-classic-maintenance-mode.html
+tools:
+  - {pattern: "tool/bedrock-agentcore.*", level: native, label: "harness tools and built-ins"}
+  - {pattern: "tool/*.user_input", level: adapt, label: "asking the user for input", advice: "the model asks in its reply, or an inline function returns control to the application"}
+  - {pattern: "tool/mcp.powerplatform.*", level: adapt, label: "Power Platform MCP connectors", advice: "these are Microsoft-hosted; connect the harness to the MCP server by URL"}
+  - {pattern: "tool/salesforce.escalate", level: adapt, label: "escalation to a human", advice: "an inline function returns control to the application to hand off"}
+  - {pattern: "tool/*code_interpreter", level: native, label: "code interpreter", advice: "add the agentcore_code_interpreter tool"}
+  - {pattern: "tool/google.code_execution", level: native, label: "code interpreter", advice: "add the agentcore_code_interpreter tool"}
+  - {pattern: "tool/mcp.http*", level: native, label: "MCP servers reached by URL"}
+  - {pattern: "tool/mcp.*", level: adapt, label: "MCP servers run as a local command", advice: "run the server on AgentCore runtime or behind an AgentCore gateway, and connect to it by URL"}
+  - {pattern: "tool/openapi.*", level: adapt, label: "OpenAPI operations", advice: "add an AgentCore gateway target with the OpenAPI schema"}
+  - {pattern: "tool/http.*", level: adapt, label: "HTTP APIs", advice: "add an AgentCore gateway target for the API"}
+  - {pattern: "tool/bedrock.*", level: adapt, label: "Bedrock Agents action groups", advice: "put the action group's Lambda behind an AgentCore gateway, or keep it as an inline function"}
+  - {pattern: "agent/*", level: adapt, label: "other agents", advice: "expose the other agent as a tool through an AgentCore gateway or MCP server"}
+  - {pattern: "*", level: adapt, label: "other tools", advice: "package the tool as a Lambda behind an AgentCore gateway, or as an inline function the application runs"}
+knowledge:
+  - {pattern: "knowledge/bedrock.knowledge_base.*", level: adapt, label: "Bedrock knowledge bases", advice: "connect the knowledge base through an AgentCore gateway target or a retrieval tool"}
+  - {pattern: "*", level: adapt, label: "other knowledge sources", advice: "ingest the data into a Bedrock knowledge base and connect it through an AgentCore gateway"}
+identity:
+  - {pattern: service_principal, level: native, label: "the harness's IAM execution role"}
+  - {pattern: "*", level: adapt, label: "user or shared credentials", advice: "the harness runs as its execution role; use AgentCore Identity for tools that act for a user"}
+models:
+  - {pattern: anthropic, level: native, label: "models served on Bedrock"}
+  - {pattern: amazon, level: native, label: "models served on Bedrock"}
+  - {pattern: meta, level: native, label: "models served on Bedrock"}
+  - {pattern: mistral, level: native, label: "models served on Bedrock"}
+  - {pattern: cohere, level: native, label: "models served on Bedrock"}
+  - {pattern: deepseek, level: native, label: "models served on Bedrock"}
+  - {pattern: bedrock, level: native, label: "models served on Bedrock"}
+  - {pattern: openai, level: native, label: "OpenAI models, through the harness's OpenAI configuration"}
+  - {pattern: azure-openai, level: native, label: "OpenAI models, through the harness's OpenAI configuration"}
+  - {pattern: google, level: native, label: "Gemini models, through the harness's Gemini configuration"}
+  - {pattern: "*", level: adapt, label: "other models", advice: "use a LiteLLM-compatible endpoint through the harness's LiteLLM configuration"}
+confirmation: adapt

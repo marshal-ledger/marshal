@@ -29,6 +29,7 @@ import yaml
 from marshal_ledger import demo
 from marshal_ledger.cli import main as marshal
 from marshal_ledger.readers import READERS
+from marshal_ledger.writers.base import yaml_text
 
 ROOT = Path(__file__).resolve().parents[1]
 CACHE = Path(os.environ.get("MARSHAL_FIXTURE_CACHE") or ROOT / "tests" / "fixtures" / ".cache")
@@ -129,6 +130,23 @@ class Examples:
         excerpt["bindings"] = {"executors": dict(list(record["bindings"]["executors"].items())[1:])}
         dumped = yaml.safe_dump(excerpt, sort_keys=False, width=100, allow_unicode=True).rstrip("\n")
         return dumped + "\n# Abbreviated: the other tool, the instructions and the version."
+
+    def convert_hr_to_agentcore(self) -> str:
+        """The public Bedrock HR assistant, moved to an AgentCore harness."""
+        template = CACHE / "cloudformation/bedrock-agents/hr-assistant/cfn/hr-resources.yml"
+        return run("convert", template, "--to", "agentcore-harness", "--migrate", stream="stderr")
+
+    def harness_hr(self) -> str:
+        """The harness written for the HR assistant, with its first tool only."""
+        template = CACHE / "cloudformation/bedrock-agents/hr-assistant/cfn/hr-resources.yml"
+        document = yaml.safe_load(run("convert", template, "--to", "agentcore-harness", "--migrate"))
+        [harness] = document["Resources"].values()
+        props = harness["Properties"]
+        others = len(props["Tools"]) - 1
+        props["Tools"] = props["Tools"][:1]
+        harness["Metadata"]["io.github.marshal-ledger"]["tool_refs"] = dict(
+            list(harness["Metadata"]["io.github.marshal-ledger"]["tool_refs"].items())[:1])
+        return yaml_text(document).rstrip("\n") + f"\n# Abbreviated: {others} more inline functions."
 
     def pr_comment_maker_credentials(self) -> str:
         """The demo's Copilot Studio edit, proposed in a pull request instead of made in the web designer."""

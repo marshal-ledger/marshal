@@ -88,6 +88,15 @@ def test_security_relevant_extension_changes_rank_high():
     assert found["extensions.copilot-studio.topics.x"] is Severity.LOW
 
 
+def test_removing_a_harness_hook_ranks_high():
+    hook = {"BeforeToolCall": {"Name": "approve-refunds", "Target": {"Lambda": {"Arn": "arn:aws:lambda:us-east-1:1:function:approve"}}}}
+    a = AgentSpec(extensions={"bedrock-agentcore": {"hooks": [hook], "allowed_tools": ["@orders"]}})
+    b = AgentSpec(extensions={"bedrock-agentcore": {"allowed_tools": ["*"]}})
+    found = severities(a, b)
+    assert found["extensions.bedrock-agentcore.hooks"] is Severity.HIGH
+    assert found["extensions.bedrock-agentcore.allowed_tools"] is Severity.MEDIUM
+
+
 def test_a_new_model_provider_is_high_and_an_upgrade_within_one_is_medium():
     def spec(model, provider):
         return AgentSpec(model={"requested": Value[str].declared(model), "provider": Value[str].declared(provider)})

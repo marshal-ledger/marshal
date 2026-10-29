@@ -41,6 +41,10 @@ SOURCES = [
     ("cloudformation", "cloudformation/serverless-agents"),
     ("cloudformation", "cloudformation/multi-agent"),
     ("cloudformation", "cloudformation/agentcore"),
+    ("cloudformation", "cloudformation/agentcore-harness"),
+    ("cloudformation", "cloudformation/agentcore-harness-websearch"),
+    ("cloudformation", "cloudformation/agentcore-harness-hoop"),
+    ("cloudformation", "cloudformation/agentcore-harness-paperclip"),
     ("copilot-studio", "copilot-studio/all-the-things"),
     ("copilot-studio", "copilot-studio/mcp-agent"),
     ("copilot-studio", "copilot-studio/solution-wellness"),
@@ -102,8 +106,8 @@ def validate_copilot_studio(files):
 
 # cfn-lint rules for values the source lacks, which the writer reports as warnings instead of inventing.
 WARNED_LINT = {"E3033": "Bedrock requires instructions of at least"}
-# cfn-lint rules about the service, not the template. W3697 (cfn-lint 1.59) notes that Bedrock Agents has been
-# in maintenance mode since 2026-06-30; the writer targets Bedrock Agents, so every template it writes has it.
+# cfn-lint rules about the service, not the template. W3697 (cfn-lint 1.59) notes that Bedrock Agents is in
+# maintenance mode; the Bedrock writer targets it, so every template that writer produces has it.
 SERVICE_LINT = {"W3697"}
 
 
@@ -160,7 +164,7 @@ def test_every_loss_is_explained(fmt, fixture, target):
         assert conversion.read_back.platform == record.platform
         if conversion.files and target == "copilot-studio":
             validate_copilot_studio(conversion.files)
-        elif target == "cloudformation":
+        elif target in ("cloudformation", "agentcore-harness"):
             validate_cloudformation(conversion)
         else:
             validate(target, conversion.document)

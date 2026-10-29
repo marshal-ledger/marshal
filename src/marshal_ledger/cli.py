@@ -188,7 +188,7 @@ def _convert(args: argparse.Namespace) -> int:
     if getattr(WRITERS[args.to], "multi_file", False) and not args.out:
         return _fail(f"{args.to} definitions span several files; pass --out DIR", 2)
     try:
-        conversions = [convert(record, args.to) for record in result.records]
+        conversions = [convert(record, args.to, migrate=args.migrate) for record in result.records]
     except ConversionError as exc:
         return _fail(str(exc))
 
@@ -594,6 +594,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     convert_.add_argument("--to", required=True, choices=sorted(WRITERS), help="target format")
     convert_.add_argument("--out", metavar="DIR", help="write one file per agent here (required for several agents)")
     convert_.add_argument("--report", metavar="FILE", help="also write the fidelity reports as JSON")
+    convert_.add_argument("--migrate", action="store_true",
+                          help="move the agent to the target's platform: it keeps its id, so its history continues, "
+                          "and is recorded on the new platform")
     convert_.set_defaults(handler=_convert)
 
     init_agent = commands.add_parser(

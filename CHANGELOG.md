@@ -4,10 +4,14 @@ Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](
 
 ## 0.9.0 (unreleased)
 
+- AgentCore harnesses: the CloudFormation reader reads `AWS::BedrockAgentCore::Harness` in full: the model and its provider, the system prompt, and the tools, including each tool of a gateway defined in the same template with the Lambda that runs it, and tools the model provider runs, such as OpenAI's web search. A harness whose `AllowedTools` doesn't restrict them is recorded with the default `shell` and `file_operations` tools, so an agent that can run commands shows as one. MCP header and environment variable values are never copied, only their names.
+- A new `agentcore-harness` writer writes an agent as an AgentCore harness in CloudFormation, checked by cfn-lint against AWS's published harness schema. It lists the agent's tools in `AllowedTools`, so a written harness never gets a shell its source didn't have, and it writes a Bedrock agent's guardrail as the model's guardrail configuration. Not yet deployed to AgentCore. AWS put Bedrock Agents in maintenance mode on July 30, 2026 and recommends the harness; the new guide [Move Bedrock agents to the AgentCore harness](docs/guides/bedrock-agents-to-agentcore.md) walks through a conversion and what doesn't carry over.
+- `marshal convert --migrate` moves an agent to the target's platform: it keeps its id, so its history continues, and is recorded on the new platform.
+- `marshal port` scores moves to the AgentCore harness (`bedrock-agentcore`).
+- Risk ranking: a change to a harness's hooks, its gateway outbound auth or its MCP headers ranks HIGH, and a change to its allowed tools MED.
 - `marshal port` printed some advice and labels cut off at the first comma, such as Bedrock's advice for MCP servers, because the capability files left them unquoted. They are quoted, and a rule with an unknown key now fails to load.
-
 - Documentation: the homepage has a short video that follows a platform engineer from an audit question to an agent inventory and a pull request comment that flags a removed guardrail. The source archive leaves it out, as it does the site's images.
-- Tests: cfn-lint 1.59 warns on every `AWS::Bedrock::Agent` that Bedrock Agents has been in maintenance mode since 2026-06-30 (W3697). The CloudFormation writer's templates are still linted; that one note about the service is set aside, and the CloudFormation format page says so.
+- Tests: cfn-lint 1.59 warns on every `AWS::Bedrock::Agent` that Bedrock Agents is in maintenance mode (W3697). The CloudFormation writer's templates are still linted; that one note about the service is set aside, and the CloudFormation format page says so.
 
 ## 0.8.0 (2026-10-27)
 
