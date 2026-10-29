@@ -8,7 +8,7 @@ GitLab pipelines record agent definitions the same way GitHub workflows do. A jo
 
 ## Add it to a pipeline
 
-Include the template from a Marshal release, then extend its `.marshal-collect` job. `v0` follows the latest 0.x release; to decide when to upgrade, include a release tag such as `v0.7.0` instead.
+Include the template from a Marshal release, then extend its `.marshal-collect` job. `v0` follows the latest 0.x release; to decide when to upgrade, include a release tag instead (see [Upgrading](deployment.md#upgrading)).
 
 ```yaml
 include:

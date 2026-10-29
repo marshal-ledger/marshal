@@ -93,6 +93,7 @@ nav:
       - Portability: portability.md
       - Platform exportability: platform-exportability.md
   - Formats:
+      - Supported formats and versions: formats/supported-versions.md
       - Databricks Asset Bundles: formats/databricks.md
       - AWS CloudFormation and CDK: formats/cloudformation.md
       - Terraform: formats/terraform.md

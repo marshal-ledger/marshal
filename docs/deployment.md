@@ -140,3 +140,13 @@ Marshal never starts a connection to an agent platform (see [Network posture](de
 - **Outbound to the store.** With `store_auth: azure`, also to Microsoft Entra ID or the managed identity endpoint for database tokens.
 
 The server speaks plain HTTP on port 8080. Terminate TLS at the ingress, Route or proxy. For TLS to Postgres, add `sslmode=verify-full` (and `sslrootcert` if needed) to the store URL.
+
+## Upgrading
+
+Run one Marshal release everywhere: the ingest API, the web view, and every pipeline that records agents. A pipeline's Marshal is what reads the definition files, so two pipelines on different releases can record the same definition differently.
+
+- **Pin the release.** The GitHub Action's `@v0` and the GitLab template's `v0` follow the latest 0.x release. To decide when to upgrade, pin a release tag such as `@v0.8.0` in every workflow, include the GitLab template from the same tag, and run the same version of the image (`ghcr.io/marshal-ledger/marshal:0.8.0`), the chart and the PyPI package.
+- **Read the changelog first.** Before 1.0, a minor release may change the ledger model, the ingest API or the command line, and the [changelog](https://github.com/marshal-ledger/marshal/blob/main/CHANGELOG.md) lists each such change. When a release reads a definition more completely, an agent can get a new version once, at its next recorded event; the changelog says when that happens.
+- **Upgrade together.** Upgrade the ingest API first, since it migrates the database when it starts, then the web view, then every pipeline in one change.
+
+[Supported formats and versions](formats/supported-versions.md) lists which variants of each agent format a release reads.

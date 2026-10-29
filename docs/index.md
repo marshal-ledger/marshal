@@ -79,7 +79,7 @@ Or install it with `pip install 'marshal-ledger[server]'`. `marshal demo` downlo
 | [ADL](formats/adl.md), [Open Agent Spec](formats/agent-spec.md), [AGNTCY OASF](formats/oasf.md) | ✓ | ✓ | round trip; published schema for ADL and Agent Spec |
 | [Marshal file](formats/marshal-file.md): a hand-written definition for agents no reader covers | ✓ | ✓ | round trip |
 
-Readers are tested against real, public definitions, pinned to a commit. Only the Bedrock writer's output has been deployed to its platform so far; see [how each format is verified](design.md#formats-and-how-each-is-verified).
+Readers are tested against real, public definitions, pinned to a commit. Only the Bedrock writer's output has been deployed to its platform so far; see [how each format is verified](design.md#formats-and-how-each-is-verified), and [supported versions](formats/supported-versions.md) for the variants each reader handles.
 
 ## Where to next
 
