@@ -46,3 +46,19 @@
   border: 1px solid var(--md-default-fg-color--lightest);
   border-radius: 8px;
 }
+
+/* The homepage video. */
+.md-typeset .marshal-video {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 8px;
+  background: #fbfbfa;
+}
+.md-typeset .marshal-video-caption {
+  margin-top: .6em;
+  font-size: .75rem;
+  color: var(--md-default-fg-color--light);
+}

@@ -4,6 +4,8 @@ Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](
 
 ## 0.9.0 (unreleased)
 
+- Documentation: the homepage has a short video that follows a platform engineer from an audit question to an agent inventory and a pull request comment that flags a removed guardrail. The source archive leaves it out, as it does the site's images.
+
 ## 0.8.0 (2026-10-27)
 
 - The GitLab CI template has been tested on GitLab.com: shipped and proposed events, and one merge request comment updated on later pushes.
