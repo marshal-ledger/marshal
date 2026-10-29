@@ -205,6 +205,138 @@ def test_azure_devops_pipeline_proposes_and_service_connection_ships(ci_config, 
     assert client.post("/v0/events", json=body("proposed"), headers=auth(other)).status_code == 403
 
 
+def per_environment_client(ledger_location, signer, shipped, issuers=None):
+    config = ServerConfig(
+        store=ledger_location,
+        issuers=issuers
+        or [
+            IssuerConfig(issuer=GITHUB, provider="github", repositories=["acme/*"]),
+            IssuerConfig(issuer=GITLAB, provider="gitlab", repositories=["acme/*"]),
+        ],
+        policy={"shipped": shipped},
+    )
+    return TestClient(create_app(config, key_resolver=signer.resolver))
+
+
+def test_environments_without_an_entry_use_the_top_level_rule(ledger_location, signer):
+    client = per_environment_client(
+        ledger_location, signer, {"by_environment": {"prod": {"environments": ["prod"]}}}
+    )
+    main = signer.github()
+    assert client.post("/v0/events", json=body("shipped", environment="test"), headers=auth(main)).status_code == 200
+    assert client.post("/v0/events", json=body("observed", environment="dev"), headers=auth(main)).status_code == 200
+    pr = signer.github(ref="refs/pull/4/merge")
+    assert client.post("/v0/events", json=body("shipped", environment="test"), headers=auth(pr)).status_code == 403
+
+
+def test_an_environment_entry_replaces_the_top_level_rule(ledger_location, signer):
+    client = per_environment_client(
+        ledger_location,
+        signer,
+        {"refs": ["refs/heads/main"], "by_environment": {"prod": {"environments": ["prod"]}}},
+    )
+    main = signer.github()
+    response = client.post("/v0/events", json=body("shipped", environment="prod"), headers=auth(main))
+    assert response.status_code == 403, "the main branch matches the top-level rule, not prod's"
+    detail = response.json()["detail"]
+    assert "shipped events for prod" in detail and "shipped rule for prod" in detail
+    response = client.post("/v0/events", json=body("observed", environment="prod"), headers=auth(main))
+    assert response.status_code == 403
+    approved = signer.github(environment="prod")
+    assert client.post("/v0/events", json=body("shipped", environment="prod"), headers=auth(approved)).status_code == 200
+    staging = signer.github(ref="refs/heads/release", environment="staging")
+    assert client.post("/v0/events", json=body("shipped", environment="prod"), headers=auth(staging)).status_code == 403
+    # Proposals are never subject to the shipped policy.
+    pr = signer.github(ref="refs/pull/4/merge")
+    assert client.post("/v0/events", json=body("proposed", environment="prod"), headers=auth(pr)).status_code == 200
+
+
+def test_an_empty_environment_entry_lets_no_one_record_it(ledger_location, signer):
+    client = per_environment_client(ledger_location, signer, {"by_environment": {"prod": {}}})
+    response = client.post("/v0/events", json=body("shipped", environment="prod"), headers=auth(signer.github()))
+    assert response.status_code == 403
+
+
+def test_gitlab_protected_environment_for_prod_only(ledger_location, signer):
+    client = per_environment_client(
+        ledger_location,
+        signer,
+        {"protected_refs": True, "by_environment": {"prod": {"protected_environments": True}}},
+    )
+    branch = signer.gitlab()
+    assert client.post("/v0/events", json=body("shipped", environment="test"), headers=auth(branch)).status_code == 200
+    assert client.post("/v0/events", json=body("shipped", environment="prod"), headers=auth(branch)).status_code == 403
+    unprotected = signer.gitlab(environment="production", environment_protected="false")
+    response = client.post("/v0/events", json=body("shipped", environment="prod"), headers=auth(unprotected))
+    assert response.status_code == 403
+    protected = signer.gitlab(environment="production", environment_protected="true")
+    assert client.post("/v0/events", json=body("shipped", environment="prod"), headers=auth(protected)).status_code == 200
+
+
+def test_jenkins_and_azure_devops_workflows_per_environment(ledger_location, signer):
+    client = per_environment_client(
+        ledger_location,
+        signer,
+        {
+            "workflows": ["https://jenkins.example.com/job/agents/job/*/job/main/", "sc://acme/agents/marshal-*"],
+            "by_environment": {
+                "prod": {
+                    "workflows": ["https://jenkins.example.com/job/agents/job/*/job/release/", "sc://acme/agents/marshal-prod"]
+                }
+            },
+        },
+        issuers=[
+            IssuerConfig(
+                issuer=JENKINS, provider="jenkins", owner="parent", repositories=["https://jenkins.example.com/job/agents/*"]
+            ),
+            IssuerConfig(issuer=AZURE_DEVOPS, provider="azure-devops", owner="parent", repositories=["acme/agents"]),
+        ],
+    )
+    main_job = signer.jenkins()
+    release_job = signer.jenkins(sub="https://jenkins.example.com/job/agents/job/finance/job/release/")
+    assert client.post("/v0/events", json=body("shipped", environment="test"), headers=auth(main_job)).status_code == 200
+    assert client.post("/v0/events", json=body("shipped", environment="prod"), headers=auth(main_job)).status_code == 403
+    assert client.post("/v0/events", json=body("shipped", environment="prod"), headers=auth(release_job)).status_code == 200
+    test_connection = signer.azure_devops(sub="sc://acme/agents/marshal-test")
+    prod_connection = signer.azure_devops(sub="sc://acme/agents/marshal-prod")
+    record_ = body("shipped", environment="test", records=[record(agent="hr/onboarding")])
+    assert client.post("/v0/events", json=record_, headers=auth(test_connection)).status_code == 200
+    record_["environment"] = "prod"
+    assert client.post("/v0/events", json=record_, headers=auth(test_connection)).status_code == 403
+    assert client.post("/v0/events", json=record_, headers=auth(prod_connection)).status_code == 200
+
+
+def test_environment_entries_reject_unknown_keys(tmp_path):
+    path = tmp_path / "marshal-server.yaml"
+    path.write_text(
+        "store: /var/lib/marshal/ledger.sqlite\n"
+        "issuers:\n"
+        "  - issuer: https://token.actions.githubusercontent.com\n"
+        "    provider: github\n"
+        "    repositories: ['acme/*']\n"
+        "policy:\n"
+        "  shipped:\n"
+        "    by_environment:\n"
+        "      prod:\n"
+        "        enviroments: [prod]\n"
+    )
+    with pytest.raises(ValueError, match="enviroments"):
+        ServerConfig.load(path)
+    path.write_text(path.read_text().replace("by_environment", "by_environments").replace("        enviroments", "        environments"))
+    with pytest.raises(ValueError, match="by_environments"):
+        ServerConfig.load(path)
+
+
+def test_example_configuration_has_a_prod_rule():
+    from pathlib import Path
+
+    example = Path(__file__).resolve().parents[2] / "examples" / "marshal-server.yaml"
+    config = ServerConfig.load(example)
+    prod = config.policy.shipped.rule_for("prod")
+    assert prod is not config.policy.shipped and prod.refs == []
+    assert config.policy.shipped.rule_for("test") is config.policy.shipped
+
+
 def test_jenkins_build_number_and_job_are_audited(ci_config, signer):
     client = TestClient(create_app(ci_config, key_resolver=signer.resolver))
     client.post("/v0/events", json=body("shipped"), headers=auth(signer.jenkins(sha="9e8d7c6")))

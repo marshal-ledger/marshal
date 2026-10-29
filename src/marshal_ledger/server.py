@@ -33,12 +33,12 @@ from .web import WebSettings, create_web_app
 MAX_RECORDS = 500
 
 
-class ShippedPolicy(BaseModel):
-    """Who may mark a version as shipped. A request passes if any rule matches."""
+class ShippedRule(BaseModel):
+    """Who may record what is live in an environment. A request passes if any rule matches."""
 
     model_config = ConfigDict(extra="forbid")
 
-    refs: list[str] = Field(default_factory=lambda: ["refs/heads/main"])
+    refs: list[str] = Field(default_factory=list)
     """Glob patterns for Git refs, such as ``refs/heads/main`` or ``refs/tags/v*``."""
     environments: list[str] = Field(default_factory=list)
     """CI deployment environments, such as a GitHub environment with required reviewers."""
@@ -51,6 +51,22 @@ class ShippedPolicy(BaseModel):
     job URL, such as the main branch's job, or an Azure DevOps subject, such as a service
     connection with a branch control check. Also matches GitHub workflow refs and GitLab CI
     config refs."""
+
+
+class ShippedPolicy(ShippedRule):
+    """Who may mark a version as shipped. The top-level rule applies to every environment that
+    ``by_environment`` doesn't name."""
+
+    refs: list[str] = Field(default_factory=lambda: ["refs/heads/main"])
+    """Glob patterns for Git refs, such as ``refs/heads/main`` or ``refs/tags/v*``."""
+    by_environment: dict[str, ShippedRule] = Field(default_factory=dict)
+    """Rules for the ledger environment an event names, such as ``prod``. An environment listed
+    here gets only its own rule, not the top-level one; its ``refs`` default to none."""
+
+    def rule_for(self, environment: str | None) -> ShippedRule:
+        if environment is not None and environment in self.by_environment:
+            return self.by_environment[environment]
+        return self
 
 
 class Policy(BaseModel):
@@ -98,7 +114,9 @@ class EventRequest(BaseModel):
     entities: list[Entity] = Field(default_factory=list)
 
 
-def may_ship(caller: Caller, policy: ShippedPolicy) -> bool:
+def may_ship(caller: Caller, policy: ShippedPolicy, environment: str | None = None) -> bool:
+    """Whether ``caller`` may record a shipped or observed event for the ledger ``environment``."""
+    policy = policy.rule_for(environment)
     if caller.ref and any(fnmatch.fnmatchcase(caller.ref, p) for p in policy.refs):
         return True
     if caller.environment and caller.environment in policy.environments:
@@ -148,11 +166,16 @@ def create_app(config: ServerConfig, key_resolver: KeyResolver | None = None) ->
     @app.post("/v0/events")
     def post_events(request: EventRequest, who: Caller = Depends(caller)) -> dict[str, Any]:
         # Shipped and observed events both claim what is live, so both need the shipped policy.
-        if request.event in (DeploymentEvent.SHIPPED, DeploymentEvent.OBSERVED) and not may_ship(who, config.policy.shipped):
+        shipped = config.policy.shipped
+        if request.event in (DeploymentEvent.SHIPPED, DeploymentEvent.OBSERVED) and not may_ship(
+            who, shipped, request.environment
+        ):
+            rule = f"rule for {request.environment}" if request.environment in shipped.by_environment else "policy"
             raise HTTPException(
                 403,
-                f"{who.repository} at {who.ref or 'an unknown ref'} may not record {request.event.value} events; "
-                "the shipped policy requires a protected ref, a deployment environment or a workflow it lists",
+                f"{who.repository} at {who.ref or 'an unknown ref'} may not record {request.event.value} events "
+                f"for {request.environment}; the shipped {rule} requires a protected ref, a deployment environment "
+                "or a workflow it lists",
             )
         channel = Channel.SCHEDULED if request.event is DeploymentEvent.OBSERVED else Channel.CI
         records = []

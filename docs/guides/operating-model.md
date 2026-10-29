@@ -68,16 +68,21 @@ Agents that no pipeline deploys can still be recorded: write a [Marshal file](..
 
 A `proposed` event can come from any allowed repository. A `shipped` or `observed` event claims what is live, so the server accepts one only from callers that its `policy.shipped` lists: the main branch, a deployment environment with required reviewers, or a protected branch or environment (see [the ingest API](../ingest-server.md#configure)).
 
+The top-level rule applies to every environment. To hold prod to a stricter rule, give it its own entry under `by_environment`. An event for an environment listed there must satisfy that entry, and the top-level rule no longer counts:
+
 ```yaml
 policy:
   shipped:
     refs:
-      - refs/heads/main
-    environments:
-      - prod
+      - refs/heads/main            # dev and test: any deploy from main
+    by_environment:
+      prod:
+        environments:
+          - prod                   # only the GitHub environment named prod, with required reviewers
+        protected_environments: true   # or a GitLab protected environment
 ```
 
-The policy decides who may record a `shipped` or `observed` event at all, not which environment each caller may record. A pipeline allowed to record a deployment to test could also record one to prod. Keep the list to the pipelines you trust with prod: deploy to dev and test from the main branch too, or don't record dev at all.
+Here a job on the main branch may record a deployment to dev or test, but a deployment to prod only from a job that ran in the approved prod environment. An entry's `refs` default to none, so `refs/heads/main` doesn't carry over to prod. Jenkins and Azure DevOps callers use `workflows` the same way: list the release job or the prod service connection under `prod`. The keys under `by_environment` are the ledger's environment names, the Action's `environment` input or `MARSHAL_ENVIRONMENT` in the GitLab template; the entries' `environments` are the CI provider's own environment names, which needn't be the same.
 
 ## Who owns what
 
