@@ -4,6 +4,8 @@ Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](
 
 ## 0.10.0 (unreleased)
 
+- Documentation: a new guide, [Run an AI agent inventory across dev, test and prod](docs/guides/operating-model.md), covers where the server runs, which pipelines record which events in each environment, who may record what is live, who owns what, and the order to roll it out in.
+
 ## 0.9.0 (2026-10-29)
 
 - AgentCore harnesses: the CloudFormation reader reads `AWS::BedrockAgentCore::Harness` in full: the model and its provider, the system prompt, and the tools, including each tool of a gateway defined in the same template with the Lambda that runs it, and tools the model provider runs, such as OpenAI's web search. A harness whose `AllowedTools` doesn't restrict them is recorded with the default `shell` and `file_operations` tools, so an agent that can run commands shows as one. MCP header and environment variable values are never copied, only their names.

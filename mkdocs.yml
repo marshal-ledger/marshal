@@ -78,6 +78,7 @@ nav:
   - Getting started: getting-started.md
   - Live demo: https://marshal-ledger.github.io/marshal/demo/
   - Guides:
+      - Operating model across environments: guides/operating-model.md
       - Copilot Studio agent inventory: guides/copilot-studio-inventory.md
       - Review agent changes in pull requests: guides/pull-request-review.md
       - Track agents in code: guides/agents-in-code.md
