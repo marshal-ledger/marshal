@@ -35,6 +35,7 @@ See [`examples/marshal-server.yaml`](../examples/marshal-server.yaml).
 | `policy.shipped.protected_refs` | Accept any ref the provider reports as protected (GitLab) |
 | `policy.shipped.protected_environments` | Accept any environment the provider reports as protected (GitLab) |
 | `policy.shipped.workflows` | Glob patterns of caller workflows that may record `shipped` events: a Jenkins job URL, an Azure DevOps subject, a GitHub workflow ref or a GitLab CI config ref |
+| `policy.shipped.by_environment` | A rule per ledger environment, such as `prod`, with the same five keys. An event for an environment listed here must satisfy that environment's rule instead of the top-level one; its `refs` default to none. Other environments use the top-level rule |
 
 `repositories` is required because a public provider signs tokens for every repository it hosts. The issuer alone proves only that a token came from GitHub, not from your organization. The same holds within an organization: a Jenkins controller signs tokens for every job, and an Azure DevOps organization for every pipeline.
 
@@ -84,7 +85,7 @@ The response lists one report per agent: its version label, the version last shi
 |---|---|
 | A bearer token is present, correctly signed by a configured issuer, with the right audience and unexpired | `401` |
 | The token names a caller, and it matches the issuer's `repositories` | `401` without one, `403` if it doesn't match |
-| For `shipped` and `observed`: the token's ref, environment or workflow satisfies `policy.shipped` | `403` |
+| For `shipped` and `observed`: the token's ref, environment or workflow satisfies `policy.shipped`, or its `by_environment` rule for the event's environment | `403` |
 | Each agent is unbound, or bound to the same issuer and repository | `403` (nothing is written) |
 | The body is a valid event | `422` |
 

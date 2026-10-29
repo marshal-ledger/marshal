@@ -20,9 +20,14 @@ issuers:
 
 policy:
   shipped:
+    # Who may record shipped and observed events for any environment not listed below.
     refs:
       - refs/heads/main
-    environments:
-      - prod              # GitHub environments with required reviewers
     protected_refs: false
     protected_environments: true
+    # An environment listed here gets only its own rule. Its refs default to none.
+    by_environment:
+      prod:
+        environments:
+          - prod          # GitHub environments with required reviewers
+        protected_environments: true   # GitLab protected environments
