@@ -1,4 +1,4 @@
-<img src="docs/assets/marshal-logo.svg" width="72" height="72" alt="Marshal logo">
+<img src="docs/assets/social-card.png" alt="Marshal, an agent ledger: one versioned record of every AI agent, on every platform. Risk-ranked diffs, drift, dependencies and format conversion for Copilot Studio, Agentforce, Bedrock, Databricks, Google ADK, LangGraph and open specs.">
 
 # Marshal — an agent ledger
 
