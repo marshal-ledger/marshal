@@ -58,3 +58,18 @@ def test_extractor_errors_are_reported_not_raised(checker, tmp_path):
     report = tmp_path / "report.json"
     assert checker.main(["--report", str(report)]) == 0
     assert "network down" in json.loads(report.read_text())["fmt"]["error"]
+
+
+def test_a_failed_issue_call_does_not_stop_the_other_sources(checker, tmp_path, monkeypatch):
+    sources = [{"id": "a", "name": "A", "extractor": "fake"}, {"id": "b", "name": "B", "extractor": "fake"}]
+    checker.WATCH.write_text(json.dumps({"sources": sources}))
+    checker.EXTRACTORS["fake"] = lambda source: ["Agent.name"]
+
+    def sync(title, body):
+        if title.endswith(": A"):
+            raise RuntimeError("gh issue create failed: HTTP 502")
+        checker.calls.append((title, body))
+
+    monkeypatch.setattr(checker, "_sync_issue", sync)
+    assert checker.main(["--issues"]) == 1
+    assert [title for title, _ in checker.calls] == ["Upstream change: B"]

@@ -238,6 +238,15 @@ def _sync_issue(title: str, body: str | None) -> None:
         _gh("issue", "create", "--title", title, "--label", ISSUE_LABEL, "--body-file", "-", input_text=body)
 
 
+def _try_sync_issue(title: str, body: str | None, failures: list[str]) -> None:
+    """Sync one issue; a failed GitHub call is recorded so the other sources are still checked."""
+    try:
+        _sync_issue(title, body)
+    except Exception as exc:
+        failures.append(title)
+        print(f"could not update the issue {title!r}: {exc}", file=sys.stderr)
+
+
 def _body(source: dict[str, Any], change: dict[str, Any]) -> str:
     lines = [f"The upstream definition of **{source['name']}** changed since its snapshot.", ""]
     for label in ("added", "removed"):
@@ -267,6 +276,7 @@ def main(argv: list[str] | None = None) -> int:
     sources = json.loads(WATCH.read_text())["sources"]
     SNAPSHOTS.mkdir(parents=True, exist_ok=True)
     report: dict[str, Any] = {}
+    issue_failures: list[str] = []
     for source in sources:
         if args.only and source["id"] not in args.only:
             continue
@@ -287,7 +297,7 @@ def main(argv: list[str] | None = None) -> int:
             snapshot_file.write_text(json.dumps(surface, indent=1) + "\n")
         if args.issues and not args.update:
             changed = change["added"] or change["removed"]
-            _sync_issue(ISSUE_PREFIX + source["name"], _body(source, change) if changed else None)
+            _try_sync_issue(ISSUE_PREFIX + source["name"], _body(source, change) if changed else None, issue_failures)
 
     if args.golden_result:
         output = Path(args.golden_result).read_text(errors="replace")
@@ -300,11 +310,11 @@ def main(argv: list[str] | None = None) -> int:
                     "of the pinned one, so an upstream definition changed in a way a reader doesn't handle.\n\n"
                     f"```\n{summary}\n```\n\nFix the reader, then move the pinned commits in "
                     "`tests/fixtures/sources.json` forward.") if failed else None
-            _sync_issue(ISSUE_PREFIX + "golden tests fail on latest upstream definitions", body)
+            _try_sync_issue(ISSUE_PREFIX + "golden tests fail on latest upstream definitions", body, issue_failures)
 
     if args.report:
         Path(args.report).write_text(json.dumps(report, indent=2) + "\n")
-    return 0
+    return 1 if issue_failures else 0
 
 
 if __name__ == "__main__":

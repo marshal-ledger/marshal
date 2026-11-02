@@ -2,9 +2,9 @@
  "anthropic 2.3",
  "crewai 1.15",
  "google-adk 2.13",
- "google-genai 2.33",
+ "google-genai 2.34",
  "langchain 1.4",
  "langgraph 1.2",
- "openai 3.37",
+ "openai 3.42",
  "openai-agents 0.24"
 ]
