@@ -217,7 +217,10 @@ EXTRACTORS: dict[str, Callable[[dict[str, Any]], list[str]]] = {
 
 
 def _gh(*args: str, input_text: str | None = None) -> str:
-    return subprocess.run(["gh", *args], check=True, capture_output=True, text=True, input=input_text).stdout
+    result = subprocess.run(["gh", *args], capture_output=True, text=True, input=input_text)
+    if result.returncode:
+        raise RuntimeError(f"gh {args[0]} {args[1]} failed: {result.stderr.strip() or result.stdout.strip()}")
+    return result.stdout
 
 
 def _sync_issue(title: str, body: str | None) -> None:
