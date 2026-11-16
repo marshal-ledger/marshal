@@ -4,14 +4,14 @@
 #     -e MARSHAL_STORE_URL=postgresql://... marshal
 # It runs as any UID in group 0 with a read-only root filesystem; give it a writable /tmp and,
 # for a SQLite store, a volume at /var/lib/marshal.
-FROM python:3.12-slim AS build
+FROM python:3.15-slim AS build
 WORKDIR /src
 COPY pyproject.toml README.md LICENSE ./
 COPY src ./src
 # azure: Microsoft Entra ID sign-in to Azure Database for PostgreSQL (store_auth: azure).
 RUN pip install --no-cache-dir --prefix=/install ".[server,postgres,azure]"
 
-FROM python:3.12-slim
+FROM python:3.15-slim
 LABEL org.opencontainers.image.title="Marshal" \
       org.opencontainers.image.description="Marshal, a ledger for enterprise AI agents: ingest API and web view" \
       org.opencontainers.image.source="https://github.com/marshal-ledger/marshal" \
