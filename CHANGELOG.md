@@ -4,6 +4,10 @@ Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](
 
 ## 0.11.0 (unreleased)
 
+- AgentCore harnesses: a remote MCP server's outbound auth (`RemoteMcp.OutboundAuth`, signed with the harness's execution role or none), which AWS added to the harness schema, is recorded, a change to it ranks HIGH, and the `agentcore-harness` writer writes it back. It is checked against AWS's published resource schema; cfn-lint 1.60.1 doesn't know the field yet.
+- Upstream checks: fetching fixtures and definitions retries timeouts, rate limits and server errors. A server error no longer counts as a file removed upstream, which had made the golden tests on upstream's latest definitions fail when nothing had changed.
+- The Python reader was checked against anthropic 2.10, google-adk 2.14, google-genai 3.5, langchain 1.5, openai 3.55 and openai-agents 0.25, and written ADK configs load in google-adk 2.14.1. The Databricks bundle schema's new resource types (data quality monitors, feature specs, materialization sets, Postgres data APIs) aren't agents and are not read.
+
 ## 0.10.0 (2026-10-29)
 
 - Ingest server: `policy.shipped.by_environment` gives an environment, such as `prod`, its own rule for who may record `shipped` and `observed` events, so a pipeline trusted to record a deployment to test can no longer record one to prod. Environments without an entry keep the top-level rule, so existing configurations behave as before. A refused event's message names the environment. See [the ingest API](docs/ingest-server.md#configure).

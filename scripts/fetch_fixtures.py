@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -40,18 +41,37 @@ def main(argv: list[str] | None = None) -> int:
             dest = target / name
             dest.parent.mkdir(parents=True, exist_ok=True)
             try:
-                with urllib.request.urlopen(url, timeout=30) as response:
-                    dest.write_bytes(response.read())
+                dest.write_bytes(download(url))
             except urllib.error.HTTPError as exc:
-                if not args.ref:
+                if not args.ref or exc.code not in (404, 410):
                     raise
                 # At a moving ref, a file can be renamed or removed upstream; report it rather than stop.
+                # A server error is not a removal, so it stops the run instead of failing the golden tests.
                 missing.append(f"{fixture['id']}: {path} ({exc.code})")
         print(f"fetched {fixture['id']} ({len(fixture['files'])} files)")
     for item in missing:
         print(f"missing at {args.ref}: {item}", file=sys.stderr)
     return 0
 
+
+def download(url: str, headers: dict[str, str] | None = None, timeout: int = 30, attempts: int = 4) -> bytes:
+    """Read a URL, retrying what a later try can fix: timeouts, dropped connections, 429 and 5xx.
+
+    Other HTTP errors, such as a 404 for a file removed upstream, are raised at once.
+    """
+    request = urllib.request.Request(url, headers=headers or {})
+    for attempt in range(1, attempts + 1):
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                return response.read()
+        except urllib.error.HTTPError as exc:
+            if exc.code != 429 and exc.code < 500 or attempt == attempts:
+                raise
+        except (urllib.error.URLError, TimeoutError, ConnectionError):
+            if attempt == attempts:
+                raise
+        time.sleep(2 * attempt)
+    raise AssertionError("unreachable")
 
 if __name__ == "__main__":
     sys.exit(main())

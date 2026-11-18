@@ -68,7 +68,7 @@ A harness is AgentCore's declarative agent: AgentCore runs the agent loop, and t
 | `tools[]` built-in | `shell` (execute) and `file_operations` (write), which every session has unless `AllowedTools` restricts them | derived |
 | `tools[]` from the model | Tools the model provider runs, listed in the model's `AdditionalParams.tools`, such as OpenAI's `web_search` | derived |
 | `permissions.identity`, `principal`, `grants[]` | `ExecutionRoleArn`, resolved as for Bedrock Agents | declared |
-| `extensions.bedrock-agentcore` | Guardrail (the model's `guardrailConfig`), allowed tools, memory, hooks, skills, environment, truncation, authorizer, limits, gateway outbound auth, environment variable and MCP header names (never values), endpoints | declared |
+| `extensions.bedrock-agentcore` | Guardrail (the model's `guardrailConfig`), allowed tools, memory, hooks, skills, environment, truncation, authorizer, limits, gateway and remote MCP outbound auth, environment variable and MCP header names (never values), endpoints | declared |
 | `bindings` | The Lambda that runs each gateway tool, as for Bedrock action groups; the model's API key ARN | declared |
 
 ## AgentCore runtimes
@@ -112,7 +112,7 @@ The writer emits one `AWS::BedrockAgentCore::Harness`:
 
 - **Role:** the `ExecutionRoleArn` template parameter, unless the record's principal is a role ARN.
 - **Model:** `BedrockModelConfig` for Bedrock model ids; `OpenAiModelConfig` or `GeminiModelConfig` for those providers, with the API key's credential provider as a template parameter. With no model in the source, `ModelId` is a template parameter and the conversion warns.
-- **Tools:** MCP servers with a URL as `remote_mcp`, gateways as `agentcore_gateway`, the code interpreter and browser as their harness tools, and any other tool as an inline function, which returns control to the calling application. A tool that ran in Lambda in the source is named in a warning.
+- **Tools:** MCP servers with a URL as `remote_mcp` (with their outbound auth), gateways as `agentcore_gateway`, the code interpreter and browser as their harness tools, and any other tool as an inline function, which returns control to the calling application. A tool that ran in Lambda in the source is named in a warning.
 - **Allowed tools:** unless the source has both of the default `shell` and `file_operations` tools, `AllowedTools` lists the agent's own tools, so the harness never gets a shell its source didn't have.
 - **Guardrail:** a Bedrock agent's guardrail becomes the model's `guardrailConfig`.
 - **Native extensions:** memory, hooks, skills, environment, truncation, authorizer and limits are written back. A setting that depended on a condition in the source template is left out, with a note.

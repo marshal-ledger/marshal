@@ -97,6 +97,14 @@ def test_removing_a_harness_hook_ranks_high():
     assert found["extensions.bedrock-agentcore.allowed_tools"] is Severity.MEDIUM
 
 
+
+def test_dropping_a_remote_mcp_servers_outbound_auth_ranks_high():
+    a = AgentSpec(extensions={"bedrock-agentcore": {"mcp_auth": {"docs": {"AwsIam": {"Service": "bedrock-agentcore"}}}}})
+    b = AgentSpec(extensions={"bedrock-agentcore": {"mcp_auth": {"docs": {"None": {}}}}})
+    found = severities(a, b)
+    assert max(level for path, level in found.items() if "mcp_auth" in path) is Severity.HIGH
+
+
 def test_a_new_model_provider_is_high_and_an_upgrade_within_one_is_medium():
     def spec(model, provider):
         return AgentSpec(model={"requested": Value[str].declared(model), "provider": Value[str].declared(provider)})

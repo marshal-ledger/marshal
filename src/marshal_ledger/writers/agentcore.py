@@ -48,7 +48,7 @@ _SETTINGS = {"memory": "Memory", "hooks": "Hooks", "skills": "Skills", "environm
              "max_tokens": "MaxTokens", "timeout_seconds": "TimeoutSeconds"}
 
 
-_HANDLED = {"resource_type", "model_config", "model_tools", "guardrail", "allowed_tools", "gateway_auth", "mcp_headers", "browsers",
+_HANDLED = {"resource_type", "model_config", "model_tools", "guardrail", "allowed_tools", "gateway_auth", "mcp_headers", "mcp_auth", "browsers",
             "code_interpreters", "gateways", "environment_variables", "endpoints", "conditional", *_SETTINGS}
 _OTHER = {
     "managed_policies": "IAM managed policies are attached to the execution role, which this writer references but does not create",
@@ -296,7 +296,11 @@ class AgentCoreHarnessWriter(Writer):
                 server = _mcp_server(use.ref, use.name)
                 if server.startswith(("https://", "http://")):
                     name = unique(use.name or re.sub(r"^https?://", "", server))
-                    add({"Type": "remote_mcp", "Name": name, "Config": {"RemoteMcp": {"Url": server}}},
+                    remote: dict[str, Any] = {"Url": server}
+                    auth = (ext.get("mcp_auth") or {}).get(use.name or "")
+                    if auth is not None:
+                        remote["OutboundAuth"] = deployable(auth, f"extensions.{_PLATFORM}.mcp_auth")
+                    add({"Type": "remote_mcp", "Name": name, "Config": {"RemoteMcp": remote}},
                         f"@{name}", use.ref, f"tool/mcp.{server}")
                     if (ext.get("mcp_headers") or {}).get(use.name or ""):
                         notes[f"extensions.{_PLATFORM}.mcp_headers"] = "MCP header values are not recorded; set them before deploying"

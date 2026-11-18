@@ -780,6 +780,9 @@ class CloudFormationReader(DocumentReader):
                 if remote.get("Headers"):
                     # Header values can hold tokens in plain text: only their names are recorded.
                     extension.setdefault("mcp_headers", {})[name] = sorted(remote["Headers"])
+                if remote.get("OutboundAuth") is not None:
+                    # How the harness signs its calls to the server (AWS IAM, or none); no secret values.
+                    extension.setdefault("mcp_auth", {})[name] = template.resolve(remote["OutboundAuth"])
             elif tool_type == "agentcore_gateway":
                 gateway = config.get("AgentCoreGateway") or {}
                 uses = self._gateway_tools(template, gateway.get("GatewayArn"), name, local, stem, bindings, result)
