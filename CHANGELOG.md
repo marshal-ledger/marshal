@@ -2,6 +2,8 @@
 
 Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](https://semver.org). Before 1.0, a minor release may change the ledger model, the ingest API or the command line; each such change is listed here.
 
+## 0.12.0 (unreleased)
+
 ## 0.11.0 (2026-11-18)
 
 - AgentCore harnesses: a remote MCP server's outbound auth (`RemoteMcp.OutboundAuth`, signed with the harness's execution role or none), which AWS added to the harness schema, is recorded, a change to it ranks HIGH, and the `agentcore-harness` writer writes it back. It is checked against AWS's published resource schema; cfn-lint 1.60.1 doesn't know the field yet.
