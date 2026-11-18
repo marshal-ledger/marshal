@@ -104,6 +104,7 @@ SENSITIVE_EXTENSION_KEYS: dict[str, Severity] = {
     "managed_policies": Severity.HIGH,
     "gateway_auth": Severity.HIGH,
     "mcp_headers": Severity.HIGH,
+    "mcp_auth": Severity.HIGH,
     "hooks": Severity.HIGH,
     "allowed_tools": Severity.MEDIUM,
     "guardrail": Severity.MEDIUM,

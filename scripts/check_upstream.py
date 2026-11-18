@@ -24,7 +24,6 @@ import os
 import re
 import subprocess
 import sys
-import urllib.request
 import zipfile
 from pathlib import Path
 from typing import Any, Callable
@@ -36,6 +35,9 @@ ISSUE_LABEL = "upstream"
 ISSUE_PREFIX = "Upstream change: "
 
 sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT / "scripts"))
+
+from fetch_fixtures import download  # noqa: E402
 
 
 def _get(url: str, accept: str | None = None) -> bytes:
@@ -45,8 +47,7 @@ def _get(url: str, accept: str | None = None) -> bytes:
     token = os.environ.get("GITHUB_TOKEN")
     if token and url.startswith("https://api.github.com/"):
         headers["Authorization"] = f"Bearer {token}"
-    with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=60) as response:
-        return response.read()
+    return download(url, headers, timeout=60)
 
 
 def _raw(repo: str, path: str, ref: str = "HEAD") -> bytes:

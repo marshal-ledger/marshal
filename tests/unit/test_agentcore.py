@@ -67,6 +67,7 @@ HARNESS = textwrap.dedent("""
                 RemoteMcp:
                   Url: https://mcp.example.com/docs
                   Headers: {Authorization: Bearer sk-live-do-not-copy}
+                  OutboundAuth: {AwsIam: {Service: bedrock-agentcore, Region: us-east-1}}
             - Type: inline_function
               Name: refund
               Config:
@@ -92,6 +93,7 @@ def test_harness_mapping():
     assert spec.permissions.principal.value == "support-harness-role"
     ext = spec.extensions["bedrock-agentcore"]
     assert ext["guardrail"] == {"guardrailIdentifier": "gr-123", "guardrailVersion": "1"}
+    assert ext["mcp_auth"] == {"docs": {"AwsIam": {"Service": "bedrock-agentcore", "Region": "us-east-1"}}}
     tools = {t.ref: t for t in spec.tools}
     # The gateway's tools, one by one, with the Lambda that runs them.
     lookup = tools["tool/bedrock-agentcore.gateway.stack.Gateway.orders.lookup_order"]
@@ -195,6 +197,7 @@ def test_harness_round_trip_keeps_the_definition():
     # The gateway is in the source stack: the harness references it by a parameter.
     assert props["Tools"][0]["Config"]["AgentCoreGateway"]["GatewayArn"] == {"Ref": "OrdersGatewayArn"}
     assert "OrdersGatewayArn" in conversion.document["Parameters"]
+    assert props["Tools"][1]["Config"]["RemoteMcp"]["OutboundAuth"] == {"AwsIam": {"Service": "bedrock-agentcore", "Region": "us-east-1"}}
     assert all(f.note for f in conversion.report.lossy)
     read_back = conversion.read_back.spec
     assert read_back.model == record.spec.model
