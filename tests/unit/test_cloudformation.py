@@ -148,3 +148,36 @@ def test_values_equal_to_bedrock_defaults_are_recorded_as_absent():
     longer = template.replace("IdleSessionTTLInSeconds: 600", "IdleSessionTTLInSeconds: 1800")
     [changed] = CloudFormationReader().read_data(load_template(longer), "stack.yaml").records
     assert changed.spec.extensions["bedrock"]["idle_session_ttl"] == 1800
+
+
+RUNTIME = textwrap.dedent("""
+    Resources:
+      Runtime:
+        Type: AWS::BedrockAgentCore::Runtime
+        Properties:
+          AgentRuntimeName: claims_runtime
+          RoleArn: arn:aws:iam::123456789012:role/claims-runtime
+          AgentRuntimeArtifact:
+            ContainerConfiguration: {ContainerUri: 123456789012.dkr.ecr.us-east-1.amazonaws.com/claims:1}
+          NetworkConfiguration: {NetworkMode: PUBLIC}
+          FilesystemConfigurations:
+            - SessionStorage: {MountPath: /mnt/session}
+            - S3BucketMount: {Bucket: claims-documents, MountPath: /mnt/claims, Prefix: "inbound/{runtimeSessionId}/"}
+          HooksConfiguration:
+            Build:
+              Warmup:
+                Action: {HttpPost: {Path: /warmup, Port: 8080}}
+          ResourceConfigurations:
+            MinimumMemoryInMiB: 4096
+""")
+
+
+def test_a_runtimes_mounts_build_hooks_and_resources_are_recorded():
+    [record] = CloudFormationReader().read_data(load_template(RUNTIME), "stack.yaml").records
+    ext = record.spec.extensions["bedrock-agentcore"]
+    assert ext["filesystems"][1] == {"S3BucketMount": {"Bucket": "claims-documents", "MountPath": "/mnt/claims",
+                                                       "Prefix": "inbound/{runtimeSessionId}/"}}
+    assert ext["build_hooks"] == {"Build": {"Warmup": {"Action": {"HttpPost": {"Path": "/warmup", "Port": 8080}}}}}
+    assert ext["resources"] == {"MinimumMemoryInMiB": 4096}
+    notes = {f.path: f.note for f in convert(record, "agentcore-harness").report.fields if f.note}
+    assert all(notes[f"extensions.bedrock-agentcore.{key}"] for key in ("filesystems", "build_hooks", "resources"))

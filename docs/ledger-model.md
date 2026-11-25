@@ -191,6 +191,6 @@ This is a heuristic: it can't tell a guardrail from an ordinary sentence that ha
 
 A different model from the same provider, such as a routine upgrade, ranks MED; a different provider ranks HIGH, because another party then sees the agent's data. An organization can list its approved models and providers in its [risk rules](guides/risk-rules.md); a change to any other is then raised.
 
-Platform-specific fields that control identity or access rank by their key wherever they appear in an extension: connection and credential modes, authentication mode, access policy, agent user, user API scopes, authorizers and attached managed policies are HIGH; guardrails, security settings and permission blocks are MED.
+Platform-specific fields that control identity or access rank by their key wherever they appear in an extension: connection and credential modes, authentication mode, access policy, agent user, user API scopes, authorizers, attached managed policies, the outbound auth of AgentCore gateways and MCP servers, MCP headers and harness hooks are HIGH; guardrails, security settings, permission blocks, a harness's allowed tools and the file systems and S3 buckets an AgentCore runtime or harness mounts are MED.
 
 The rules are in [`src/marshal_ledger/risk.py`](../src/marshal_ledger/risk.py). An organization's own rules, set on its ingest server, add to them; see [Your own risk rules](guides/risk-rules.md).

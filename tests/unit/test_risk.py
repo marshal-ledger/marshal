@@ -98,6 +98,19 @@ def test_removing_a_harness_hook_ranks_high():
 
 
 
+def test_mounting_a_bucket_or_file_system_ranks_medium():
+    mount = {"S3BucketMount": {"Bucket": "claims-documents", "MountPath": "/mnt/claims"}}
+    runtime = severities(AgentSpec(extensions={"bedrock-agentcore": {"filesystems": [{"SessionStorage": {"MountPath": "/mnt/s"}}]}}),
+                         AgentSpec(extensions={"bedrock-agentcore": {"filesystems": [{"SessionStorage": {"MountPath": "/mnt/s"}}, mount]}}))
+    assert max(runtime.values()) is Severity.MEDIUM
+    harness = severities(AgentSpec(extensions={"bedrock-agentcore": {"environment": {}}}),
+                         AgentSpec(extensions={"bedrock-agentcore": {"environment": {
+                             "AgentCoreRuntimeEnvironment": {"FilesystemConfigurations": [mount]}}}}))
+    assert max(harness.values()) is Severity.MEDIUM
+    hook = severities(AgentSpec(), AgentSpec(extensions={"bedrock-agentcore": {"build_hooks": {"Build": {}}}}))
+    assert max(hook.values()) is Severity.LOW
+
+
 def test_dropping_a_remote_mcp_servers_outbound_auth_ranks_high():
     a = AgentSpec(extensions={"bedrock-agentcore": {"mcp_auth": {"docs": {"AwsIam": {"Service": "bedrock-agentcore"}}}}})
     b = AgentSpec(extensions={"bedrock-agentcore": {"mcp_auth": {"docs": {"None": {}}}}})

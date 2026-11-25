@@ -41,7 +41,11 @@ _MEMORY_KEYS = {"managed": "managedMemoryConfiguration", "existing": "agentCoreM
 _VERBATIM = {"headers", "inputSchema", "additionalParams", "environmentVariables", "customParameters"}
 # Settings the CLI reads that the Harness resource has no property for: the ones the
 # ledger keeps, and the ones it leaves out (tags, and the VPC id CodeBuild needs).
-_CLI_ONLY = {"dockerfile": "dockerfile", "connections": "connections"}
+_CLI_ONLY = {"dockerfile": "dockerfile", "connections": "connections", "build": "build",
+             "buildContextPath": "build_context_path", "customDockerBuildArgs": "docker_build_args"}
+# Of those, the maps whose values can hold credentials (a build argument often carries a
+# token): only their names are recorded.
+_NAMES_ONLY = {"customDockerBuildArgs"}
 _DROPPED = {"tags", "networkConfig", "authorizerType"}
 
 
@@ -257,7 +261,8 @@ class AgentCoreCliReader(Reader):
                     warnings.append(f"{artifact}: {PROMPT_FILE} is not readable text")
             else:
                 warnings.append(f"{artifact}: {PROMPT_FILE} is larger than {MAX_PROMPT_BYTES} bytes and was not read")
-        extras = {label: spec[key] for key, label in _CLI_ONLY.items() if spec.get(key) is not None}
+        extras = {label: sorted(spec[key]) if key in _NAMES_ONLY and isinstance(spec[key], dict) else spec[key]
+                  for key, label in _CLI_ONLY.items() if spec.get(key) is not None}
         props: dict[str, Any] = {}
         for key, value in spec.items():
             if key in _CLI_ONLY or key in _DROPPED or value is None:

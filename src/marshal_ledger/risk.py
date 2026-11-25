@@ -106,6 +106,8 @@ SENSITIVE_EXTENSION_KEYS: dict[str, Severity] = {
     "mcp_headers": Severity.HIGH,
     "mcp_auth": Severity.HIGH,
     "hooks": Severity.HIGH,
+    "filesystems": Severity.MEDIUM,
+    "FilesystemConfigurations": Severity.MEDIUM,
     "allowed_tools": Severity.MEDIUM,
     "guardrail": Severity.MEDIUM,
     "security": Severity.MEDIUM,

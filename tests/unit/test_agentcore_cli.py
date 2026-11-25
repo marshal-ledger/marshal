@@ -351,3 +351,22 @@ def test_a_project_memory_becomes_an_arn_parameter_in_cloudformation(tmp_path):
     lossy = {f.path: f.note for f in conversion.report.lossy}
     assert "takes its ARN as a parameter" in lossy["extensions.bedrock-agentcore.memory"]
     assert "every namespace" in lossy["extensions.bedrock-agentcore.memory"]
+
+
+def test_container_build_settings_are_kept_with_build_argument_names_only(tmp_path):
+    harness = HARNESS_YAML + textwrap.dedent(f"""
+        build: Container
+        buildContextPath: .
+        customDockerBuildArgs:
+          PIP_INDEX_URL: https://build:{TOKEN}@pypi.example.com/simple
+          PYTHON_VERSION: "3.12"
+    """)
+    record = read(project(tmp_path, harness))
+    assert TOKEN not in record.model_dump_json()
+    ext = record.spec.extensions["bedrock-agentcore"]
+    assert (ext["build"], ext["build_context_path"]) == ("Container", ".")
+    assert ext["docker_build_args"] == ["PIP_INDEX_URL", "PYTHON_VERSION"]
+    flat = {**HARNESS_JSON, "build": "Container", "customDockerBuildArgs": {"PIP_INDEX_URL": TOKEN}}
+    [json_record] = AgentCoreCliReader().read(project(tmp_path / "v1", flat, version=1, file="harness.json")).records
+    assert TOKEN not in json_record.model_dump_json()
+    assert json_record.spec.extensions["bedrock-agentcore"]["docker_build_args"] == ["PIP_INDEX_URL"]
