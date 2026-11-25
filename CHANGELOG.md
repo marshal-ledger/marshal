@@ -2,6 +2,8 @@
 
 Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](https://semver.org). Before 1.0, a minor release may change the ledger model, the ingest API or the command line; each such change is listed here.
 
+## 0.13.0 (unreleased)
+
 ## 0.12.0 (2026-11-25)
 
 - AgentCore runtimes: the file systems and S3 buckets a runtime mounts (`FilesystemConfigurations`, including the new S3 bucket mount), its build hooks and its minimum memory, which AWS added to the runtime schema, are recorded from CloudFormation and from Terraform's Cloud Control provider. Mounting a file system or bucket, or changing a mount, ranks MED, for a runtime or a harness. A runtime whose template already set `FilesystemConfigurations` gets a new version once.
