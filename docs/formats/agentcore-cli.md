@@ -32,7 +32,7 @@ What that mapping records, briefly:
 - **Model:** the model id, its provider (from the model configuration, or the model id), and temperature, top-p, top-k and max tokens. An API key credential (`apiKeyArn`) goes in `bindings`.
 - **Tools:** remote MCP servers by URL, gateways by ARN, the browser and code interpreter, and inline functions with their input schema. The default `shell` and `file_operations` tools are recorded unless `allowedTools` leaves them out, so a harness that can run commands shows as one.
 - **Identity:** `executionRoleArn` when set. Without it, `agentcore deploy` creates the role, so the identity is recorded as a service role (`derived`) and its name as unknown.
-- **Everything else** (memory, skills, truncation, environment, limits, `allowedTools`, the caller authorizer) goes in `extensions.bedrock-agentcore`, as for CloudFormation. Two settings only the CLI has are kept there too: `dockerfile` and `connections`. Tags and the VPC id used for container builds aren't recorded.
+- **Everything else** (memory, skills, truncation, environment, limits, `allowedTools`, the caller authorizer) goes in `extensions.bedrock-agentcore`, as for CloudFormation. Settings only the CLI has are kept there too: `dockerfile`, `connections`, and the container build settings `build` and `buildContextPath`, with the names of `customDockerBuildArgs` but never their values, since a build argument can carry a token. Tags and the VPC id used for container builds aren't recorded.
 
 `networkMode: PUBLIC` with no VPC settings is the CLI's default, so it is recorded as absent: a file that states it and one that omits it give the same version.
 

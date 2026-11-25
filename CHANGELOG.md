@@ -4,6 +4,10 @@ Notable changes to Marshal, newest first. Versions follow [Semantic Versioning](
 
 ## 0.12.0 (unreleased)
 
+- AgentCore runtimes: the file systems and S3 buckets a runtime mounts (`FilesystemConfigurations`, including the new S3 bucket mount), its build hooks and its minimum memory, which AWS added to the runtime schema, are recorded from CloudFormation and from Terraform's Cloud Control provider. Mounting a file system or bucket, or changing a mount, ranks MED, for a runtime or a harness. A runtime whose template already set `FilesystemConfigurations` gets a new version once.
+- AgentCore CLI projects: a harness's container build settings (`build`, `buildContextPath`) are recorded, and of `customDockerBuildArgs` only the names, since a build argument can carry a token.
+- The Python reader was checked against anthropic 2.14, google-adk 2.15, google-genai 3.6, openai 3.59 and openai-agents 0.26, and written ADK configs load in google-adk 2.15.1. New AgentCore gateway settings (custom domains, JWT certificate locations, response interception) and the Databricks bundle schema's app thumbnail don't change what is recorded.
+
 ## 0.11.0 (2026-11-18)
 
 - AgentCore harnesses: a remote MCP server's outbound auth (`RemoteMcp.OutboundAuth`, signed with the harness's execution role or none), which AWS added to the harness schema, is recorded, a change to it ranks HIGH, and the `agentcore-harness` writer writes it back. It is checked against AWS's published resource schema; cfn-lint 1.60.1 doesn't know the field yet.

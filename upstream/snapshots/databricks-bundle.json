@@ -29,6 +29,7 @@
  "resources.apps.source_code_path",
  "resources.apps.space",
  "resources.apps.telemetry_export_destinations",
+ "resources.apps.thumbnail_path",
  "resources.apps.usage_policy_id",
  "resources.apps.user_api_scopes",
  "resources.catalogs",

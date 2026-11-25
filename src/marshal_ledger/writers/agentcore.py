@@ -56,6 +56,9 @@ _OTHER = {
     "protocol": "an AgentCore runtime setting; a harness is invoked through InvokeHarness",
     "network": "an AgentCore runtime setting; a harness's network is part of its environment",
     "lifecycle": "an AgentCore runtime setting; a harness's lifecycle is part of its environment",
+    "filesystems": "an AgentCore runtime setting; a harness's file systems are part of its environment",
+    "build_hooks": "an AgentCore runtime setting, which the harness resource has no property for",
+    "resources": "an AgentCore runtime setting, which the harness resource has no property for",
 }
 
 

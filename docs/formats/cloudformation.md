@@ -12,7 +12,7 @@ Format id: `cloudformation`. Reads CloudFormation templates (YAML with short-for
 |---|---|---|
 | `AWS::Bedrock::Agent` | `bedrock` | Partial: read in full; written as the agent resource without its surrounding stack |
 | `AWS::BedrockAgentCore::Harness` | `bedrock-agentcore` | Partial: read in full, with the tools of gateways in the same template; written as the harness without its surrounding stack |
-| `AWS::BedrockAgentCore::Runtime` | `bedrock-agentcore` | Inventory: identity, grants, protocol, artifact, authorizer; model and tools are in the runtime's code |
+| `AWS::BedrockAgentCore::Runtime` | `bedrock-agentcore` | Inventory: identity, grants, protocol, artifact, authorizer, mounts; model and tools are in the runtime's code |
 
 Bedrock Agents has been in maintenance mode since July 30, 2026: accounts without Bedrock Agents use in the past year can't create agents, and AWS recommends the AgentCore harness. See [Move Bedrock agents to the AgentCore harness](../guides/bedrock-agents-to-agentcore.md).
 
@@ -73,7 +73,7 @@ A harness is AgentCore's declarative agent: AgentCore runs the agent loop, and t
 
 ## AgentCore runtimes
 
-The record holds the runtime name and description, the execution role's identity and grants, protocol (`MCP`, `HTTP`, `A2A`, `AGUI`), artifact (container or code), network and authorizer configuration, environment variable names (never values), and endpoints. Model, instructions and tools are unknown: read the runtime's source with the [Python reader](python.md).
+The record holds the runtime name and description, the execution role's identity and grants, protocol (`MCP`, `HTTP`, `A2A`, `AGUI`), artifact (container or code), network and authorizer configuration, the file systems and S3 buckets it mounts (`FilesystemConfigurations`; a change to them ranks MED), its build hooks and minimum memory, environment variable names (never values), and endpoints. Model, instructions and tools are unknown: read the runtime's source with the [Python reader](python.md).
 
 ## Writing
 

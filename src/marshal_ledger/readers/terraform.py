@@ -74,6 +74,7 @@ _AGENT_ATTRIBUTES = [
 _RUNTIME_ATTRIBUTES = [
     "agent_runtime_name", "description", "role_arn", "agent_runtime_artifact", "network_configuration",
     "authorizer_configuration", "lifecycle_configuration", "environment_variables", "protocol_configuration",
+    "filesystem_configurations", "hooks_configuration", "resource_configurations",
 ]
 _HARNESS_ATTRIBUTES = [
     "harness_name", "model", "system_prompt", "tools", "allowed_tools", "execution_role_arn", "memory", "skills",

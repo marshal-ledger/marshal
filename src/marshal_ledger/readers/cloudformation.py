@@ -678,7 +678,9 @@ class CloudFormationReader(DocumentReader):
         if artifact:
             extension["artifact"] = artifact
         for key, label in (("ProtocolConfiguration", "protocol"), ("NetworkConfiguration", "network"),
-                           ("AuthorizerConfiguration", "authorizer"), ("LifecycleConfiguration", "lifecycle")):
+                           ("AuthorizerConfiguration", "authorizer"), ("LifecycleConfiguration", "lifecycle"),
+                           ("FilesystemConfigurations", "filesystems"), ("HooksConfiguration", "build_hooks"),
+                           ("ResourceConfigurations", "resources")):
             if props.get(key) is not None:
                 extension[label] = template.resolve(props[key])
         if props.get("EnvironmentVariables"):

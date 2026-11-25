@@ -318,3 +318,46 @@ def test_harness_header_values_are_never_copied():
     [record] = result.records
     assert FAKE not in record.model_dump_json()
     assert record.spec.extensions["bedrock-agentcore"]["mcp_headers"] == {"research": ["X-Api-Key"]}
+
+
+def test_a_runtime_maps_the_same_from_terraform_and_cloudformation():
+    data = plan([
+        resource("awscc_bedrockagentcore_runtime.claims", "awscc_bedrockagentcore_runtime", {
+            "agent_runtime_name": "claims_runtime", "description": None,
+            "role_arn": "arn:aws:iam::123456789012:role/claims-runtime",
+            "agent_runtime_artifact": {"code_configuration": None, "container_configuration": {
+                "container_uri": "123456789012.dkr.ecr.us-east-1.amazonaws.com/claims:1"}},
+            "network_configuration": {"network_mode": "PUBLIC", "network_mode_config": None},
+            "filesystem_configurations": [{"session_storage": {"mount_path": "/mnt/session"}, "efs_access_point": None}],
+            "hooks_configuration": {"build": {"warmup": {"action": {"http_post": {"path": "/warmup", "port": 8080}}}}},
+            "resource_configurations": {"minimum_memory_in_mi_b": 4096},
+            "environment_variables": None, "authorizer_configuration": None, "lifecycle_configuration": None,
+            "protocol_configuration": None,
+        }),
+    ], {})
+    [terraform] = read(data, "runtime.plan.json").records
+    template = textwrap.dedent("""
+        Resources:
+          Runtime:
+            Type: AWS::BedrockAgentCore::Runtime
+            Metadata:
+              io.github.marshal-ledger: {agent: awscc_bedrockagentcore_runtime.claims}
+            Properties:
+              AgentRuntimeName: claims_runtime
+              RoleArn: arn:aws:iam::123456789012:role/claims-runtime
+              AgentRuntimeArtifact:
+                ContainerConfiguration: {ContainerUri: 123456789012.dkr.ecr.us-east-1.amazonaws.com/claims:1}
+              NetworkConfiguration: {NetworkMode: PUBLIC}
+              FilesystemConfigurations:
+                - SessionStorage: {MountPath: /mnt/session}
+              HooksConfiguration:
+                Build:
+                  Warmup:
+                    Action: {HttpPost: {Path: /warmup, Port: 8080}}
+              ResourceConfigurations:
+                MinimumMemoryInMiB: 4096
+    """)
+    [cfn] = CloudFormationReader().read_data(load_template(template), "stack.yaml").records
+    assert terraform.agent == cfn.agent
+    assert terraform.spec.extensions["bedrock-agentcore"]["resources"] == {"MinimumMemoryInMiB": 4096}
+    assert without_basis(terraform.spec.model_dump(mode="json")) == without_basis(cfn.spec.model_dump(mode="json"))
